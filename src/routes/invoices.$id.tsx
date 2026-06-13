@@ -63,7 +63,7 @@ function InvoiceDetail() {
             <Table className="mt-6">
               <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Unit Price</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader>
               <TableBody>
-                {invoice.items.map((it, i) => (
+                {invoice.items.map((it: typeof invoice.items[number], i: number) => (
                   <TableRow key={i}>
                     <TableCell className="font-medium">{it.productName}</TableCell>
                     <TableCell className="text-right">{it.quantity}</TableCell>

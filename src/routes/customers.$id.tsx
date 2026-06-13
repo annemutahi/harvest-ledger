@@ -30,7 +30,7 @@ function CustomerDetail() {
   const custInvoices = invoices.filter((i) => i.customerId === customer.id);
   const custPayments = payments.filter((p) => p.customerId === customer.id);
   const totalPurchases = custInvoices.reduce((s, i) => s + i.totalAmount, 0);
-  const initials = customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("");
+  const initials = customer.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("");
 
   return (
     <AppShell
