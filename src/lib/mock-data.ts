@@ -1,4 +1,4 @@
-// Mock data for the Farm Sales & Receivables Management System.
+// Mock data for Peaceful Acres Farm Limited — Sales & Receivables Management.
 // TODO: Replace with API calls to Django REST Framework backend.
 
 export type CustomerType = "Individual" | "Corporate";
@@ -23,6 +23,7 @@ export interface Product {
   unitPrice: number;
   availableQuantity: number;
   unit: string;
+  description?: string;
 }
 
 export interface SaleItem {
@@ -76,6 +77,15 @@ export interface Payment {
   notes?: string;
 }
 
+export const COMPANY = {
+  name: "Peaceful Acres Farm Limited",
+  shortName: "Peaceful Acres",
+  tagline: "Fresh, Organic — From Our Farm To Your Table",
+  phone: "+254 741 961 786",
+  email: "peacefulacres19@gmail.com",
+  location: "Kiambu, Kenya",
+};
+
 export const customers: Customer[] = [
   { id: "C-001", name: "Green Valley Restaurant", type: "Corporate", company: "Green Valley Ltd", contactPerson: "Sarah Mwangi", phone: "+254 712 345 678", email: "sarah@greenvalley.co.ke", creditLimit: 500000, outstandingBalance: 145000, createdAt: "2025-01-15" },
   { id: "C-002", name: "John Kamau", type: "Individual", contactPerson: "John Kamau", phone: "+254 722 111 222", email: "jkamau@gmail.com", creditLimit: 50000, outstandingBalance: 12500, createdAt: "2025-02-20" },
@@ -87,41 +97,45 @@ export const customers: Customer[] = [
 ];
 
 export const products: Product[] = [
-  { id: "P-001", name: "Tomatoes", category: "Vegetables", unitPrice: 120, availableQuantity: 450, unit: "kg" },
-  { id: "P-002", name: "Sukuma Wiki (Kale)", category: "Vegetables", unitPrice: 40, availableQuantity: 280, unit: "bunch" },
-  { id: "P-003", name: "Maize", category: "Grains", unitPrice: 65, availableQuantity: 1200, unit: "kg" },
-  { id: "P-004", name: "Fresh Milk", category: "Dairy", unitPrice: 70, availableQuantity: 320, unit: "litre" },
-  { id: "P-005", name: "Eggs (Tray)", category: "Poultry", unitPrice: 480, availableQuantity: 95, unit: "tray" },
-  { id: "P-006", name: "Avocados", category: "Fruits", unitPrice: 25, availableQuantity: 800, unit: "piece" },
-  { id: "P-007", name: "Potatoes", category: "Vegetables", unitPrice: 80, availableQuantity: 650, unit: "kg" },
-  { id: "P-008", name: "Onions", category: "Vegetables", unitPrice: 110, availableQuantity: 380, unit: "kg" },
-  { id: "P-009", name: "Bananas", category: "Fruits", unitPrice: 200, availableQuantity: 140, unit: "bunch" },
-  { id: "P-010", name: "Carrots", category: "Vegetables", unitPrice: 90, availableQuantity: 220, unit: "kg" },
+  { id: "P-001", name: "Broiler Chicken", category: "Whole Chicken", unitPrice: 550, availableQuantity: 180, unit: "piece", description: "Whole dressed broiler, approx. 1.2kg" },
+  { id: "P-002", name: "Chicken Thighs", category: "Chicken Cuts", unitPrice: 450, availableQuantity: 120, unit: "pack", description: "Fresh thighs, 450g pack" },
+  { id: "P-003", name: "Chicken Drumsticks", category: "Chicken Cuts", unitPrice: 550, availableQuantity: 95, unit: "kg", description: "Per kilogram, farm fresh" },
+  { id: "P-004", name: "Chicken Breast", category: "Chicken Cuts", unitPrice: 650, availableQuantity: 140, unit: "kg", description: "Lean boneless breast, per kg" },
+  { id: "P-005", name: "Kienyeji Chicken", category: "Whole Chicken", unitPrice: 1100, availableQuantity: 60, unit: "piece", description: "Free-range indigenous chicken" },
+  { id: "P-006", name: "Chicken Gizzards", category: "Chicken Offal", unitPrice: 300, availableQuantity: 80, unit: "pack", description: "500g pack, cleaned" },
+  { id: "P-007", name: "Chicken Liver", category: "Chicken Offal", unitPrice: 150, availableQuantity: 110, unit: "pack", description: "500g pack, fresh" },
+  { id: "P-008", name: "Chicken Bones", category: "Chicken Offal", unitPrice: 250, availableQuantity: 70, unit: "pack", description: "5kg pack — great for stock" },
+  { id: "P-009", name: "Chicken Wings", category: "Chicken Cuts", unitPrice: 700, availableQuantity: 90, unit: "pack", description: "1kg pack, ready to cook" },
+  { id: "P-010", name: "Tray of Eggs", category: "Eggs", unitPrice: 500, availableQuantity: 220, unit: "tray", description: "30 farm-fresh eggs per tray" },
 ];
 
 export const invoices: Invoice[] = [
   { id: "INV-001", invoiceNumber: "INV-2026-001", customerId: "C-001", customerName: "Green Valley Restaurant", invoiceDate: "2026-05-20", dueDate: "2026-06-19", items: [
-    { productId: "P-001", productName: "Tomatoes", quantity: 50, unitPrice: 120, total: 6000 },
-    { productId: "P-007", productName: "Potatoes", quantity: 80, unitPrice: 80, total: 6400 },
+    { productId: "P-001", productName: "Broiler Chicken", quantity: 80, unitPrice: 550, total: 44000 },
+    { productId: "P-010", productName: "Tray of Eggs", quantity: 40, unitPrice: 500, total: 20000 },
   ], totalAmount: 145000, amountPaid: 0, outstandingBalance: 145000, status: "Overdue" },
   { id: "INV-002", invoiceNumber: "INV-2026-002", customerId: "C-003", customerName: "FreshMart Supermarket", invoiceDate: "2026-06-01", dueDate: "2026-07-01", items: [
-    { productId: "P-003", productName: "Maize", quantity: 500, unitPrice: 65, total: 32500 },
-    { productId: "P-004", productName: "Fresh Milk", quantity: 200, unitPrice: 70, total: 14000 },
+    { productId: "P-004", productName: "Chicken Breast", quantity: 200, unitPrice: 650, total: 130000 },
+    { productId: "P-010", productName: "Tray of Eggs", quantity: 100, unitPrice: 500, total: 50000 },
   ], totalAmount: 320000, amountPaid: 0, outstandingBalance: 320000, status: "Unpaid" },
   { id: "INV-003", invoiceNumber: "INV-2026-003", customerId: "C-005", customerName: "Sunrise Hotel", invoiceDate: "2026-06-05", dueDate: "2026-07-05", items: [
-    { productId: "P-005", productName: "Eggs (Tray)", quantity: 30, unitPrice: 480, total: 14400 },
+    { productId: "P-005", productName: "Kienyeji Chicken", quantity: 60, unitPrice: 1100, total: 66000 },
+    { productId: "P-009", productName: "Chicken Wings", quantity: 50, unitPrice: 700, total: 35000 },
   ], totalAmount: 215000, amountPaid: 50000, outstandingBalance: 165000, status: "Partially Paid" },
   { id: "INV-004", invoiceNumber: "INV-2026-004", customerId: "C-002", customerName: "John Kamau", invoiceDate: "2026-06-08", dueDate: "2026-06-22", items: [
-    { productId: "P-002", productName: "Sukuma Wiki (Kale)", quantity: 25, unitPrice: 40, total: 1000 },
+    { productId: "P-002", productName: "Chicken Thighs", quantity: 12, unitPrice: 450, total: 5400 },
+    { productId: "P-007", productName: "Chicken Liver", quantity: 4, unitPrice: 150, total: 600 },
   ], totalAmount: 12500, amountPaid: 0, outstandingBalance: 12500, status: "Unpaid" },
   { id: "INV-005", invoiceNumber: "INV-2026-005", customerId: "C-004", customerName: "Mary Wanjiku", invoiceDate: "2026-06-10", dueDate: "2026-06-24", items: [
-    { productId: "P-006", productName: "Avocados", quantity: 40, unitPrice: 25, total: 1000 },
+    { productId: "P-010", productName: "Tray of Eggs", quantity: 5, unitPrice: 500, total: 2500 },
+    { productId: "P-006", productName: "Chicken Gizzards", quantity: 2, unitPrice: 300, total: 600 },
   ], totalAmount: 8500, amountPaid: 8500, outstandingBalance: 0, status: "Paid" },
   { id: "INV-006", invoiceNumber: "INV-2026-006", customerId: "C-007", customerName: "Highland Schools", invoiceDate: "2026-06-02", dueDate: "2026-07-02", items: [
-    { productId: "P-003", productName: "Maize", quantity: 300, unitPrice: 65, total: 19500 },
+    { productId: "P-001", productName: "Broiler Chicken", quantity: 100, unitPrice: 550, total: 55000 },
+    { productId: "P-008", productName: "Chicken Bones", quantity: 20, unitPrice: 250, total: 5000 },
   ], totalAmount: 88000, amountPaid: 0, outstandingBalance: 88000, status: "Unpaid" },
   { id: "INV-007", invoiceNumber: "INV-2026-007", customerId: "C-006", customerName: "Grace Achieng", invoiceDate: "2026-06-11", dueDate: "2026-06-25", items: [
-    { productId: "P-010", productName: "Carrots", quantity: 10, unitPrice: 90, total: 900 },
+    { productId: "P-007", productName: "Chicken Liver", quantity: 10, unitPrice: 150, total: 1500 },
   ], totalAmount: 4500, amountPaid: 0, outstandingBalance: 4500, status: "Unpaid" },
 ];
 

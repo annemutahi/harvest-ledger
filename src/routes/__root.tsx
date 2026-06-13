@@ -77,14 +77,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GreenHarvest — Farm Sales & Receivables" },
-      { name: "description", content: "Manage farm sales, customer debts, invoices and payments in one place." },
-      { name: "author", content: "GreenHarvest" },
-      { property: "og:title", content: "GreenHarvest — Farm Sales & Receivables" },
-      { property: "og:description", content: "Manage farm sales, customer debts, invoices and payments in one place." },
+      { title: "Peaceful Acres Farm — Sales & Receivables" },
+      { name: "description", content: "Peaceful Acres Farm Limited — manage poultry sales, customer balances, invoices and payments in one place." },
+      { name: "author", content: "Peaceful Acres Farm Limited" },
+      { property: "og:title", content: "Peaceful Acres Farm — Sales & Receivables" },
+      { property: "og:description", content: "Fresh, organic poultry from our farm to your table. Sales, receivables and invoicing made simple." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:site", content: "@PeacefulAcres" },
+
     ],
     links: [
       {
