@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileSpreadsheet, FileDown, BarChart3, Wallet, BanknoteArrowUp, FileText, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/reports")({
-  head: () => ({ meta: [{ title: "Reports — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Reports — Peaceful Acres" }] }),
   component: ReportsPage,
 });
 

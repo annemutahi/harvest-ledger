@@ -1,8 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, Package, ShoppingCart, FileText,
-  Wallet, CreditCard, BarChart3, Settings, Sprout, LogOut,
+  Wallet, CreditCard, BarChart3, Settings, Drumstick, LogOut,
 } from "lucide-react";
+import { COMPANY } from "@/lib/mock-data";
+
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -59,15 +61,16 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-3">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-            <Sprout className="h-5 w-5" />
+            <Drumstick className="h-5 w-5" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">GreenHarvest</p>
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">{COMPANY.shortName}</p>
               <p className="truncate text-xs text-sidebar-foreground/60">Farm Management</p>
             </div>
           )}
         </div>
+
       </SidebarHeader>
       <SidebarContent>
         {renderGroup("Main", mainItems)}

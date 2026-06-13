@@ -10,7 +10,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { customers, invoices, monthlySales, payments, sales, formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Dashboard — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Peaceful Acres" }] }),
   component: Dashboard,
 });
 
@@ -45,12 +45,6 @@ function Dashboard() {
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlySales}>
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis dataKey="month" stroke="var(--color-muted-foreground)" fontSize={12} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={12} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
@@ -58,9 +52,10 @@ function Dashboard() {
                   formatter={(v: number) => formatCurrency(v)}
                   contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
                 />
-                <Area type="monotone" dataKey="sales" stroke="var(--color-primary)" strokeWidth={2} fill="url(#g1)" />
+                <Area type="monotone" dataKey="sales" stroke="var(--color-primary)" strokeWidth={2} fill="var(--color-primary)" fillOpacity={0.18} />
               </AreaChart>
             </ResponsiveContainer>
+
           </CardContent>
         </Card>
         <Card>

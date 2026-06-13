@@ -12,7 +12,7 @@ import { Plus, Search } from "lucide-react";
 import { sales, formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/sales/")({
-  head: () => ({ meta: [{ title: "Sales — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Sales — Peaceful Acres" }] }),
   component: SalesPage,
 });
 

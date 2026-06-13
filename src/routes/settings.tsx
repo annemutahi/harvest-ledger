@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Settings — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Settings — Peaceful Acres" }] }),
   component: SettingsPage,
 });
 
@@ -79,7 +79,7 @@ function SettingsPage() {
             <CardHeader><CardTitle>Company Information</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2"><Label>Farm Name</Label><Input defaultValue="GreenHarvest Farms Ltd." /></div>
+                <div className="grid gap-2"><Label>Farm Name</Label><Input defaultValue="Peaceful Acres Farm Limited" /></div>
                 <div className="grid gap-2"><Label>Tax ID</Label><Input defaultValue="P051234567X" /></div>
                 <div className="grid gap-2 sm:col-span-2"><Label>Address</Label><Input defaultValue="Limuru Road, Kiambu County, Kenya" /></div>
                 <div className="grid gap-2"><Label>Phone</Label><Input defaultValue="+254 711 222 333" /></div>

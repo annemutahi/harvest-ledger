@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { customers, invoices, formatCurrency } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/payments/new")({
-  head: () => ({ meta: [{ title: "Record Payment — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Record Payment — Peaceful Acres" }] }),
   component: RecordPaymentPage,
 });
 

@@ -13,7 +13,7 @@ import { Plus, Search, ChevronRight } from "lucide-react";
 import { customers, formatCurrency } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/customers/")({
-  head: () => ({ meta: [{ title: "Customers — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Customers — Peaceful Acres" }] }),
   component: CustomersPage,
 });
 
