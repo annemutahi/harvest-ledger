@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sprout } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Sign in — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Sign in — Peaceful Acres" }] }),
   component: LoginPage,
 });
 
@@ -23,7 +23,7 @@ function LoginPage() {
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary-foreground/10">
             <Sprout className="h-6 w-6" />
           </div>
-          <span className="text-lg font-semibold">GreenHarvest</span>
+          <span className="text-lg font-semibold">Peaceful Acres</span>
         </div>
         <div className="space-y-4">
           <h2 className="text-4xl font-bold leading-tight">From field to ledger, every harvest accounted for.</h2>
@@ -31,7 +31,7 @@ function LoginPage() {
             Track sales, manage receivables, and keep your farm's cashflow healthy with a workspace built for growers.
           </p>
         </div>
-        <p className="text-xs text-primary-foreground/60">© 2026 GreenHarvest Farms</p>
+        <p className="text-xs text-primary-foreground/60">© 2026 Peaceful Acres Farm</p>
       </div>
       <div className="flex items-center justify-center p-6 md:p-12">
         <Card className="w-full max-w-md border-0 shadow-none lg:border lg:shadow-sm">
@@ -40,7 +40,7 @@ function LoginPage() {
               <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
                 <Sprout className="h-5 w-5" />
               </div>
-              <span className="text-lg font-semibold">GreenHarvest</span>
+              <span className="text-lg font-semibold">Peaceful Acres</span>
             </div>
             <h1 className="text-2xl font-bold">Welcome back</h1>
             <p className="mt-1 text-sm text-muted-foreground">Sign in to manage your farm's sales and receivables.</p>

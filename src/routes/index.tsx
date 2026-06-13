@@ -10,7 +10,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { customers, invoices, monthlySales, payments, sales, formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Dashboard — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Peaceful Acres" }] }),
   component: Dashboard,
 });
 

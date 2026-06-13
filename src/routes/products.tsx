@@ -12,7 +12,7 @@ import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { products, formatCurrency } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/products")({
-  head: () => ({ meta: [{ title: "Products — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Products — Peaceful Acres" }] }),
   component: ProductsPage,
 });
 

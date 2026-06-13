@@ -8,7 +8,7 @@ import { ArrowLeft, Printer, FileDown } from "lucide-react";
 import { invoices, customers, payments, formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/invoices/$id")({
-  head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id} — GreenHarvest` }] }),
+  head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id} — Peaceful Acres` }] }),
   loader: ({ params }) => {
     const invoice = invoices.find((i) => i.id === params.id);
     if (!invoice) throw notFound();
@@ -55,7 +55,7 @@ function InvoiceDetail() {
               </div>
               <div className="sm:text-right">
                 <p className="text-xs font-medium uppercase text-muted-foreground">From</p>
-                <p className="mt-1 font-semibold">GreenHarvest Farms Ltd.</p>
+                <p className="mt-1 font-semibold">Peaceful Acres Farm Limited</p>
                 <p className="text-sm text-muted-foreground">Limuru Road, Kiambu</p>
                 <p className="text-sm text-muted-foreground">accounts@greenharvest.farm</p>
               </div>

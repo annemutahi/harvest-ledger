@@ -12,7 +12,7 @@ import { Search, Wallet, AlertTriangle, CalendarClock, Users } from "lucide-reac
 import { invoices, formatCurrency, formatDate, daysOverdue } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/receivables")({
-  head: () => ({ meta: [{ title: "Receivables — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Receivables — Peaceful Acres" }] }),
   component: ReceivablesPage,
 });
 

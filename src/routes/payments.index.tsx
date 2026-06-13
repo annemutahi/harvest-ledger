@@ -9,7 +9,7 @@ import { Plus, Search } from "lucide-react";
 import { payments, formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/payments/")({
-  head: () => ({ meta: [{ title: "Payments — GreenHarvest" }] }),
+  head: () => ({ meta: [{ title: "Payments — Peaceful Acres" }] }),
   component: PaymentsPage,
 });
 

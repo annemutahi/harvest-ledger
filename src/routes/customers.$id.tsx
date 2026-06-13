@@ -10,7 +10,7 @@ import { ArrowLeft, Mail, Phone, FileDown } from "lucide-react";
 import { customers, invoices, payments, formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/customers/$id")({
-  head: ({ params }) => ({ meta: [{ title: `Customer ${params.id} — GreenHarvest` }] }),
+  head: ({ params }) => ({ meta: [{ title: `Customer ${params.id} — Peaceful Acres` }] }),
   loader: ({ params }) => {
     const customer = customers.find((c) => c.id === params.id);
     if (!customer) throw notFound();
