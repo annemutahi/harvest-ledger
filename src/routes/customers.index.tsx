@@ -1,16 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, ChevronRight } from "lucide-react";
-import { customers, formatCurrency } from "@/lib/mock-data";
+import { Plus, Search, ChevronRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { api, ApiError } from "@/lib/api";
+import { formatCurrency, type CustomerType } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/customers/")({
   head: () => ({ meta: [{ title: "Customers — Peaceful Acres" }] }),
@@ -18,11 +22,38 @@ export const Route = createFileRoute("/customers/")({
 });
 
 function CustomersPage() {
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [type, setType] = useState<string>("all");
   const [open, setOpen] = useState(false);
 
-  const filtered = customers.filter((c) => {
+  const { data: customers, isLoading, error } = useQuery({
+    queryKey: ["customers"],
+    queryFn: api.listCustomers,
+  });
+
+  const [form, setForm] = useState({
+    name: "",
+    type: "Individual" as CustomerType,
+    company: "",
+    contactPerson: "",
+    phone: "",
+    email: "",
+    creditLimit: 0,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => api.createCustomer(form),
+    onSuccess: () => {
+      toast.success("Customer created");
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      setOpen(false);
+      setForm({ name: "", type: "Individual", company: "", contactPerson: "", phone: "", email: "", creditLimit: 0 });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed to create customer"),
+  });
+
+  const filtered = (customers ?? []).filter((c) => {
     const matchQ = !q || c.name.toLowerCase().includes(q.toLowerCase()) || c.email.toLowerCase().includes(q.toLowerCase());
     const matchT = type === "all" || c.type === type;
     return matchQ && matchT;
@@ -37,23 +68,42 @@ function CustomersPage() {
           <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Add Customer</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>New Customer</DialogTitle></DialogHeader>
-            <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); setOpen(false); }}>
-              <div className="grid gap-2"><Label>Customer Name</Label><Input placeholder="e.g. Sunset Café" /></div>
+            <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
+              <div className="grid gap-2"><Label>Customer Name</Label>
+                <Input required placeholder="e.g. Sunset Café" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2"><Label>Type</Label>
-                  <Select defaultValue="Individual"><SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as CustomerType })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="Individual">Individual</SelectItem><SelectItem value="Corporate">Corporate</SelectItem></SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2"><Label>Company (optional)</Label><Input /></div>
+                <div className="grid gap-2"><Label>Company (optional)</Label>
+                  <Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+                </div>
               </div>
-              <div className="grid gap-2"><Label>Contact Person</Label><Input /></div>
+              <div className="grid gap-2"><Label>Contact Person</Label>
+                <Input value={form.contactPerson} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} />
+              </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-2"><Label>Phone</Label><Input /></div>
-                <div className="grid gap-2"><Label>Email</Label><Input type="email" /></div>
+                <div className="grid gap-2"><Label>Phone</Label>
+                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                </div>
+                <div className="grid gap-2"><Label>Email</Label>
+                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                </div>
               </div>
-              <div className="grid gap-2"><Label>Credit Limit (KES)</Label><Input type="number" placeholder="50000" /></div>
-              <DialogFooter><Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit">Save Customer</Button></DialogFooter>
+              <div className="grid gap-2"><Label>Credit Limit (KES)</Label>
+                <Input type="number" placeholder="50000" value={form.creditLimit || ""} onChange={(e) => setForm({ ...form, creditLimit: Number(e.target.value) || 0 })} />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Customer
+                </Button>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -93,10 +143,25 @@ function CustomersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.length === 0 && (
+                {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                ))}
+                {!isLoading && error && (
+                  <TableRow><TableCell colSpan={6} className="py-12 text-center text-destructive">
+                    {error instanceof Error ? error.message : "Failed to load customers"}
+                  </TableCell></TableRow>
+                )}
+                {!isLoading && !error && filtered.length === 0 && (
                   <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No customers match your filters.</TableCell></TableRow>
                 )}
-                {filtered.map((c) => (
+                {!isLoading && !error && filtered.map((c) => (
                   <TableRow key={c.id} className="cursor-pointer hover:bg-muted/40">
                     <TableCell>
                       <Link to="/customers/$id" params={{ id: c.id }} className="font-medium hover:underline">{c.name}</Link>
