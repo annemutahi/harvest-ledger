@@ -5,6 +5,8 @@ import { Bell, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
+import { useAuth } from "@/lib/auth-context";
 
 interface AppShellProps {
   title: string;
@@ -14,6 +16,16 @@ interface AppShellProps {
 }
 
 export function AppShell({ title, description, actions, children }: AppShellProps) {
+  const { user } = useAuth();
+  const initials = user?.username
+    ? user.username
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join("")
+    : "U";
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
@@ -29,9 +41,13 @@ export function AppShell({ title, description, actions, children }: AppShellProp
               <Button variant="ghost" size="icon" aria-label="Notifications">
                 <Bell className="h-4 w-4" />
               </Button>
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-primary text-primary-foreground">FM</AvatarFallback>
-              </Avatar>
+              <Button asChild variant="ghost" size="icon" aria-label="Profile settings">
+                <Link to="/settings">
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
+                  </Avatar>
+                </Link>
+              </Button>
             </div>
           </header>
           <main className="flex-1 px-4 py-6 md:px-6 md:py-8">

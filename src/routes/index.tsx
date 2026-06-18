@@ -79,7 +79,7 @@ function LandingPage() {
   return (
     <AppShell
       title="Dashboard"
-      description="A focused view of monthly sales, payments, credit, and upcoming dues."
+      description=""
       actions={
         <Button asChild>
           <Link to="/transactions">Open Transactions</Link>

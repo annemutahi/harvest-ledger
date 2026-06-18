@@ -50,7 +50,7 @@ function ReportsPage() {
                 </div>
                 <h3 className="mt-4 text-lg font-semibold">{r.title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{r.desc}</p>
-                <p className="mt-4 text-xs text-muted-foreground">Apply filters above and export. Backend integration pending.</p>
+                <p className="mt-4 text-xs text-muted-foreground">Apply filters above and export.</p>
               </CardContent>
             </Card>
           </TabsContent>

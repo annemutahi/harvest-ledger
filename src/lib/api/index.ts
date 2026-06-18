@@ -338,6 +338,8 @@ export const api = {
   createSale: async (data: {
     customerId: string;
     paymentType: PaymentType;
+    invoiceDate?: string;
+    dueDate?: string;
     items: { productId: string; quantity: number; unitPrice: number }[];
   }): Promise<Sale> =>
     mapSale(
@@ -346,6 +348,9 @@ export const api = {
         body: JSON.stringify({
           customer: data.customerId,
           payment_type: data.paymentType.toLowerCase(),
+          date: data.invoiceDate,
+          invoice_date: data.invoiceDate,
+          due_date: data.dueDate,
           items: data.items.map((i) => ({
             product: i.productId,
             quantity: i.quantity,

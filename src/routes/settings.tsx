@@ -57,7 +57,7 @@ function initials(name: string) {
 function SettingsPage() {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [name, setName] = useState(user?.username ?? "Farm Manager");
+  const [name, setName] = useState(user?.username ?? "{username}");
   const [email, setEmail] = useState(user?.email ?? "");
   const [phone, setPhone] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | undefined>();

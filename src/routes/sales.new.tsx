@@ -20,12 +20,22 @@ export const Route = createFileRoute("/sales/new")({
 
 interface Line { productId: string; qty: number; }
 
+function formatInputDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
 function NewSalePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [customerId, setCustomerId] = useState("");
   const [paymentType, setPaymentType] = useState("Cash");
   const [lines, setLines] = useState<Line[]>([{ productId: "", qty: 1 }]);
+  const [invoiceDate, setInvoiceDate] = useState(() => formatInputDate(new Date()));
+  const [dueDate, setDueDate] = useState(() => {
+    const due = new Date();
+    due.setDate(due.getDate() + 14);
+    return formatInputDate(due);
+  });
 
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
@@ -63,10 +73,12 @@ function NewSalePage() {
         className="grid gap-4 lg:grid-cols-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!customerId || total === 0 || hasInvalidLine) return;
+          if (!customerId || total === 0 || hasInvalidLine || !invoiceDate || !dueDate) return;
           createSaleMutation.mutate({
             customerId,
             paymentType: paymentType as "Cash" | "Credit",
+            invoiceDate,
+            dueDate,
             items: lines
               .filter((line) => line.productId && line.qty > 0)
               .map((line) => {
@@ -144,6 +156,10 @@ function NewSalePage() {
               </Select>
             </div>
             <div className="grid gap-2">
+              <Label>Date Created</Label>
+              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
               <Label>Payment Type</Label>
               <Select value={paymentType} onValueChange={setPaymentType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -152,6 +168,10 @@ function NewSalePage() {
                   <SelectItem value="Credit">Credit</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Due Date</Label>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
             <div className="rounded-lg bg-muted p-4">
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(total)}</span></div>
