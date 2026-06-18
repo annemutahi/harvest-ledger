@@ -182,7 +182,8 @@ export const api = {
   },
   me: async (): Promise<AuthUser> => request<AuthUser>("/auth/me/"),
 
-
+  // Customers — /api/customers/
+  listCustomers: async (): Promise<Customer[]> =>
     unwrap<any>(await request("/customers/")).map(mapCustomer),
   getCustomer: async (id: string): Promise<Customer> =>
     mapCustomer(await request(`/customers/${id}/`)),
