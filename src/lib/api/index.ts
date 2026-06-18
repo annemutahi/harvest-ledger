@@ -18,14 +18,40 @@ const API_BASE =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ||
   "http://127.0.0.1:8000/api";
 
+// Read a cookie by name (used for Django's CSRF token).
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    const csrf = getCookie("csrftoken");
+    if (csrf) headers["X-CSRFToken"] = csrf;
+  }
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    credentials: "include", // send Django sessionid + csrftoken cookies
     ...init,
+    headers,
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`API ${res.status} ${res.statusText} on ${path}: ${body}`);
+    throw new ApiError(res.status, `API ${res.status} ${res.statusText} on ${path}: ${body}`);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
@@ -132,7 +158,30 @@ function mapPayment(p: any): Payment {
 
 // ---------- Public API ----------
 
+export type AuthUser = { id: number | string; username: string; email?: string };
+
 export const api = {
+  // Auth — Django session + CSRF.
+  // Endpoints expected on the backend:
+  //   GET  /api/auth/csrf/   -> sets csrftoken cookie (returns {detail:"ok"})
+  //   POST /api/auth/login/  body {username, password} -> sets sessionid, returns user
+  //   POST /api/auth/logout/ -> clears session
+  //   GET  /api/auth/me/     -> returns current user, 401/403 if anonymous
+  ensureCsrf: async (): Promise<void> => {
+    await request("/auth/csrf/").catch(() => {});
+  },
+  login: async (username: string, password: string): Promise<AuthUser> => {
+    await api.ensureCsrf();
+    return request<AuthUser>("/auth/login/", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+  },
+  logout: async (): Promise<void> => {
+    await request("/auth/logout/", { method: "POST" }).catch(() => {});
+  },
+  me: async (): Promise<AuthUser> => request<AuthUser>("/auth/me/"),
+
   // Customers — /api/customers/
   listCustomers: async (): Promise<Customer[]> =>
     unwrap<any>(await request("/customers/")).map(mapCustomer),
