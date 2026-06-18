@@ -158,9 +158,31 @@ function mapPayment(p: any): Payment {
 
 // ---------- Public API ----------
 
+export type AuthUser = { id: number | string; username: string; email?: string };
+
 export const api = {
-  // Customers — /api/customers/
-  listCustomers: async (): Promise<Customer[]> =>
+  // Auth — Django session + CSRF.
+  // Endpoints expected on the backend:
+  //   GET  /api/auth/csrf/   -> sets csrftoken cookie (returns {detail:"ok"})
+  //   POST /api/auth/login/  body {username, password} -> sets sessionid, returns user
+  //   POST /api/auth/logout/ -> clears session
+  //   GET  /api/auth/me/     -> returns current user, 401/403 if anonymous
+  ensureCsrf: async (): Promise<void> => {
+    await request("/auth/csrf/").catch(() => {});
+  },
+  login: async (username: string, password: string): Promise<AuthUser> => {
+    await api.ensureCsrf();
+    return request<AuthUser>("/auth/login/", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+  },
+  logout: async (): Promise<void> => {
+    await request("/auth/logout/", { method: "POST" }).catch(() => {});
+  },
+  me: async (): Promise<AuthUser> => request<AuthUser>("/auth/me/"),
+
+
     unwrap<any>(await request("/customers/")).map(mapCustomer),
   getCustomer: async (id: string): Promise<Customer> =>
     mapCustomer(await request(`/customers/${id}/`)),
