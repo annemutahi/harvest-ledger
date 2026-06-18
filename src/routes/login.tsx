@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sprout } from "lucide-react";
+import { Sprout, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — Peaceful Acres" }] }),
@@ -13,8 +14,11 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const [email, setEmail] = useState("admin@greenharvest.farm");
-  const [password, setPassword] = useState("demo1234");
+  const { login } = useAuth();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -46,27 +50,44 @@ function LoginPage() {
             <p className="mt-1 text-sm text-muted-foreground">Sign in to manage your farm's sales and receivables.</p>
             <form
               className="mt-6 space-y-4"
-              onSubmit={(e) => { e.preventDefault(); window.location.href = "/"; }}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setError(null);
+                setSubmitting(true);
+                try {
+                  await login(username, password);
+                  window.location.href = "/";
+                } catch (err: any) {
+                  setError(err?.message?.includes("400") || err?.message?.includes("401")
+                    ? "Invalid username or password."
+                    : "Could not reach the server. Is the backend running?");
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
             >
               <div className="space-y-2">
-                <Label htmlFor="email">Email or Username</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Label htmlFor="username">Username</Label>
+                <Input id="username" type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
                   <Link to="/login" className="text-xs font-medium text-primary hover:underline">Forgot password?</Link>
                 </div>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="remember" defaultChecked />
                 <Label htmlFor="remember" className="text-sm font-normal">Remember me on this device</Label>
               </div>
-              <Button type="submit" className="w-full" size="lg">Sign in</Button>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
+              </Button>
             </form>
             <p className="mt-6 text-center text-xs text-muted-foreground">
-              Demo build — any credentials will sign you in.
+              Accounts are created by an administrator in the Django admin.
             </p>
           </CardContent>
         </Card>
