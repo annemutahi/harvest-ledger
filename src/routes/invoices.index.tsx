@@ -1,13 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/status-badge";
-import { Search } from "lucide-react";
-import { invoices, formatCurrency, formatDate } from "@/lib/mock-data";
+import { Search, Loader2 } from "lucide-react";
+import { api } from "@/lib/api";
+import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/invoices/")({
   head: () => ({ meta: [{ title: "Invoices — Peaceful Acres" }] }),
@@ -17,6 +20,7 @@ export const Route = createFileRoute("/invoices/")({
 function InvoicesPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
+  const { data: invoices = [], isLoading, error } = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
   const filtered = invoices.filter((i) =>
     (!q || i.invoiceNumber.toLowerCase().includes(q.toLowerCase()) || i.customerName.toLowerCase().includes(q.toLowerCase())) &&
     (status === "all" || i.status === status)
@@ -50,7 +54,22 @@ function InvoicesPage() {
             <Table>
               <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead>Due</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Paid</TableHead><TableHead className="text-right">Balance</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
               <TableBody>
-                {filtered.map((i) => (
+                {isLoading && Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  </TableRow>
+                ))}
+                {!isLoading && error && (
+                  <TableRow><TableCell colSpan={8} className="py-12 text-center text-destructive">{error instanceof Error ? error.message : "Failed to load invoices"}</TableCell></TableRow>
+                )}
+                {!isLoading && !error && filtered.map((i) => (
                   <TableRow key={i.id}>
                     <TableCell><Link to="/invoices/$id" params={{ id: i.id }} className="font-medium hover:underline">{i.invoiceNumber}</Link></TableCell>
                     <TableCell>{i.customerName}</TableCell>

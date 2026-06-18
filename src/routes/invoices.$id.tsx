@@ -1,27 +1,37 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { ArrowLeft, Printer, FileDown } from "lucide-react";
-import { invoices, customers, payments, formatCurrency, formatDate } from "@/lib/mock-data";
+import { api, ApiError } from "@/lib/api";
+import { formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/invoices/$id")({
   head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id} — Peaceful Acres` }] }),
-  loader: ({ params }) => {
-    const invoice = invoices.find((i) => i.id === params.id);
-    if (!invoice) throw notFound();
-    return { invoice };
+  loader: async ({ params }) => {
+    try {
+      const invoice = await api.getInvoice(params.id);
+      return { invoice };
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) throw notFound();
+      throw error;
+    }
   },
-  notFoundComponent: () => (<AppShell title="Invoice not found"><p className="text-muted-foreground">No such invoice.</p></AppShell>),
-  errorComponent: ({ error }) => (<AppShell title="Error"><p>{error.message}</p></AppShell>),
+  notFoundComponent: () => (
+    <AppShell title="Invoice not found"><p className="text-muted-foreground">No such invoice.</p></AppShell>
+  ),
+  errorComponent: ({ error }) => (
+    <AppShell title="Error"><p>{error.message}</p></AppShell>
+  ),
   component: InvoiceDetail,
 });
 
 function InvoiceDetail() {
   const { invoice } = Route.useLoaderData();
-  const customer = customers.find((c) => c.id === invoice.customerId);
+  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
   const pays = payments.filter((p) => p.invoiceId === invoice.id);
 
   return (
@@ -48,10 +58,7 @@ function InvoiceDetail() {
             <div className="grid gap-6 sm:grid-cols-2">
               <div>
                 <p className="text-xs font-medium uppercase text-muted-foreground">Billed to</p>
-                <p className="mt-1 font-semibold">{customer?.name}</p>
-                {customer?.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
-                <p className="text-sm text-muted-foreground">{customer?.email}</p>
-                <p className="text-sm text-muted-foreground">{customer?.phone}</p>
+                <p className="mt-1 font-semibold">{invoice.customerName}</p>
               </div>
               <div className="sm:text-right">
                 <p className="text-xs font-medium uppercase text-muted-foreground">From</p>

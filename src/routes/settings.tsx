@@ -1,91 +1,237 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/lib/auth-context";
+import { Bell, Camera, KeyRound, UserRound } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Settings — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Profile Settings - Peaceful Acres" }] }),
   component: SettingsPage,
 });
 
+const notificationOptions = [
+  {
+    id: "dueSoon",
+    title: "Payments due soon",
+    description: "Remind me before customer invoices reach their due date.",
+    defaultChecked: true,
+  },
+  {
+    id: "overdue",
+    title: "Overdue invoices",
+    description: "Alert me when an invoice moves past its due date.",
+    defaultChecked: true,
+  },
+  {
+    id: "payments",
+    title: "Payments received",
+    description: "Notify me when a payment is recorded.",
+    defaultChecked: true,
+  },
+  {
+    id: "dailySummary",
+    title: "Daily activity summary",
+    description: "Send a daily summary of sales, payments, and open credit.",
+    defaultChecked: false,
+  },
+];
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
+}
+
 function SettingsPage() {
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [name, setName] = useState(user?.username ?? "Farm Manager");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [phone, setPhone] = useState("");
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const handlePhotoChange = (file?: File) => {
+    if (!file) return;
+    setPhotoUrl(URL.createObjectURL(file));
+    toast.success("Profile photo selected.");
+  };
+
+  const saveProfile = () => {
+    toast.success("Profile settings saved locally.");
+  };
+
+  const changePassword = () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Fill in all password fields.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirmation do not match.");
+      return;
+    }
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    toast.success("Password change ready to send to the backend.");
+  };
+
   return (
-    <AppShell title="Settings" description="Manage your profile and farm-wide preferences.">
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="company">Company</TabsTrigger>
+    <AppShell
+      title="Profile Settings"
+      description="Manage your account details, password, photo, and notification preferences."
+    >
+      <Tabs defaultValue="profile" className="space-y-4">
+        <TabsList className="flex flex-wrap">
+          <TabsTrigger value="profile">
+            <UserRound className="mr-2 h-4 w-4" />
+            Profile
+          </TabsTrigger>
+          <TabsTrigger value="password">
+            <KeyRound className="mr-2 h-4 w-4" />
+            Password
+          </TabsTrigger>
+          <TabsTrigger value="notifications">
+            <Bell className="mr-2 h-4 w-4" />
+            Notifications
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
           <Card>
-            <CardHeader><CardTitle>User Profile</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16"><AvatarFallback className="bg-primary text-primary-foreground">FM</AvatarFallback></Avatar>
-                <Button variant="outline">Change photo</Button>
+            <CardHeader>
+              <CardTitle>Profile Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={photoUrl} alt={name} />
+                  <AvatarFallback className="bg-primary text-lg font-semibold text-primary-foreground">
+                    {initials(name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => handlePhotoChange(event.target.files?.[0])}
+                  />
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Change Photo
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Use a square image for the cleanest crop.</p>
+                </div>
               </div>
+
+              <Separator />
+
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2"><Label>Full Name</Label><Input defaultValue="Farm Manager" /></div>
-                <div className="grid gap-2"><Label>Email</Label><Input type="email" defaultValue="manager@greenharvest.farm" /></div>
-                <div className="grid gap-2"><Label>Phone</Label><Input defaultValue="+254 700 000 000" /></div>
-                <div className="grid gap-2"><Label>Role</Label><Input defaultValue="Administrator" disabled /></div>
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" value={name} onChange={(event) => setName(event.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+254 700 000 000" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Input id="role" value="Administrator" disabled />
+                </div>
               </div>
-              <Button>Save Changes</Button>
+
+              <div className="flex justify-end">
+                <Button onClick={saveProfile}>Save Profile</Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="password">
           <Card>
-            <CardHeader><CardTitle>Change Password</CardTitle></CardHeader>
-            <CardContent className="space-y-4 max-w-md">
-              <div className="grid gap-2"><Label>Current Password</Label><Input type="password" /></div>
-              <div className="grid gap-2"><Label>New Password</Label><Input type="password" /></div>
-              <div className="grid gap-2"><Label>Confirm Password</Label><Input type="password" /></div>
-              <Button>Update Password</Button>
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+            </CardHeader>
+            <CardContent className="max-w-xl space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="current-password">Current Password</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                />
+              </div>
+              <Button onClick={changePassword}>Update Password</Button>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="notifications">
           <Card>
-            <CardHeader><CardTitle>Notification Preferences</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Notification Preferences</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-4">
-              {[
-                ["Overdue invoice alerts", "Email when an invoice becomes overdue."],
-                ["Payment received", "Notify me whenever a payment is recorded."],
-                ["Daily sales summary", "Receive a daily summary at 8pm."],
-                ["Low stock warnings", "Alert when a product runs low."],
-              ].map(([title, desc]) => (
-                <div key={title} className="flex items-center justify-between gap-4 rounded-lg border p-4">
-                  <div className="min-w-0"><p className="font-medium">{title}</p><p className="text-sm text-muted-foreground">{desc}</p></div>
-                  <Switch defaultChecked />
+              {notificationOptions.map((option, index) => (
+                <div key={option.id}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{option.title}</p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                    <Switch defaultChecked={option.defaultChecked} aria-label={option.title} />
+                  </div>
+                  {index < notificationOptions.length - 1 && <Separator className="mt-4" />}
                 </div>
               ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="company">
-          <Card>
-            <CardHeader><CardTitle>Company Information</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2"><Label>Farm Name</Label><Input defaultValue="Peaceful Acres Farm Limited" /></div>
-                <div className="grid gap-2"><Label>Tax ID</Label><Input defaultValue="P051234567X" /></div>
-                <div className="grid gap-2 sm:col-span-2"><Label>Address</Label><Input defaultValue="Limuru Road, Kiambu County, Kenya" /></div>
-                <div className="grid gap-2"><Label>Phone</Label><Input defaultValue="+254 711 222 333" /></div>
-                <div className="grid gap-2"><Label>Email</Label><Input type="email" defaultValue="accounts@greenharvest.farm" /></div>
+              <div className="flex justify-end pt-2">
+                <Button onClick={() => toast.success("Notification preferences saved locally.")}>
+                  Save Notifications
+                </Button>
               </div>
-              <Button>Save Company Info</Button>
             </CardContent>
           </Card>
         </TabsContent>

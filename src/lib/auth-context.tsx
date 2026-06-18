@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { api, type AuthUser } from "./api";
+import { AUTH_CHANGED_EVENT, api, type AuthUser } from "./api";
 
 type AuthState = {
   user: AuthUser | null;
@@ -19,8 +19,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Prime CSRF cookie so unsafe requests can succeed.
-      await api.ensureCsrf();
       try {
         const me = await api.me();
         if (!cancelled) setUser(me);
@@ -33,6 +31,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const syncAuthState = async () => {
+      try {
+        setUser(await api.me());
+      } catch {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener(AUTH_CHANGED_EVENT, syncAuthState);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, syncAuthState);
   }, []);
 
   // Redirect logic: anything but /login requires auth.

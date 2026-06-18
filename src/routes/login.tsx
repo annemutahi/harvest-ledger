@@ -46,8 +46,8 @@ function LoginPage() {
               </div>
               <span className="text-lg font-semibold">Peaceful Acres</span>
             </div>
-            <h1 className="text-2xl font-bold">Welcome back</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Sign in to manage your farm's sales and receivables.</p>
+            <h1 className="text-2xl font-bold">Welcome</h1>
+            <p className="mt-1 text-sm text-muted-foreground"></p>
             <form
               className="mt-6 space-y-4"
               onSubmit={async (e) => {
@@ -87,7 +87,7 @@ function LoginPage() {
               </Button>
             </form>
             <p className="mt-6 text-center text-xs text-muted-foreground">
-              Accounts are created by an administrator in the Django admin.
+              Accounts are created by the administrator.
             </p>
           </CardContent>
         </Card>

@@ -15,14 +15,23 @@ import type {
 } from "../mock-data";
 
 const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ||
+  (
+    (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
+    (import.meta.env.VITE_API_URL as string | undefined)
+  )?.replace(/\/$/, "") ||
   "http://127.0.0.1:8000/api";
 
-// Read a cookie by name (used for Django's CSRF token).
-function getCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
-  return match ? decodeURIComponent(match[1]) : null;
+const ACCESS_TOKEN_KEY = "harvest_ledger_access_token";
+const REFRESH_TOKEN_KEY = "harvest_ledger_refresh_token";
+const USER_KEY = "harvest_ledger_user";
+export const AUTH_CHANGED_EVENT = "harvest-ledger-auth-changed";
+
+function storage(): Storage | null {
+  return typeof window === "undefined" ? null : window.localStorage;
+}
+
+function getAccessToken(): string | null {
+  return storage()?.getItem(ACCESS_TOKEN_KEY) ?? null;
 }
 
 export class ApiError extends Error {
@@ -33,23 +42,89 @@ export class ApiError extends Error {
   }
 }
 
+export type AuthUser = { id: number | string; username: string; email?: string };
+
+type LoginResponse = {
+  access?: string;
+  refresh?: string;
+  token?: string;
+  access_token?: string;
+  refresh_token?: string;
+  user?: AuthUser;
+  id?: number | string;
+  pk?: number | string;
+  username?: string;
+  email?: string;
+};
+
+function clearStoredAuth() {
+  storage()?.removeItem(ACCESS_TOKEN_KEY);
+  storage()?.removeItem(REFRESH_TOKEN_KEY);
+  storage()?.removeItem(USER_KEY);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+}
+
+function getStoredUser(): AuthUser | null {
+  const raw = storage()?.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    clearStoredAuth();
+    return null;
+  }
+}
+
+function decodeJwtPayload(token: string): Record<string, any> | null {
+  if (typeof window === "undefined") return null;
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+
+  try {
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = window.atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
+    return JSON.parse(json) as Record<string, any>;
+  } catch {
+    return null;
+  }
+}
+
+function setStoredAuth(auth: LoginResponse): AuthUser {
+  const accessToken = auth.access ?? auth.token ?? auth.access_token;
+  if (!accessToken) {
+    throw new ApiError(500, "Login response did not include a JWT access token.");
+  }
+
+  storage()?.setItem(ACCESS_TOKEN_KEY, accessToken);
+  const refreshToken = auth.refresh ?? auth.refresh_token;
+  if (refreshToken) storage()?.setItem(REFRESH_TOKEN_KEY, refreshToken);
+
+  const claims = decodeJwtPayload(accessToken);
+  const user = auth.user ?? {
+    id: auth.id ?? auth.pk ?? claims?.user_id ?? claims?.id ?? claims?.sub ?? auth.username ?? "authenticated",
+    username: auth.username ?? claims?.username ?? claims?.email ?? claims?.sub ?? "authenticated",
+    email: auth.email,
+  };
+  storage()?.setItem(USER_KEY, JSON.stringify(user));
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+  return user;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
     ...(init?.headers as Record<string, string> | undefined),
   };
-  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
-    const csrf = getCookie("csrftoken");
-    if (csrf) headers["X-CSRFToken"] = csrf;
-  }
+  const token = getAccessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(`${API_BASE}${path}`, {
-    credentials: "include", // send Django sessionid + csrftoken cookies
     ...init,
     headers,
   });
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) clearStoredAuth();
     const body = await res.text().catch(() => "");
     throw new ApiError(res.status, `API ${res.status} ${res.statusText} on ${path}: ${body}`);
   }
@@ -107,9 +182,19 @@ function mapItem(i: any): SaleItem {
 }
 
 function mapSale(s: any): Sale {
+  const invoiceObject = s.invoice ?? s.invoice_data ?? s.invoice_detail ?? {};
+  const invoiceId = String(invoiceObject?.id ?? s.invoice ?? s.invoice_id ?? s.id ?? "");
+  const invoiceNumber =
+    s.invoice_number ??
+    invoiceObject?.invoice_number ??
+    invoiceObject?.number ??
+    invoiceObject?.id ??
+    "";
+
   return {
     id: String(s.id),
-    invoiceNumber: s.invoice_number ?? s.invoice?.invoice_number ?? "",
+    invoiceId,
+    invoiceNumber: String(invoiceNumber),
     customerId: String(s.customer ?? s.customer_id ?? ""),
     customerName: s.customer_name ?? "",
     date: s.date ?? s.created_at ?? "",
@@ -158,29 +243,37 @@ function mapPayment(p: any): Payment {
 
 // ---------- Public API ----------
 
-export type AuthUser = { id: number | string; username: string; email?: string };
-
 export const api = {
-  // Auth — Django session + CSRF.
+  // Auth - JWT.
   // Endpoints expected on the backend:
-  //   GET  /api/auth/csrf/   -> sets csrftoken cookie (returns {detail:"ok"})
-  //   POST /api/auth/login/  body {username, password} -> sets sessionid, returns user
-  //   POST /api/auth/logout/ -> clears session
-  //   GET  /api/auth/me/     -> returns current user, 401/403 if anonymous
+  //   POST /api/auth/login/ body {username, password} -> returns {access, refresh?, user?}
+  //   GET  /api/auth/me/    -> returns current user with Authorization: Bearer <access>
   ensureCsrf: async (): Promise<void> => {
-    await request("/auth/csrf/").catch(() => {});
+    return Promise.resolve();
   },
   login: async (username: string, password: string): Promise<AuthUser> => {
-    await api.ensureCsrf();
-    return request<AuthUser>("/auth/login/", {
+    const auth = await request<LoginResponse>("/auth/login/", {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });
+    return setStoredAuth(auth);
   },
   logout: async (): Promise<void> => {
-    await request("/auth/logout/", { method: "POST" }).catch(() => {});
+    clearStoredAuth();
   },
-  me: async (): Promise<AuthUser> => request<AuthUser>("/auth/me/"),
+  me: async (): Promise<AuthUser> => {
+    if (!getAccessToken()) throw new ApiError(401, "No auth token.");
+
+    try {
+      const user = await request<AuthUser>("/auth/me/");
+      storage()?.setItem(USER_KEY, JSON.stringify(user));
+      return user;
+    } catch (error) {
+      const storedUser = getStoredUser();
+      if (storedUser) return storedUser;
+      throw error;
+    }
+  },
 
   // Customers — /api/customers/
   listCustomers: async (): Promise<Customer[]> =>
@@ -211,15 +304,33 @@ export const api = {
       await request("/products/", {
         method: "POST",
         body: JSON.stringify({
-          name: data.name,
-          category: (data.category ?? "").toLowerCase().replace(/ /g, "_"),
-          unit_price: data.unitPrice ?? 0,
-          available_quantity: data.availableQuantity ?? 0,
-          unit: data.unit ?? "piece",
-          description: data.description ?? "",
+          name: data.name?.trim() ?? "",
+          category: data.category?.trim() ?? "",
+          unit_price: Number(data.unitPrice ?? 0),
+          available_quantity: Number(data.availableQuantity ?? 0),
+          description: data.description?.trim() ?? undefined,
         }),
       }),
     ),
+  // Update a product by id
+  updateProduct: async (id: string, data: Partial<Product>): Promise<Product> =>
+    mapProduct(
+      await request(`/products/${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: data.name,
+          category: data.category ? data.category.toLowerCase().replace(/ /g, "_") : undefined,
+          unit_price: data.unitPrice,
+          available_quantity: data.availableQuantity,
+          description: data.description,
+        }),
+      }),
+    ),
+  // Delete a product by id
+  deleteProduct: async (id: string): Promise<void> =>
+    await request(`/products/${id}/`, {
+      method: "DELETE",
+    }),
 
   // Sales — /api/sales/
   listSales: async (): Promise<Sale[]> =>

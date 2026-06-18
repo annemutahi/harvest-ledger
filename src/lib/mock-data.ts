@@ -39,6 +39,7 @@ export type InvoiceStatus = "Paid" | "Partially Paid" | "Unpaid" | "Overdue";
 
 export interface Sale {
   id: string;
+  invoiceId?: string;
   invoiceNumber: string;
   customerId: string;
   customerName: string;

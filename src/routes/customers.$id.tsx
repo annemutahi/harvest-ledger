@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,14 +8,19 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Mail, Phone, FileDown } from "lucide-react";
-import { customers, invoices, payments, formatCurrency, formatDate } from "@/lib/mock-data";
+import { api, ApiError } from "@/lib/api";
+import { Customer, formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/customers/$id")({
   head: ({ params }) => ({ meta: [{ title: `Customer ${params.id} — Peaceful Acres` }] }),
-  loader: ({ params }) => {
-    const customer = customers.find((c) => c.id === params.id);
-    if (!customer) throw notFound();
-    return { customer };
+  loader: async ({ params }) => {
+    try {
+      const customer = await api.getCustomer(params.id);
+      return { customer };
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) throw notFound();
+      throw error;
+    }
   },
   notFoundComponent: () => (
     <AppShell title="Customer not found"><p className="text-muted-foreground">This customer doesn't exist.</p></AppShell>
@@ -26,7 +32,9 @@ export const Route = createFileRoute("/customers/$id")({
 });
 
 function CustomerDetail() {
-  const { customer } = Route.useLoaderData();
+  const { customer } = Route.useLoaderData() as { customer: Customer };
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
+  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
   const custInvoices = invoices.filter((i) => i.customerId === customer.id);
   const custPayments = payments.filter((p) => p.customerId === customer.id);
   const totalPurchases = custInvoices.reduce((s, i) => s + i.totalAmount, 0);
