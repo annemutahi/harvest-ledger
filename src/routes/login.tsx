@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+  const navigate = useNavigate();
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -56,7 +57,7 @@ function LoginPage() {
                 setSubmitting(true);
                 try {
                   await login(username, password);
-                  window.location.href = "/";
+                  navigate({ to: "/", replace: true });
                 } catch (err: any) {
                   setError(err?.message?.includes("400") || err?.message?.includes("401")
                     ? "Invalid username or password."

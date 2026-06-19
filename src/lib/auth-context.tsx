@@ -50,10 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     const path = window.location.pathname;
+
     if (!user && path !== "/login") {
-      router.navigate({ to: "/login" });
+      router.navigate({ to: "/login", replace: true });
     } else if (user && path === "/login") {
-      router.navigate({ to: "/" });
+      router.navigate({ to: "/", replace: true });
     }
   }, [user, loading, router]);
 
@@ -70,7 +71,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {loading && window.location.pathname !== "/login" ? (
+        <div className="flex min-h-screen items-center justify-center bg-background px-4">
+          <p className="text-sm text-muted-foreground">Checking your session…</p>
+        </div>
+      ) : (
+        children
+      )}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
