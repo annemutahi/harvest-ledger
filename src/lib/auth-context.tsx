@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {loading && window.location.pathname !== "/login" ? (
+      {loading ? (
         <div className="flex min-h-screen items-center justify-center bg-background px-4">
           <p className="text-sm text-muted-foreground">Checking your session…</p>
         </div>
