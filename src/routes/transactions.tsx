@@ -23,6 +23,8 @@ export const Route = createFileRoute("/transactions")({
 function TransactionsPage() {
   const [q, setQ] = useState("");
   const query = q.toLowerCase();
+  const { user } = useAuth();
+  const mayEdit = canEditSales(user);
   const { data: sales = [] } = useQuery({ queryKey: ["sales"], queryFn: api.listSales });
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
 
