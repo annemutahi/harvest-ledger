@@ -24,7 +24,7 @@ function RecordPaymentPage() {
   const [customerId, setCustomerId] = useState("");
   const [invoiceId, setInvoiceId] = useState("");
   const [amount, setAmount] = useState(0);
-  const [method, setMethod] = useState("Cash");
+  const [method, setMethod] = useState<"Cash" | "Bank Transfer" | "Mobile Money" | "Cheque">("Cash");
   const [notes, setNotes] = useState("");
 
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
