@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
-import { BanknoteArrowUp, Plus, Search, ShoppingCart } from "lucide-react";
+import { BanknoteArrowUp, Pencil, Plus, Search, ShoppingCart } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { useAuth } from "@/lib/auth-context";
+import { canEditSales } from "@/lib/permissions";
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({ meta: [{ title: "Transactions - Peaceful Acres" }] }),
