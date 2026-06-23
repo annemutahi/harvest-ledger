@@ -42,7 +42,14 @@ export class ApiError extends Error {
   }
 }
 
-export type AuthUser = { id: number | string; username: string; email?: string };
+export type AuthUser = {
+  id: number | string;
+  username: string;
+  email?: string;
+  is_staff?: boolean;
+  is_superuser?: boolean;
+  can_edit_sales?: boolean;
+};
 
 type LoginResponse = {
   access?: string;
