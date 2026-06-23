@@ -43,7 +43,14 @@ export class ApiError extends Error {
   }
 }
 
-export type AuthUser = { id: number | string; username: string; email?: string };
+export type AuthUser = {
+  id: number | string;
+  username: string;
+  email?: string;
+  is_staff?: boolean;
+  is_superuser?: boolean;
+  can_edit_sales?: boolean;
+};
 
 type LoginResponse = {
   access?: string;
@@ -422,6 +429,37 @@ export const api = {
         }),
       }),
     ),
+  getSale: async (id: string): Promise<Sale> =>
+    mapSale(await request(`/sales/${id}/`)),
+  updateSale: async (
+    id: string,
+    data: {
+      customerId: string;
+      paymentType: PaymentType;
+      invoiceDate?: string;
+      dueDate?: string;
+      items: { productId: string; quantity: number; unitPrice: number }[];
+    },
+  ): Promise<Sale> =>
+    mapSale(
+      await request(`/sales/${id}/`, {
+        method: "PUT",
+        body: JSON.stringify({
+          customer: data.customerId,
+          payment_type: data.paymentType.toLowerCase(),
+          date: data.invoiceDate,
+          invoice_date: data.invoiceDate,
+          due_date: data.dueDate,
+          items: data.items.map((i) => ({
+            product: i.productId,
+            quantity: i.quantity,
+            unit_price: i.unitPrice,
+          })),
+        }),
+      }),
+    ),
+  deleteSale: async (id: string): Promise<void> =>
+    await request(`/sales/${id}/`, { method: "DELETE" }),
 
   // Invoices — /api/invoices/
   listInvoices: async (): Promise<Invoice[]> =>

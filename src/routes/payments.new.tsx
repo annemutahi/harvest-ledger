@@ -24,7 +24,7 @@ function RecordPaymentPage() {
   const [customerId, setCustomerId] = useState("");
   const [invoiceId, setInvoiceId] = useState("");
   const [amount, setAmount] = useState(0);
-  const [method, setMethod] = useState("Cash");
+  const [method, setMethod] = useState<"Cash" | "Bank Transfer" | "Mobile Money" | "Cheque">("Cash");
   const [notes, setNotes] = useState("");
 
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
@@ -95,7 +95,7 @@ function RecordPaymentPage() {
               <div className="grid gap-2"><Label>Amount (KES)</Label><Input type="number" min={0} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
               <div className="grid gap-2">
                 <Label>Payment Method</Label>
-                <Select value={method} onValueChange={setMethod}>
+                <Select value={method} onValueChange={(v) => setMethod(v as typeof method)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Cash">Cash</SelectItem>

@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
-import { BanknoteArrowUp, Plus, Search, ShoppingCart } from "lucide-react";
+import { BanknoteArrowUp, Pencil, Plus, Search, ShoppingCart } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { useAuth } from "@/lib/auth-context";
+import { canEditSales } from "@/lib/permissions";
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({ meta: [{ title: "Transactions - Peaceful Acres" }] }),
@@ -21,6 +23,8 @@ export const Route = createFileRoute("/transactions")({
 function TransactionsPage() {
   const [q, setQ] = useState("");
   const query = q.toLowerCase();
+  const { user } = useAuth();
+  const mayEdit = canEditSales(user);
   const { data: sales = [] } = useQuery({ queryKey: ["sales"], queryFn: api.listSales });
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
 
@@ -97,6 +101,7 @@ function TransactionsPage() {
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Payment</TableHead>
                       <TableHead>Status</TableHead>
+                      {mayEdit && <TableHead className="w-16 text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -120,6 +125,15 @@ function TransactionsPage() {
                         <TableCell>
                           <StatusBadge status={sale.status} />
                         </TableCell>
+                        {mayEdit && (
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" asChild title="Edit sale">
+                              <Link to="/sales/$id/edit" params={{ id: sale.id }}>
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
