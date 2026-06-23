@@ -23,6 +23,7 @@ const API_BASE =
 
 const ACCESS_TOKEN_KEY = "harvest_ledger_access_token";
 const REFRESH_TOKEN_KEY = "harvest_ledger_refresh_token";
+const REFRESH_ENDPOINT = "/auth/token/refresh/";
 const USER_KEY = "harvest_ledger_user";
 export const AUTH_CHANGED_EVENT = "harvest-ledger-auth-changed";
 
@@ -89,6 +90,53 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
   }
 }
 
+function getRefreshToken(): string | null {
+  return storage()?.getItem(REFRESH_TOKEN_KEY) ?? null;
+}
+
+function setAccessToken(token: string) {
+  storage()?.setItem(ACCESS_TOKEN_KEY, token);
+}
+
+function setRefreshToken(token: string) {
+  storage()?.setItem(REFRESH_TOKEN_KEY, token);
+}
+
+async function refreshAccessToken(): Promise<string> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    throw new ApiError(401, "No refresh token available.");
+  }
+
+  const res = await fetch(`${API_BASE}${REFRESH_ENDPOINT}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ refresh: refreshToken }),
+  });
+
+  if (!res.ok) {
+    clearStoredAuth();
+    const body = await res.text().catch(() => "");
+    throw new ApiError(res.status, `Token refresh failed ${res.status} ${res.statusText}: ${body}`);
+  }
+
+  const data = (await res.json()) as LoginResponse;
+  const accessToken = data.access ?? data.token ?? data.access_token;
+  const newRefreshToken = data.refresh ?? data.refresh_token;
+
+  if (!accessToken) {
+    clearStoredAuth();
+    throw new ApiError(500, "Refresh response did not include a new access token.");
+  }
+
+  setAccessToken(accessToken);
+  if (newRefreshToken) setRefreshToken(newRefreshToken);
+  return accessToken;
+}
+
 function setStoredAuth(auth: LoginResponse): AuthUser {
   const accessToken = auth.access ?? auth.token ?? auth.access_token;
   if (!accessToken) {
@@ -110,7 +158,9 @@ function setStoredAuth(auth: LoginResponse): AuthUser {
   return user;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+type RequestOptions = RequestInit & { skipRefresh?: boolean };
+
+async function request<T>(path: string, init?: RequestOptions): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -123,13 +173,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers,
   });
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403) clearStoredAuth();
-    const body = await res.text().catch(() => "");
-    throw new ApiError(res.status, `API ${res.status} ${res.statusText} on ${path}: ${body}`);
+
+  if (res.ok) {
+    if (res.status === 204) return undefined as T;
+    return (await res.json()) as T;
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+
+  if ((res.status === 401 || res.status === 403) && !init?.skipRefresh) {
+    try {
+      await refreshAccessToken();
+      return await request(path, { ...init, skipRefresh: true });
+    } catch (refreshError) {
+      clearStoredAuth();
+      const body = await res.text().catch(() => "");
+      throw new ApiError(res.status, `API ${res.status} ${res.statusText} on ${path}: ${body}`);
+    }
+  }
+
+  if (res.status === 401 || res.status === 403) clearStoredAuth();
+  const body = await res.text().catch(() => "");
+  throw new ApiError(res.status, `API ${res.status} ${res.statusText} on ${path}: ${body}`);
 }
 
 // DRF endpoints may return either a plain array or a paginated { results: [...] }.
@@ -197,7 +260,7 @@ function mapSale(s: any): Sale {
     invoiceNumber: String(invoiceNumber),
     customerId: String(s.customer ?? s.customer_id ?? ""),
     customerName: s.customer_name ?? "",
-    date: s.date ?? s.created_at ?? "",
+    date: s.date ?? s.created_at ?? s.issue_date ?? "",
     items: (s.items ?? []).map(mapItem),
     amount: Number(s.total ?? s.amount ?? 0),
     paymentType: (cap(s.payment_type ?? "cash") as PaymentType) || "Cash",
@@ -213,8 +276,8 @@ function mapInvoice(i: any): Invoice {
     invoiceNumber: i.invoice_number ?? "",
     customerId: String(i.customer ?? i.customer_id ?? ""),
     customerName: i.customer_name ?? "",
-    invoiceDate: i.invoice_date ?? i.created_at ?? "",
-    dueDate: i.due_date ?? "",
+    invoiceDate: i.issue_date ?? i.date ?? i.created_at ?? "",
+    dueDate: i.due_date ?? i.dueDate ?? i.date ??"",
     items: (i.items ?? []).map(mapItem),
     totalAmount: total,
     amountPaid: paid,

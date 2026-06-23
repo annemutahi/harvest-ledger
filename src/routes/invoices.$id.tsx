@@ -10,7 +10,7 @@ import { api, ApiError } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/invoices/$id")({
-  head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id} — Peaceful Acres` }] }),
+  head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id} — Peaceful Acres ` }] }),
   loader: async ({ params }) => {
     try {
       const invoice = await api.getInvoice(params.id);
@@ -30,9 +30,19 @@ export const Route = createFileRoute("/invoices/$id")({
 });
 
 function InvoiceDetail() {
-  const { invoice } = Route.useLoaderData();
+  // Guard against the loader returning undefined or missing invoice
+  const loaderData = Route.useLoaderData() as { invoice?: unknown } | undefined;
+  if (!loaderData || !loaderData.invoice) {
+    return (
+      <AppShell title="Invoice not found">
+        <p className="text-muted-foreground">No such invoice.</p>
+      </AppShell>
+    );
+  }
+
+  const { invoice } = loaderData as { invoice: any };
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
-  const pays = payments.filter((p) => p.invoiceId === invoice.id);
+  const pays = payments.filter((p: any) => p.invoiceId === invoice.id);
 
   return (
     <AppShell
@@ -42,7 +52,7 @@ function InvoiceDetail() {
         <>
           <Button variant="outline" asChild><Link to="/invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
-          <Button><FileDown className="mr-2 h-4 w-4" />Download PDF</Button>
+          {/* <Button><FileDown className="mr-2 h-4 w-4" />Download PDF</Button> */}
         </>
       }
     >

@@ -92,7 +92,6 @@ function TransactionsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Invoice #</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
@@ -103,15 +102,15 @@ function TransactionsPage() {
                   <TableBody>
                     {filteredSales.map((sale) => (
                       <TableRow key={sale.id}>
-                        <TableCell>
+                        {/* <TableCell>
                           <Link
                             to="/invoices/$id"
                             params={{ id: sale.invoiceId || sale.id }}
                             className="font-medium hover:underline"
                           >
-                            {sale.invoiceNumber || `#${sale.invoiceId || sale.id}`}
+                            {sale.invoiceNumber || `${sale.invoiceId || sale.id}`}
                           </Link>
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell>{sale.customerName}</TableCell>
                         <TableCell>{formatDate(sale.date)}</TableCell>
                         <TableCell className="text-right font-medium">{formatCurrency(sale.amount)}</TableCell>
