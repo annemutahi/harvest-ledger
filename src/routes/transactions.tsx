@@ -102,6 +102,7 @@ function TransactionsPage() {
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Payment</TableHead>
                       <TableHead>Status</TableHead>
+                      {mayEdit && <TableHead className="w-16 text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -125,6 +126,15 @@ function TransactionsPage() {
                         <TableCell>
                           <StatusBadge status={sale.status} />
                         </TableCell>
+                        {mayEdit && (
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" asChild title="Edit sale">
+                              <Link to="/sales/$id/edit" params={{ id: sale.id }}>
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
