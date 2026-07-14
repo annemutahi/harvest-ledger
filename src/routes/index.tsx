@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
-import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp } from "lucide-react";
+import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp, Wallet } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
+import { EXPENSES_CHANGE_EVENT, sumExpensesInRange } from "@/lib/expenses-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard - Peaceful Acres" }] }),
