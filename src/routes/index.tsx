@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
-import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp } from "lucide-react";
+import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp, Wallet } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
+import { EXPENSES_CHANGE_EVENT, sumExpensesInRange } from "@/lib/expenses-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard - Peaceful Acres" }] }),
@@ -61,6 +63,21 @@ function LandingPage() {
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
 
+  // Expenses from local store (updates when purchases/wages change).
+  const [expensesTick, setExpensesTick] = useState(0);
+  useEffect(() => {
+    const handler = () => setExpensesTick((n) => n + 1);
+    window.addEventListener(EXPENSES_CHANGE_EVENT, handler);
+    return () => window.removeEventListener(EXPENSES_CHANGE_EVENT, handler);
+  }, []);
+  const expensesThisMonth = useMemo(() => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    return sumExpensesInRange(from, to);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expensesTick]);
+
   const monthlySales = useMemo(() => groupMonthlySales(invoices), [invoices]);
   const currentMonth = monthlySales[monthlySales.length - 1] ?? { month: "", sales: 0, receivables: 0 };
   const previousMonth = monthlySales[monthlySales.length - 2];
@@ -86,7 +103,7 @@ function LandingPage() {
         </Button>
       }
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label={`${currentMonth.month} Sales`}
           value={formatCurrency(currentMonth.sales)}
@@ -116,6 +133,14 @@ function LandingPage() {
           icon={CalendarClock}
           tone="warning"
           trend={`${dueSoon.length} invoices due in ${dueSoonWindowDays} days`}
+        />
+        <StatCard
+          label="Expenses (MTD)"
+          value={formatCurrency(expensesThisMonth.total)}
+          icon={Wallet}
+          tone="destructive"
+          trend={`Purchases ${formatCurrency(expensesThisMonth.purchases)} · Wages ${formatCurrency(expensesThisMonth.wages)}`}
+          trendDirection={expensesThisMonth.total > 0 ? "down" : "neutral"}
         />
       </div>
 
