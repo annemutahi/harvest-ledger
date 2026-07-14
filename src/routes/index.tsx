@@ -63,6 +63,21 @@ function LandingPage() {
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
 
+  // Expenses from local store (updates when purchases/wages change).
+  const [expensesTick, setExpensesTick] = useState(0);
+  useEffect(() => {
+    const handler = () => setExpensesTick((n) => n + 1);
+    window.addEventListener(EXPENSES_CHANGE_EVENT, handler);
+    return () => window.removeEventListener(EXPENSES_CHANGE_EVENT, handler);
+  }, []);
+  const expensesThisMonth = useMemo(() => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    return sumExpensesInRange(from, to);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expensesTick]);
+
   const monthlySales = useMemo(() => groupMonthlySales(invoices), [invoices]);
   const currentMonth = monthlySales[monthlySales.length - 1] ?? { month: "", sales: 0, receivables: 0 };
   const previousMonth = monthlySales[monthlySales.length - 2];
