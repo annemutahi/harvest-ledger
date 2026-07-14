@@ -103,7 +103,7 @@ function LandingPage() {
         </Button>
       }
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label={`${currentMonth.month} Sales`}
           value={formatCurrency(currentMonth.sales)}
@@ -133,6 +133,14 @@ function LandingPage() {
           icon={CalendarClock}
           tone="warning"
           trend={`${dueSoon.length} invoices due in ${dueSoonWindowDays} days`}
+        />
+        <StatCard
+          label="Expenses (MTD)"
+          value={formatCurrency(expensesThisMonth.total)}
+          icon={Wallet}
+          tone="destructive"
+          trend={`Purchases ${formatCurrency(expensesThisMonth.purchases)} · Wages ${formatCurrency(expensesThisMonth.wages)}`}
+          trendDirection={expensesThisMonth.total > 0 ? "down" : "neutral"}
         />
       </div>
 
