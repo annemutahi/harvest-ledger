@@ -1,13 +1,17 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/status-badge";
-import { ArrowLeft, Printer, FileDown } from "lucide-react";
+import { ArrowLeft, Printer, Pencil, Plus, Trash2, Save, X } from "lucide-react";
+import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate, type SaleItem } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/invoices/$id")({
   head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id} — Peaceful Acres ` }] }),
@@ -29,10 +33,121 @@ export const Route = createFileRoute("/invoices/$id")({
   component: InvoiceDetail,
 });
 
+type EditableLine = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+};
+
 function InvoiceDetail() {
-  // Guard against the loader returning undefined or missing invoice
-  const loaderData = Route.useLoaderData() as { invoice?: unknown } | undefined;
-  if (!loaderData || !loaderData.invoice) {
+  const loaderData = Route.useLoaderData() as { invoice?: any } | undefined;
+  const initialInvoice = loaderData?.invoice;
+  const qc = useQueryClient();
+
+  const { data: invoice = initialInvoice } = useQuery({
+    queryKey: ["invoices", initialInvoice?.id],
+    queryFn: () => api.getInvoice(initialInvoice.id),
+    initialData: initialInvoice,
+    enabled: !!initialInvoice?.id,
+  });
+
+  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
+  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
+
+  const [editing, setEditing] = useState(false);
+  const [lines, setLines] = useState<EditableLine[]>([]);
+
+  const startEdit = () => {
+    setLines(
+      (invoice.items as SaleItem[]).map((it) => ({
+        productId: it.productId,
+        productName: it.productName,
+        quantity: Number(it.quantity),
+        unitPrice: Number(it.unitPrice),
+      })),
+    );
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setLines([]);
+  };
+
+  const addLine = () => {
+    const p = products[0];
+    setLines((ls) => [
+      ...ls,
+      {
+        productId: p?.id ?? "",
+        productName: p?.name ?? "",
+        quantity: 1,
+        unitPrice: Number(p?.unitPrice ?? 0),
+      },
+    ]);
+  };
+
+  const updateLine = (idx: number, patch: Partial<EditableLine>) => {
+    setLines((ls) => ls.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  };
+
+  const removeLine = (idx: number) => {
+    setLines((ls) => ls.filter((_, i) => i !== idx));
+  };
+
+  const editingTotal = useMemo(
+    () => lines.reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0), 0),
+    [lines],
+  );
+  const diff = editingTotal - Number(invoice?.totalAmount ?? 0);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!invoice?.saleId) {
+        throw new Error("This invoice is not linked to an editable sale.");
+      }
+      if (lines.length === 0) throw new Error("Add at least one line item.");
+      for (const l of lines) {
+        if (!l.productId) throw new Error("Every line must have a product.");
+        if (l.quantity <= 0) throw new Error("Quantities must be greater than zero.");
+        if (l.unitPrice < 0) throw new Error("Unit price must be zero or positive.");
+      }
+      return api.updateSale(invoice.saleId, {
+        customerId: invoice.customerId,
+        paymentType: invoice.paymentType ?? "Credit",
+        invoiceDate: invoice.invoiceDate,
+        dueDate: invoice.dueDate,
+        items: lines.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+        })),
+      });
+    },
+    onSuccess: () => {
+      const delta = diff;
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["invoices", invoice.id] });
+      qc.invalidateQueries({ queryKey: ["sales"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      setEditing(false);
+      if (Math.abs(delta) < 0.005) {
+        toast.success("Invoice updated");
+      } else if (delta > 0) {
+        toast.success(
+          `Invoice updated. Debit note issued for ${formatCurrency(delta)} (added charge).`,
+        );
+      } else {
+        toast.success(
+          `Invoice updated. Credit note issued for ${formatCurrency(Math.abs(delta))} (refund/credit).`,
+        );
+      }
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Update failed"),
+  });
+
+  if (!invoice) {
     return (
       <AppShell title="Invoice not found">
         <p className="text-muted-foreground">No such invoice.</p>
@@ -40,9 +155,8 @@ function InvoiceDetail() {
     );
   }
 
-  const { invoice } = loaderData as { invoice: any };
-  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
   const pays = payments.filter((p: any) => p.invoiceId === invoice.id);
+  const canEdit = !!invoice.saleId;
 
   return (
     <AppShell
@@ -52,7 +166,9 @@ function InvoiceDetail() {
         <>
           <Button variant="outline" asChild><Link to="/invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
-          {/* <Button><FileDown className="mr-2 h-4 w-4" />Download PDF</Button> */}
+          {!editing && canEdit && (
+            <Button onClick={startEdit}><Pencil className="mr-2 h-4 w-4" />Edit items</Button>
+          )}
         </>
       }
     >
@@ -74,27 +190,131 @@ function InvoiceDetail() {
                 <p className="text-xs font-medium uppercase text-muted-foreground">From</p>
                 <p className="mt-1 font-semibold">Peaceful Acres Farm Limited</p>
                 <p className="text-sm text-muted-foreground">Limuru Road, Kiambu</p>
-                <p className="text-sm text-muted-foreground">accounts@greenharvest.farm</p>
+                <p className="text-sm text-muted-foreground">accounts@peacefulacres.farm</p>
               </div>
             </div>
-            <Table className="mt-6">
-              <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Unit Price</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {invoice.items.map((it: typeof invoice.items[number], i: number) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium">{it.productName}</TableCell>
-                    <TableCell className="text-right">{it.quantity}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(it.unitPrice)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(it.total)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <div className="ml-auto mt-6 max-w-sm space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total</span><span>{formatCurrency(invoice.totalAmount)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Paid</span><span className="text-success">{formatCurrency(invoice.amountPaid)}</span></div>
-              <div className="flex justify-between border-t pt-2 text-base font-semibold"><span>Balance Due</span><span className="text-earth">{formatCurrency(invoice.outstandingBalance)}</span></div>
-            </div>
+
+            {!editing ? (
+              <>
+                <Table className="mt-6">
+                  <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Unit Price</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {invoice.items.map((it: SaleItem, i: number) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-medium">{it.productName}</TableCell>
+                        <TableCell className="text-right">{it.quantity}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(it.unitPrice)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(it.total)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="ml-auto mt-6 max-w-sm space-y-2">
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total</span><span>{formatCurrency(invoice.totalAmount)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Paid</span><span className="text-success">{formatCurrency(invoice.amountPaid)}</span></div>
+                  <div className="flex justify-between border-t pt-2 text-base font-semibold"><span>Balance Due</span><span className="text-earth">{formatCurrency(invoice.outstandingBalance)}</span></div>
+                </div>
+              </>
+            ) : (
+              <div className="mt-6 space-y-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-2/5">Product</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lines.map((l, idx) => {
+                      const total = Number(l.quantity || 0) * Number(l.unitPrice || 0);
+                      return (
+                        <TableRow key={idx}>
+                          <TableCell>
+                            <Select
+                              value={l.productId}
+                              onValueChange={(v) => {
+                                const p = products.find((x: any) => x.id === v);
+                                updateLine(idx, {
+                                  productId: v,
+                                  productName: p?.name ?? l.productName,
+                                  unitPrice: p ? Number(p.unitPrice) : l.unitPrice,
+                                });
+                              }}
+                            >
+                              <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
+                              <SelectContent>
+                                {products.map((p: any) => (
+                                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="text-right"
+                              value={l.quantity}
+                              onChange={(e) => updateLine(idx, { quantity: Number(e.target.value) })}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="text-right"
+                              value={l.unitPrice}
+                              onChange={(e) => updateLine(idx, { unitPrice: Number(e.target.value) })}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">{formatCurrency(total)}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" onClick={() => removeLine(idx)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                <Button variant="outline" size="sm" onClick={addLine}>
+                  <Plus className="mr-2 h-4 w-4" />Add line
+                </Button>
+
+                <div className="ml-auto max-w-sm space-y-2 border-t pt-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Previous total</span>
+                    <span>{formatCurrency(invoice.totalAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">New total</span>
+                    <span>{formatCurrency(editingTotal)}</span>
+                  </div>
+                  <div className={`flex justify-between border-t pt-2 text-sm font-semibold ${diff > 0 ? "text-earth" : diff < 0 ? "text-success" : ""}`}>
+                    <span>
+                      {diff > 0 ? "Debit note (added charge)" : diff < 0 ? "Credit note (refund)" : "No change"}
+                    </span>
+                    <span>{formatCurrency(Math.abs(diff))}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 border-t pt-4">
+                  <Button variant="outline" onClick={cancelEdit} disabled={saveMutation.isPending}>
+                    <X className="mr-2 h-4 w-4" />Cancel
+                  </Button>
+                  <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {saveMutation.isPending ? "Saving…" : "Save changes"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>

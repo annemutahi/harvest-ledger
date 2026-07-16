@@ -37,15 +37,27 @@ class InvoiceSerializer(serializers.ModelSerializer):
         max_digits=14, decimal_places=2, read_only=True,
     )
     items = serializers.SerializerMethodField()
+    sale_id = serializers.SerializerMethodField()
+    payment_type = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
         fields = [
             "id", "invoice_number", "customer", "customer_name",
             "issue_date", "due_date", "total_amount", "amount_paid",
-            "outstanding_balance", "status", "items", "created_at",
+            "outstanding_balance", "status", "items", "sale_id",
+            "payment_type", "created_at",
         ]
         read_only_fields = fields
+
+    def get_sale_id(self, obj):
+        sale = getattr(obj, "sale", None)
+        return sale.id if sale else None
+
+    def get_payment_type(self, obj):
+        sale = getattr(obj, "sale", None)
+        return sale.payment_type if sale else None
+
 
     def get_items(self, obj):
         sale = getattr(obj, "sale", None)

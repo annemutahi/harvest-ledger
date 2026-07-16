@@ -62,6 +62,8 @@ export interface Invoice {
   amountPaid: number;
   outstandingBalance: number;
   status: InvoiceStatus;
+  saleId?: string;
+  paymentType?: PaymentType;
 }
 
 export type PaymentMethod = "Cash" | "Bank Transfer" | "Mobile Money" | "Cheque";
