@@ -21,6 +21,7 @@ const navItems = [
   { title: "Customers", url: "/customers", icon: Users },
   { title: "Products", url: "/products", icon: Box },
   { title: "Stock", url: "/stock", icon: Wheat },
+  { title: "Orders", url: "/orders", icon: ClipboardList },
   { title: "Transactions", url: "/transactions", icon: CreditCard },
   { title: "Invoices", url: "/invoices", icon: FileText },
 ];
