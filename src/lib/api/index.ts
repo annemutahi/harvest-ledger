@@ -606,6 +606,50 @@ export const api = {
     ),
   deleteCasualWage: async (id: string): Promise<void> =>
     await request(`/casual-wages/${id}/`, { method: "DELETE" }),
+
+  // ---------- Orders ----------
+  listOrders: async (): Promise<ApiOrder[]> =>
+    unwrap<any>(await request("/orders/")).map(mapOrder),
+  getOrder: async (id: string): Promise<ApiOrder> =>
+    mapOrder(await request(`/orders/${id}/`)),
+  createOrder: async (data: {
+    reference?: string;
+    customerName: string;
+    customerPhone?: string;
+    customerEmail?: string;
+    deliveryAddress?: string;
+    notes?: string;
+    items: { productId?: string; productName: string; quantity: number; unitPrice: number }[];
+    status?: ApiOrderStatus;
+  }): Promise<ApiOrder> =>
+    mapOrder(
+      await request("/orders/", {
+        method: "POST",
+        body: JSON.stringify({
+          reference: data.reference,
+          channel: "in-person",
+          status: data.status ?? "confirmed",
+          customer_name: data.customerName,
+          customer_phone: data.customerPhone ?? "",
+          customer_email: data.customerEmail ?? "",
+          delivery_address: data.deliveryAddress ?? "",
+          notes: data.notes ?? "",
+          items: data.items.map((i) => ({
+            product: i.productId ? Number(i.productId) || i.productId : null,
+            product_name: i.productName,
+            quantity: i.quantity,
+            unit_price: i.unitPrice,
+          })),
+        }),
+      }),
+    ),
+  updateOrderStatus: async (id: string, status: ApiOrderStatus): Promise<ApiOrder> =>
+    mapOrder(
+      await request(`/orders/${id}/status/`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      }),
+    ),
 };
 
 // ---------- Expense DTOs and mappers ----------
