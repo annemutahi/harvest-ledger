@@ -86,12 +86,32 @@ function LandingPage() {
     };
   }, []);
 
+  // Delivered orders MTD count toward monthly sales.
+  const [deliveredOrdersMTD, setDeliveredOrdersMTD] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth(), 1);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      fetchDeliveredOrdersInRange(from, to).then((v) => { if (!cancelled) setDeliveredOrdersMTD(v); });
+    };
+    load();
+    window.addEventListener(ORDERS_CHANGE_EVENT, load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(ORDERS_CHANGE_EVENT, load);
+    };
+  }, []);
+
   const monthlySales = useMemo(() => groupMonthlySales(invoices), [invoices]);
   const currentMonth = monthlySales[monthlySales.length - 1] ?? { month: "", sales: 0, receivables: 0 };
   const previousMonth = monthlySales[monthlySales.length - 2];
+  const totalMonthSales = currentMonth.sales + deliveredOrdersMTD;
   const monthlyChange = previousMonth
-    ? ((currentMonth.sales - previousMonth.sales) / previousMonth.sales) * 100
+    ? ((totalMonthSales - previousMonth.sales) / previousMonth.sales) * 100
     : 0;
+  const monthlyProfit = totalMonthSales - expensesThisMonth.total;
   const paymentsReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const totalCredit = invoices.reduce((sum, invoice) => sum + invoice.outstandingBalance, 0);
   const dueSoon = invoices
