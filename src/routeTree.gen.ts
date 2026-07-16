@@ -28,6 +28,7 @@ import { Route as ExpensesPurchasesRouteImport } from './routes/expenses.purchas
 import { Route as ExpensesCasualsRouteImport } from './routes/expenses.casuals'
 import { Route as CustomersIdRouteImport } from './routes/customers.$id'
 import { Route as SalesIdEditRouteImport } from './routes/sales.$id.edit'
+import { Route as OrdersIdDocumentRouteImport } from './routes/orders.$id.document'
 import { Route as ApiPublicOrdersWebhookRouteImport } from './routes/api/public/orders.webhook'
 
 const TransactionsRoute = TransactionsRouteImport.update({
@@ -125,6 +126,11 @@ const SalesIdEditRoute = SalesIdEditRouteImport.update({
   path: '/sales/$id/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrdersIdDocumentRoute = OrdersIdDocumentRouteImport.update({
+  id: '/document',
+  path: '/document',
+  getParentRoute: () => OrdersIdRoute,
+} as any)
 const ApiPublicOrdersWebhookRoute = ApiPublicOrdersWebhookRouteImport.update({
   id: '/api/public/orders/webhook',
   path: '/api/public/orders/webhook',
@@ -142,7 +148,7 @@ export interface FileRoutesByFullPath {
   '/expenses/casuals': typeof ExpensesCasualsRoute
   '/expenses/purchases': typeof ExpensesPurchasesRoute
   '/invoices/$id': typeof InvoicesIdRoute
-  '/orders/$id': typeof OrdersIdRoute
+  '/orders/$id': typeof OrdersIdRouteWithChildren
   '/orders/new': typeof OrdersNewRoute
   '/payments/new': typeof PaymentsNewRoute
   '/sales/new': typeof SalesNewRoute
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/invoices/': typeof InvoicesIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/orders/$id/document': typeof OrdersIdDocumentRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
   '/api/public/orders/webhook': typeof ApiPublicOrdersWebhookRoute
 }
@@ -164,7 +171,7 @@ export interface FileRoutesByTo {
   '/expenses/casuals': typeof ExpensesCasualsRoute
   '/expenses/purchases': typeof ExpensesPurchasesRoute
   '/invoices/$id': typeof InvoicesIdRoute
-  '/orders/$id': typeof OrdersIdRoute
+  '/orders/$id': typeof OrdersIdRouteWithChildren
   '/orders/new': typeof OrdersNewRoute
   '/payments/new': typeof PaymentsNewRoute
   '/sales/new': typeof SalesNewRoute
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/invoices': typeof InvoicesIndexRoute
   '/orders': typeof OrdersIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/orders/$id/document': typeof OrdersIdDocumentRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
   '/api/public/orders/webhook': typeof ApiPublicOrdersWebhookRoute
 }
@@ -187,7 +195,7 @@ export interface FileRoutesById {
   '/expenses/casuals': typeof ExpensesCasualsRoute
   '/expenses/purchases': typeof ExpensesPurchasesRoute
   '/invoices/$id': typeof InvoicesIdRoute
-  '/orders/$id': typeof OrdersIdRoute
+  '/orders/$id': typeof OrdersIdRouteWithChildren
   '/orders/new': typeof OrdersNewRoute
   '/payments/new': typeof PaymentsNewRoute
   '/sales/new': typeof SalesNewRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/invoices/': typeof InvoicesIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/orders/$id/document': typeof OrdersIdDocumentRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
   '/api/public/orders/webhook': typeof ApiPublicOrdersWebhookRoute
 }
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/invoices/'
     | '/orders/'
     | '/products/'
+    | '/orders/$id/document'
     | '/sales/$id/edit'
     | '/api/public/orders/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/invoices'
     | '/orders'
     | '/products'
+    | '/orders/$id/document'
     | '/sales/$id/edit'
     | '/api/public/orders/webhook'
   id:
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/invoices/'
     | '/orders/'
     | '/products/'
+    | '/orders/$id/document'
     | '/sales/$id/edit'
     | '/api/public/orders/webhook'
   fileRoutesById: FileRoutesById
@@ -278,7 +290,7 @@ export interface RootRouteChildren {
   ExpensesCasualsRoute: typeof ExpensesCasualsRoute
   ExpensesPurchasesRoute: typeof ExpensesPurchasesRoute
   InvoicesIdRoute: typeof InvoicesIdRoute
-  OrdersIdRoute: typeof OrdersIdRoute
+  OrdersIdRoute: typeof OrdersIdRouteWithChildren
   OrdersNewRoute: typeof OrdersNewRoute
   PaymentsNewRoute: typeof PaymentsNewRoute
   SalesNewRoute: typeof SalesNewRoute
@@ -425,6 +437,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SalesIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orders/$id/document': {
+      id: '/orders/$id/document'
+      path: '/document'
+      fullPath: '/orders/$id/document'
+      preLoaderRoute: typeof OrdersIdDocumentRouteImport
+      parentRoute: typeof OrdersIdRoute
+    }
     '/api/public/orders/webhook': {
       id: '/api/public/orders/webhook'
       path: '/api/public/orders/webhook'
@@ -434,6 +453,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface OrdersIdRouteChildren {
+  OrdersIdDocumentRoute: typeof OrdersIdDocumentRoute
+}
+
+const OrdersIdRouteChildren: OrdersIdRouteChildren = {
+  OrdersIdDocumentRoute: OrdersIdDocumentRoute,
+}
+
+const OrdersIdRouteWithChildren = OrdersIdRoute._addFileChildren(
+  OrdersIdRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -446,7 +477,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExpensesCasualsRoute: ExpensesCasualsRoute,
   ExpensesPurchasesRoute: ExpensesPurchasesRoute,
   InvoicesIdRoute: InvoicesIdRoute,
-  OrdersIdRoute: OrdersIdRoute,
+  OrdersIdRoute: OrdersIdRouteWithChildren,
   OrdersNewRoute: OrdersNewRoute,
   PaymentsNewRoute: PaymentsNewRoute,
   SalesNewRoute: SalesNewRoute,
@@ -460,13 +491,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

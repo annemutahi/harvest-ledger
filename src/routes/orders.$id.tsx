@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { ORDER_STATUSES, notifyOrdersChanged, type OrderStatus } from "@/lib/orders-store";
