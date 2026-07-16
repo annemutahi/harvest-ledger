@@ -278,6 +278,7 @@ function mapSale(s: any): Sale {
 function mapInvoice(i: any): Invoice {
   const total = Number(i.total_amount ?? i.total ?? 0);
   const paid = Number(i.amount_paid ?? 0);
+  const pt = (i.payment_type ?? "").toString();
   return {
     id: String(i.id),
     invoiceNumber: i.invoice_number ?? "",
@@ -290,6 +291,8 @@ function mapInvoice(i: any): Invoice {
     amountPaid: paid,
     outstandingBalance: Number(i.outstanding_balance ?? total - paid),
     status: (cap(i.status ?? "unpaid") as InvoiceStatus) || "Unpaid",
+    saleId: i.sale_id != null ? String(i.sale_id) : undefined,
+    paymentType: pt ? ((cap(pt) as PaymentType) || undefined) : undefined,
   };
 }
 
