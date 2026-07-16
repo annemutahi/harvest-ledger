@@ -606,6 +606,50 @@ export const api = {
     ),
   deleteCasualWage: async (id: string): Promise<void> =>
     await request(`/casual-wages/${id}/`, { method: "DELETE" }),
+
+  // ---------- Orders ----------
+  listOrders: async (): Promise<ApiOrder[]> =>
+    unwrap<any>(await request("/orders/")).map(mapOrder),
+  getOrder: async (id: string): Promise<ApiOrder> =>
+    mapOrder(await request(`/orders/${id}/`)),
+  createOrder: async (data: {
+    reference?: string;
+    customerName: string;
+    customerPhone?: string;
+    customerEmail?: string;
+    deliveryAddress?: string;
+    notes?: string;
+    items: { productId?: string; productName: string; quantity: number; unitPrice: number }[];
+    status?: ApiOrderStatus;
+  }): Promise<ApiOrder> =>
+    mapOrder(
+      await request("/orders/", {
+        method: "POST",
+        body: JSON.stringify({
+          reference: data.reference,
+          channel: "in-person",
+          status: data.status ?? "confirmed",
+          customer_name: data.customerName,
+          customer_phone: data.customerPhone ?? "",
+          customer_email: data.customerEmail ?? "",
+          delivery_address: data.deliveryAddress ?? "",
+          notes: data.notes ?? "",
+          items: data.items.map((i) => ({
+            product: i.productId ? Number(i.productId) || i.productId : null,
+            product_name: i.productName,
+            quantity: i.quantity,
+            unit_price: i.unitPrice,
+          })),
+        }),
+      }),
+    ),
+  updateOrderStatus: async (id: string, status: ApiOrderStatus): Promise<ApiOrder> =>
+    mapOrder(
+      await request(`/orders/${id}/status/`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      }),
+    ),
 };
 
 // ---------- Expense DTOs and mappers ----------
@@ -718,3 +762,71 @@ function mapCasualWage(w: any): ApiCasualWage {
   };
 }
 
+
+// ---------- Order DTOs and mappers ----------
+
+export type ApiOrderStatus =
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "ready"
+  | "delivered"
+  | "cancelled";
+
+export type ApiOrderChannel = "online" | "in-person";
+
+export type ApiOrderItem = {
+  productId?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
+export type ApiOrder = {
+  id: string;
+  reference: string;
+  externalId?: string;
+  storeSource?: string;
+  channel: ApiOrderChannel;
+  status: ApiOrderStatus;
+  customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  deliveryAddress?: string;
+  notes?: string;
+  total: number;
+  items: ApiOrderItem[];
+  placedAt: string;
+  updatedAt: string;
+};
+
+function mapOrderItem(i: any): ApiOrderItem {
+  return {
+    productId: i.product != null ? String(i.product) : undefined,
+    productName: i.product_name ?? "",
+    quantity: Number(i.quantity ?? 0),
+    unitPrice: Number(i.unit_price ?? 0),
+    total: Number(i.total ?? 0),
+  };
+}
+
+function mapOrder(o: any): ApiOrder {
+  return {
+    id: String(o.id),
+    reference: o.reference ?? "",
+    externalId: o.external_id || undefined,
+    storeSource: o.store_source || undefined,
+    channel: (o.channel ?? "in-person") as ApiOrderChannel,
+    status: (o.status ?? "pending") as ApiOrderStatus,
+    customerName: o.customer_name ?? "",
+    customerPhone: o.customer_phone || undefined,
+    customerEmail: o.customer_email || undefined,
+    deliveryAddress: o.delivery_address || undefined,
+    notes: o.notes || undefined,
+    total: Number(o.total ?? 0),
+    items: (o.items ?? []).map(mapOrderItem),
+    placedAt: o.placed_at ?? "",
+    updatedAt: o.updated_at ?? "",
+  };
+}

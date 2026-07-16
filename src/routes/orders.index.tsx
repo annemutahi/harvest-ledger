@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search } from "lucide-react";
-import { ordersStore, type Order, type OrderStatus } from "@/lib/orders-store";
+import { api } from "@/lib/api";
+import type { OrderStatus } from "@/lib/orders-store";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/orders/")({
@@ -24,18 +26,8 @@ const statusVariant: Record<OrderStatus, string> = {
   cancelled: "bg-red-100 text-red-800",
 };
 
-function useOrders() {
-  const [orders, setOrders] = useState<Order[]>(() => ordersStore.list());
-  useEffect(() => {
-    const refresh = () => setOrders(ordersStore.list());
-    window.addEventListener(ordersStore.changeEvent, refresh);
-    return () => window.removeEventListener(ordersStore.changeEvent, refresh);
-  }, []);
-  return orders;
-}
-
 function OrdersPage() {
-  const orders = useOrders();
+  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: api.listOrders });
   const [q, setQ] = useState("");
   const query = q.toLowerCase();
   const filtered = orders.filter(

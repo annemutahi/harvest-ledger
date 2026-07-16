@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
-import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp, Wallet } from "lucide-react";
+import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp, Wallet, PiggyBank } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
 import { EXPENSES_CHANGE_EVENT, fetchExpensesInRange } from "@/lib/expenses-store";
+import { ORDERS_CHANGE_EVENT, fetchDeliveredOrdersInRange } from "@/lib/orders-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard - Peaceful Acres" }] }),
@@ -85,12 +86,32 @@ function LandingPage() {
     };
   }, []);
 
+  // Delivered orders MTD count toward monthly sales.
+  const [deliveredOrdersMTD, setDeliveredOrdersMTD] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth(), 1);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      fetchDeliveredOrdersInRange(from, to).then((v) => { if (!cancelled) setDeliveredOrdersMTD(v); });
+    };
+    load();
+    window.addEventListener(ORDERS_CHANGE_EVENT, load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(ORDERS_CHANGE_EVENT, load);
+    };
+  }, []);
+
   const monthlySales = useMemo(() => groupMonthlySales(invoices), [invoices]);
   const currentMonth = monthlySales[monthlySales.length - 1] ?? { month: "", sales: 0, receivables: 0 };
   const previousMonth = monthlySales[monthlySales.length - 2];
+  const totalMonthSales = currentMonth.sales + deliveredOrdersMTD;
   const monthlyChange = previousMonth
-    ? ((currentMonth.sales - previousMonth.sales) / previousMonth.sales) * 100
+    ? ((totalMonthSales - previousMonth.sales) / previousMonth.sales) * 100
     : 0;
+  const monthlyProfit = totalMonthSales - expensesThisMonth.total;
   const paymentsReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const totalCredit = invoices.reduce((sum, invoice) => sum + invoice.outstandingBalance, 0);
   const dueSoon = invoices
@@ -110,14 +131,22 @@ function LandingPage() {
         </Button>
       }
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <StatCard
-          label={`${currentMonth.month} Sales`}
-          value={formatCurrency(currentMonth.sales)}
+          label={`${currentMonth.month || "This Month"} Sales`}
+          value={formatCurrency(totalMonthSales)}
           icon={TrendingUp}
           tone="primary"
-          trend={`${monthlyChange >= 0 ? "+" : ""}${monthlyChange.toFixed(1)}% vs ${previousMonth?.month ?? "N/A"}`}
+          trend={`Invoices ${formatCurrency(currentMonth.sales)} · Delivered orders ${formatCurrency(deliveredOrdersMTD)}`}
           trendDirection={monthlyChange >= 0 ? "up" : "down"}
+        />
+        <StatCard
+          label="Profits (MTD)"
+          value={formatCurrency(monthlyProfit)}
+          icon={PiggyBank}
+          tone={monthlyProfit >= 0 ? "success" : "destructive"}
+          trend={`Sales ${formatCurrency(totalMonthSales)} − Expenses ${formatCurrency(expensesThisMonth.total)}`}
+          trendDirection={monthlyProfit >= 0 ? "up" : "down"}
         />
         <StatCard
           label="Payments"

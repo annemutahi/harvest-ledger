@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { ordersStore, ORDER_STATUSES, type Order, type OrderStatus } from "@/lib/orders-store";
+import { api } from "@/lib/api";
+import { ORDER_STATUSES, notifyOrdersChanged, type OrderStatus } from "@/lib/orders-store";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/orders/$id")({
@@ -30,23 +31,32 @@ function OrderNotFound() {
 
 function OrderDetailPage() {
   const { id } = Route.useParams();
-  const navigate = useNavigate();
-  const [order, setOrder] = useState<Order | undefined>(() => ordersStore.get(id));
+  const qc = useQueryClient();
+  const { data: order, isLoading, isError } = useQuery({
+    queryKey: ["orders", id],
+    queryFn: () => api.getOrder(id),
+    retry: false,
+  });
 
-  useEffect(() => {
-    const refresh = () => setOrder(ordersStore.get(id));
-    window.addEventListener(ordersStore.changeEvent, refresh);
-    return () => window.removeEventListener(ordersStore.changeEvent, refresh);
-  }, [id]);
+  const statusMutation = useMutation({
+    mutationFn: (status: OrderStatus) => api.updateOrderStatus(id, status),
+    onSuccess: (updated) => {
+      qc.setQueryData(["orders", id], updated);
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      notifyOrdersChanged();
+      toast.success(`Marked as ${updated.status}`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Update failed"),
+  });
 
-  if (!order) throw notFound();
-
-  const setStatus = (status: OrderStatus) => {
-    ordersStore.updateStatus(order.id, status);
-    // TODO(backend): PATCH /api/orders/:id/status/ — Django will forward the
-    // status update to the online store's API.
-    toast.success(`Marked as ${status}`);
-  };
+  if (isLoading) {
+    return (
+      <AppShell title="Loading…">
+        <p className="text-muted-foreground">Fetching order…</p>
+      </AppShell>
+    );
+  }
+  if (isError || !order) throw notFound();
 
   return (
     <AppShell
@@ -102,7 +112,11 @@ function OrderDetailPage() {
             <CardHeader><CardTitle>Status</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <Badge variant="outline" className="capitalize">{order.status}</Badge>
-              <Select value={order.status} onValueChange={(v) => setStatus(v as OrderStatus)}>
+              <Select
+                value={order.status}
+                onValueChange={(v) => statusMutation.mutate(v as OrderStatus)}
+                disabled={statusMutation.isPending}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ORDER_STATUSES.map((s) => (
@@ -111,7 +125,7 @@ function OrderDetailPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Updating status will also sync back to the online store.
+                Marking an order as <b>delivered</b> adds its total to monthly sales.
               </p>
             </CardContent>
           </Card>
