@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { ORDER_STATUSES, notifyOrdersChanged, type OrderStatus } from "@/lib/orders-store";
@@ -63,12 +63,26 @@ function OrderDetailPage() {
       title={order.reference}
       description={`Placed ${formatDate(order.placedAt)} • ${order.channel}`}
       actions={
-        <Button variant="outline" asChild>
-          <Link to="/orders">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Link>
-        </Button>
+        <>
+          <Button variant="outline" asChild>
+            <Link to="/orders">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/orders/$id/document" params={{ id }} search={{ format: "invoice" }}>
+              <FileText className="mr-2 h-4 w-4" />
+              Invoice
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/orders/$id/document" params={{ id }} search={{ format: "receipt" }}>
+              <ReceiptText className="mr-2 h-4 w-4" />
+              Receipt
+            </Link>
+          </Button>
+        </>
       }
     >
       <div className="grid gap-4 lg:grid-cols-3">
