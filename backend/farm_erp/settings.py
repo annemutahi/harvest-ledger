@@ -82,11 +82,17 @@ TEMPLATES = [
 ]
 
 # Database — Postgres in production, SQLite fallback for local dev.
+# DATABASES = {
+#     "default": env.db_url(
+#         "DATABASE_URL",
+#         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+#     ),
+# }
 DATABASES = {
-    "default": env.db_url(
-        "DATABASE_URL",
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-    ),
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 
 # Argon2 first — modern, memory-hard hashing.
