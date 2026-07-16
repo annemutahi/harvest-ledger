@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, FileText, CreditCard, BarChart3, Settings, Drumstick, Box, LogOut, Wheat,
-  ChevronDown, Wallet, ShoppingBag, HardHat,
+  ChevronDown, Wallet, ShoppingBag, HardHat, ClipboardList,
 } from "lucide-react";
 import { COMPANY } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-context";
@@ -21,6 +21,7 @@ const navItems = [
   { title: "Customers", url: "/customers", icon: Users },
   { title: "Products", url: "/products", icon: Box },
   { title: "Stock", url: "/stock", icon: Wheat },
+  { title: "Orders", url: "/orders", icon: ClipboardList },
   { title: "Transactions", url: "/transactions", icon: CreditCard },
   { title: "Invoices", url: "/invoices", icon: FileText },
 ];
