@@ -63,12 +63,26 @@ function OrderDetailPage() {
       title={order.reference}
       description={`Placed ${formatDate(order.placedAt)} • ${order.channel}`}
       actions={
-        <Button variant="outline" asChild>
-          <Link to="/orders">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Link>
-        </Button>
+        <>
+          <Button variant="outline" asChild>
+            <Link to="/orders">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/orders/$id/document" params={{ id }} search={{ format: "invoice" }}>
+              <FileText className="mr-2 h-4 w-4" />
+              Invoice
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/orders/$id/document" params={{ id }} search={{ format: "receipt" }}>
+              <ReceiptText className="mr-2 h-4 w-4" />
+              Receipt
+            </Link>
+          </Button>
+        </>
       }
     >
       <div className="grid gap-4 lg:grid-cols-3">
