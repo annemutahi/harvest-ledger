@@ -762,3 +762,71 @@ function mapCasualWage(w: any): ApiCasualWage {
   };
 }
 
+
+// ---------- Order DTOs and mappers ----------
+
+export type ApiOrderStatus =
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "ready"
+  | "delivered"
+  | "cancelled";
+
+export type ApiOrderChannel = "online" | "in-person";
+
+export type ApiOrderItem = {
+  productId?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
+export type ApiOrder = {
+  id: string;
+  reference: string;
+  externalId?: string;
+  storeSource?: string;
+  channel: ApiOrderChannel;
+  status: ApiOrderStatus;
+  customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  deliveryAddress?: string;
+  notes?: string;
+  total: number;
+  items: ApiOrderItem[];
+  placedAt: string;
+  updatedAt: string;
+};
+
+function mapOrderItem(i: any): ApiOrderItem {
+  return {
+    productId: i.product != null ? String(i.product) : undefined,
+    productName: i.product_name ?? "",
+    quantity: Number(i.quantity ?? 0),
+    unitPrice: Number(i.unit_price ?? 0),
+    total: Number(i.total ?? 0),
+  };
+}
+
+function mapOrder(o: any): ApiOrder {
+  return {
+    id: String(o.id),
+    reference: o.reference ?? "",
+    externalId: o.external_id || undefined,
+    storeSource: o.store_source || undefined,
+    channel: (o.channel ?? "in-person") as ApiOrderChannel,
+    status: (o.status ?? "pending") as ApiOrderStatus,
+    customerName: o.customer_name ?? "",
+    customerPhone: o.customer_phone || undefined,
+    customerEmail: o.customer_email || undefined,
+    deliveryAddress: o.delivery_address || undefined,
+    notes: o.notes || undefined,
+    total: Number(o.total ?? 0),
+    items: (o.items ?? []).map(mapOrderItem),
+    placedAt: o.placed_at ?? "",
+    updatedAt: o.updated_at ?? "",
+  };
+}
