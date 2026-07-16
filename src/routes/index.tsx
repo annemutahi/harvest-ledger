@@ -131,14 +131,22 @@ function LandingPage() {
         </Button>
       }
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <StatCard
-          label={`${currentMonth.month} Sales`}
-          value={formatCurrency(currentMonth.sales)}
+          label={`${currentMonth.month || "This Month"} Sales`}
+          value={formatCurrency(totalMonthSales)}
           icon={TrendingUp}
           tone="primary"
-          trend={`${monthlyChange >= 0 ? "+" : ""}${monthlyChange.toFixed(1)}% vs ${previousMonth?.month ?? "N/A"}`}
+          trend={`Invoices ${formatCurrency(currentMonth.sales)} · Delivered orders ${formatCurrency(deliveredOrdersMTD)}`}
           trendDirection={monthlyChange >= 0 ? "up" : "down"}
+        />
+        <StatCard
+          label="Profits (MTD)"
+          value={formatCurrency(monthlyProfit)}
+          icon={PiggyBank}
+          tone={monthlyProfit >= 0 ? "success" : "destructive"}
+          trend={`Sales ${formatCurrency(totalMonthSales)} − Expenses ${formatCurrency(expensesThisMonth.total)}`}
+          trendDirection={monthlyProfit >= 0 ? "up" : "down"}
         />
         <StatCard
           label="Payments"
