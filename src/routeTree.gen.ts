@@ -28,6 +28,7 @@ import { Route as ExpensesPurchasesRouteImport } from './routes/expenses.purchas
 import { Route as ExpensesCasualsRouteImport } from './routes/expenses.casuals'
 import { Route as CustomersIdRouteImport } from './routes/customers.$id'
 import { Route as SalesIdEditRouteImport } from './routes/sales.$id.edit'
+import { Route as ApiPublicOrdersWebhookRouteImport } from './routes/api/public/orders.webhook'
 
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
@@ -124,6 +125,11 @@ const SalesIdEditRoute = SalesIdEditRouteImport.update({
   path: '/sales/$id/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicOrdersWebhookRoute = ApiPublicOrdersWebhookRouteImport.update({
+  id: '/api/public/orders/webhook',
+  path: '/api/public/orders/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
+  '/api/public/orders/webhook': typeof ApiPublicOrdersWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/orders': typeof OrdersIndexRoute
   '/products': typeof ProductsIndexRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
+  '/api/public/orders/webhook': typeof ApiPublicOrdersWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
+  '/api/public/orders/webhook': typeof ApiPublicOrdersWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/orders/'
     | '/products/'
     | '/sales/$id/edit'
+    | '/api/public/orders/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/products'
     | '/sales/$id/edit'
+    | '/api/public/orders/webhook'
   id:
     | '__root__'
     | '/'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/orders/'
     | '/products/'
     | '/sales/$id/edit'
+    | '/api/public/orders/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -275,6 +287,7 @@ export interface RootRouteChildren {
   OrdersIndexRoute: typeof OrdersIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   SalesIdEditRoute: typeof SalesIdEditRoute
+  ApiPublicOrdersWebhookRoute: typeof ApiPublicOrdersWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -412,6 +425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SalesIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/orders/webhook': {
+      id: '/api/public/orders/webhook'
+      path: '/api/public/orders/webhook'
+      fullPath: '/api/public/orders/webhook'
+      preLoaderRoute: typeof ApiPublicOrdersWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -435,6 +455,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrdersIndexRoute: OrdersIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   SalesIdEditRoute: SalesIdEditRoute,
+  ApiPublicOrdersWebhookRoute: ApiPublicOrdersWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
