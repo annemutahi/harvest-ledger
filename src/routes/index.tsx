@@ -107,6 +107,111 @@ function LandingPage() {
   }, []);
 
   const monthlySales = useMemo(() => groupMonthlySales(invoices), [invoices]);
+
+  // Sales chart filters
+  const now = new Date();
+  const [chartPeriod, setChartPeriod] = useState<"week" | "month" | "year">("month");
+  const [chartYear, setChartYear] = useState<number>(now.getFullYear() < 2026 ? 2026 : now.getFullYear());
+  const [chartMonth, setChartMonth] = useState<number>(now.getMonth());
+
+  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: api.listOrders });
+
+  const chartData = useMemo(() => {
+    type Point = { label: string; sales: number };
+    const deliveredOrders = orders.filter((o) => o.status === "delivered");
+
+    const addToBucket = (buckets: Map<string, Point>, key: string, label: string, amount: number) => {
+      const existing = buckets.get(key);
+      if (existing) existing.sales += amount;
+      else buckets.set(key, { label, sales: amount });
+    };
+
+    if (chartPeriod === "year") {
+      const buckets = new Map<string, Point>();
+      for (let m = 0; m < 12; m++) {
+        const key = String(m).padStart(2, "0");
+        const label = new Date(chartYear, m, 1).toLocaleString("default", { month: "short" });
+        buckets.set(key, { label, sales: 0 });
+      }
+      invoices.forEach((inv) => {
+        const d = new Date(inv.invoiceDate);
+        if (d.getFullYear() === chartYear) {
+          addToBucket(buckets, String(d.getMonth()).padStart(2, "0"),
+            d.toLocaleString("default", { month: "short" }), inv.totalAmount);
+        }
+      });
+      deliveredOrders.forEach((o) => {
+        const d = new Date(o.updatedAt || o.placedAt);
+        if (d.getFullYear() === chartYear) {
+          addToBucket(buckets, String(d.getMonth()).padStart(2, "0"),
+            d.toLocaleString("default", { month: "short" }), Number(o.total || 0));
+        }
+      });
+      return Array.from(buckets.values());
+    }
+
+    if (chartPeriod === "month") {
+      const daysInMonth = new Date(chartYear, chartMonth + 1, 0).getDate();
+      const buckets = new Map<string, Point>();
+      for (let day = 1; day <= daysInMonth; day++) {
+        buckets.set(String(day), { label: String(day), sales: 0 });
+      }
+      invoices.forEach((inv) => {
+        const d = new Date(inv.invoiceDate);
+        if (d.getFullYear() === chartYear && d.getMonth() === chartMonth) {
+          addToBucket(buckets, String(d.getDate()), String(d.getDate()), inv.totalAmount);
+        }
+      });
+      deliveredOrders.forEach((o) => {
+        const d = new Date(o.updatedAt || o.placedAt);
+        if (d.getFullYear() === chartYear && d.getMonth() === chartMonth) {
+          addToBucket(buckets, String(d.getDate()), String(d.getDate()), Number(o.total || 0));
+        }
+      });
+      return Array.from(buckets.values());
+    }
+
+    // week: current week Mon..Sun
+    const start = new Date(now);
+    const dow = (start.getDay() + 6) % 7; // 0 = Mon
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - dow);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    const buckets = new Map<string, Point>();
+    const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      buckets.set(d.toDateString(), { label: dayLabels[i], sales: 0 });
+    }
+    invoices.forEach((inv) => {
+      const d = new Date(inv.invoiceDate);
+      if (d >= start && d < end) addToBucket(buckets, d.toDateString(),
+        dayLabels[(d.getDay() + 6) % 7], inv.totalAmount);
+    });
+    deliveredOrders.forEach((o) => {
+      const d = new Date(o.updatedAt || o.placedAt);
+      if (d >= start && d < end) addToBucket(buckets, d.toDateString(),
+        dayLabels[(d.getDay() + 6) % 7], Number(o.total || 0));
+    });
+    return Array.from(buckets.values());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoices, orders, chartPeriod, chartYear, chartMonth]);
+
+  const chartTitle = chartPeriod === "year"
+    ? `Sales · ${chartYear}`
+    : chartPeriod === "month"
+    ? `Sales · ${new Date(chartYear, chartMonth, 1).toLocaleString("default", { month: "long" })} ${chartYear}`
+    : "Sales · This Week";
+
+  const yearOptions: number[] = [];
+  for (let y = 2026; y <= Math.max(now.getFullYear(), 2026); y++) yearOptions.push(y);
+  const monthOptions = Array.from({ length: 12 }, (_, i) => ({
+    value: i,
+    label: new Date(2026, i, 1).toLocaleString("default", { month: "long" }),
+  }));
+
   const currentMonth = monthlySales[monthlySales.length - 1] ?? { month: "", sales: 0, receivables: 0 };
   const previousMonth = monthlySales[monthlySales.length - 2];
   const totalMonthSales = currentMonth.sales + deliveredOrdersMTD;
