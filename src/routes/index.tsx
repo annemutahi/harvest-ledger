@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
 });
 
 const today = new Date();
-const dueSoonWindowDays = 14;
+const dueSoonWindowDays = 7;
 
 function daysUntil(date: string) {
   const due = new Date(date);
@@ -131,7 +131,7 @@ function LandingPage() {
         </Button>
       }
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label={`${currentMonth.month || "This Month"} Sales`}
           value={formatCurrency(totalMonthSales)}
@@ -141,7 +141,7 @@ function LandingPage() {
           trendDirection={monthlyChange >= 0 ? "up" : "down"}
         />
         <StatCard
-          label="Profits (MTD)"
+          label="Monthly Profits"
           value={formatCurrency(monthlyProfit)}
           icon={PiggyBank}
           tone={monthlyProfit >= 0 ? "success" : "destructive"}
@@ -171,7 +171,7 @@ function LandingPage() {
           trend={`${dueSoon.length} invoices due in ${dueSoonWindowDays} days`}
         />
         <StatCard
-          label="Expenses (MTD)"
+          label="Expenses This Month"
           value={formatCurrency(expensesThisMonth.total)}
           icon={Wallet}
           tone="destructive"
