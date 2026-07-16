@@ -289,14 +289,45 @@ function LandingPage() {
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card>
-          <CardHeader>
-            <CardTitle>Monthly Sales Summary</CardTitle>
+          <CardHeader className="gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle>{chartTitle}</CardTitle>
+              <Tabs value={chartPeriod} onValueChange={(v) => setChartPeriod(v as "week" | "month" | "year")}>
+                <TabsList>
+                  <TabsTrigger value="week">Week</TabsTrigger>
+                  <TabsTrigger value="month">Month</TabsTrigger>
+                  <TabsTrigger value="year">Year</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            {chartPeriod !== "week" && (
+              <div className="flex flex-wrap gap-2">
+                {chartPeriod === "month" && (
+                  <Select value={String(chartMonth)} onValueChange={(v) => setChartMonth(Number(v))}>
+                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {monthOptions.map((m) => (
+                        <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Select value={String(chartYear)} onValueChange={(v) => setChartYear(Number(v))}>
+                  <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlySales}>
+              <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="month" stroke="var(--color-muted-foreground)" fontSize={12} />
+                <XAxis dataKey="label" stroke="var(--color-muted-foreground)" fontSize={12} />
                 <YAxis
                   stroke="var(--color-muted-foreground)"
                   fontSize={12}
@@ -322,6 +353,7 @@ function LandingPage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
 
         <Card>
           <CardHeader>
