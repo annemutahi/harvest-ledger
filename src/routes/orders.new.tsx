@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { notifyOrdersChanged } from "@/lib/orders-store";
 import { formatCurrency } from "@/lib/mock-data";
-import { ordersStore } from "@/lib/orders-store";
 
 export const Route = createFileRoute("/orders/new")({
   head: () => ({ meta: [{ title: "New Order — Peaceful Acres" }] }),
@@ -24,6 +24,7 @@ interface Line { productId: string; qty: number }
 
 function NewOrderPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
 
   const [customerName, setCustomerName] = useState("");
@@ -45,6 +46,17 @@ function NewOrderPage() {
   const updateLine = (idx: number, patch: Partial<Line>) =>
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
 
+  const createMutation = useMutation({
+    mutationFn: api.createOrder,
+    onSuccess: (order) => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      notifyOrdersChanged();
+      toast.success(`Order ${order.reference} recorded`);
+      navigate({ to: "/orders" });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to create order"),
+  });
+
   const submit = () => {
     if (!customerName.trim()) return toast.error("Customer name is required");
     const items = lines
@@ -56,14 +68,12 @@ function NewOrderPage() {
           productName: p.name,
           quantity: l.qty,
           unitPrice: p.unitPrice,
-          total: p.unitPrice * l.qty,
         };
       });
     if (items.length === 0) return toast.error("Add at least one product");
 
-    const order = ordersStore.create({
+    createMutation.mutate({
       reference: `IPO-${Date.now().toString().slice(-6)}`,
-      channel: "in-person",
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim() || undefined,
       customerEmail: customerEmail.trim() || undefined,
@@ -72,9 +82,6 @@ function NewOrderPage() {
       items,
       status: "confirmed",
     });
-    // TODO(backend): POST /api/orders/  with channel="in-person"
-    toast.success(`Order ${order.reference} recorded`);
-    navigate({ to: "/orders" });
   };
 
   return (
@@ -191,7 +198,9 @@ function NewOrderPage() {
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="outline" asChild><Link to="/orders">Cancel</Link></Button>
-              <Button onClick={submit}>Save order</Button>
+              <Button onClick={submit} disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Saving…" : "Save order"}
+              </Button>
             </div>
           </CardContent>
         </Card>
