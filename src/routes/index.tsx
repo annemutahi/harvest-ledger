@@ -12,7 +12,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
-import { EXPENSES_CHANGE_EVENT, sumExpensesInRange } from "@/lib/expenses-store";
+import { EXPENSES_CHANGE_EVENT, fetchExpensesInRange } from "@/lib/expenses-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard - Peaceful Acres" }] }),
