@@ -12,7 +12,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
-import { EXPENSES_CHANGE_EVENT, sumExpensesInRange } from "@/lib/expenses-store";
+import { EXPENSES_CHANGE_EVENT, fetchExpensesInRange } from "@/lib/expenses-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard - Peaceful Acres" }] }),
@@ -63,20 +63,27 @@ function LandingPage() {
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
 
-  // Expenses from local store (updates when purchases/wages change).
-  const [expensesTick, setExpensesTick] = useState(0);
+  // Expenses summary (server-backed). Refetches on mutation via the change event.
+  const [expensesThisMonth, setExpensesThisMonth] = useState<{ purchases: number; wages: number; total: number }>({
+    purchases: 0,
+    wages: 0,
+    total: 0,
+  });
   useEffect(() => {
-    const handler = () => setExpensesTick((n) => n + 1);
-    window.addEventListener(EXPENSES_CHANGE_EVENT, handler);
-    return () => window.removeEventListener(EXPENSES_CHANGE_EVENT, handler);
+    let cancelled = false;
+    const load = () => {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth(), 1);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      fetchExpensesInRange(from, to).then((v) => { if (!cancelled) setExpensesThisMonth(v); });
+    };
+    load();
+    window.addEventListener(EXPENSES_CHANGE_EVENT, load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(EXPENSES_CHANGE_EVENT, load);
+    };
   }, []);
-  const expensesThisMonth = useMemo(() => {
-    const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth(), 1);
-    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    return sumExpensesInRange(from, to);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expensesTick]);
 
   const monthlySales = useMemo(() => groupMonthlySales(invoices), [invoices]);
   const currentMonth = monthlySales[monthlySales.length - 1] ?? { month: "", sales: 0, receivables: 0 };
