@@ -489,4 +489,232 @@ export const api = {
         }),
       }),
     ),
+
+  // ---------- Expenses: Suppliers ----------
+  listSuppliers: async (): Promise<ApiSupplier[]> =>
+    unwrap<any>(await request("/suppliers/")).map(mapSupplier),
+  createSupplier: async (data: {
+    name: string;
+    contactPerson?: string;
+    phone?: string;
+    email?: string;
+    notes?: string;
+  }): Promise<ApiSupplier> =>
+    mapSupplier(
+      await request("/suppliers/", {
+        method: "POST",
+        body: JSON.stringify({
+          name: data.name,
+          contact_person: data.contactPerson ?? "",
+          phone: data.phone ?? "",
+          email: data.email ?? "",
+          notes: data.notes ?? "",
+        }),
+      }),
+    ),
+  deleteSupplier: async (id: string): Promise<void> =>
+    await request(`/suppliers/${id}/`, { method: "DELETE" }),
+
+  // ---------- Expenses: Purchases ----------
+  listPurchases: async (): Promise<ApiPurchase[]> =>
+    unwrap<any>(await request("/purchases/")).map(mapPurchase),
+  createPurchase: async (data: {
+    supplierId?: string;
+    supplierName: string;
+    date: string;
+    category: string;
+    item: string;
+    quantity: number;
+    unit?: string;
+    unitCost: number;
+    paymentMethod?: string;
+    notes?: string;
+  }): Promise<ApiPurchase> =>
+    mapPurchase(
+      await request("/purchases/", {
+        method: "POST",
+        body: JSON.stringify({
+          supplier: data.supplierId ? Number(data.supplierId) || data.supplierId : null,
+          supplier_name: data.supplierName,
+          date: data.date,
+          category: data.category,
+          item: data.item,
+          quantity: data.quantity,
+          unit: data.unit ?? "",
+          unit_cost: data.unitCost,
+          payment_method: data.paymentMethod ?? "",
+          notes: data.notes ?? "",
+        }),
+      }),
+    ),
+  deletePurchase: async (id: string): Promise<void> =>
+    await request(`/purchases/${id}/`, { method: "DELETE" }),
+
+  // ---------- Expenses: Casual workers ----------
+  listCasualWorkers: async (): Promise<ApiCasualWorker[]> =>
+    unwrap<any>(await request("/casual-workers/")).map(mapCasualWorker),
+  createCasualWorker: async (data: {
+    name: string;
+    phone?: string;
+    dailyRate: number;
+  }): Promise<ApiCasualWorker> =>
+    mapCasualWorker(
+      await request("/casual-workers/", {
+        method: "POST",
+        body: JSON.stringify({
+          name: data.name,
+          phone: data.phone ?? "",
+          daily_rate: data.dailyRate,
+          active: true,
+        }),
+      }),
+    ),
+  deleteCasualWorker: async (id: string): Promise<void> =>
+    await request(`/casual-workers/${id}/`, { method: "DELETE" }),
+
+  // ---------- Expenses: Casual wages ----------
+  listCasualWages: async (): Promise<ApiCasualWage[]> =>
+    unwrap<any>(await request("/casual-wages/")).map(mapCasualWage),
+  createCasualWage: async (data: {
+    workerId?: string;
+    workerName: string;
+    date: string;
+    daysWorked: number;
+    ratePerDay: number;
+    task?: string;
+    paid?: boolean;
+    notes?: string;
+  }): Promise<ApiCasualWage> =>
+    mapCasualWage(
+      await request("/casual-wages/", {
+        method: "POST",
+        body: JSON.stringify({
+          worker: data.workerId ? Number(data.workerId) || data.workerId : null,
+          worker_name: data.workerName,
+          date: data.date,
+          days_worked: data.daysWorked,
+          rate_per_day: data.ratePerDay,
+          task: data.task ?? "",
+          paid: !!data.paid,
+          notes: data.notes ?? "",
+        }),
+      }),
+    ),
+  markCasualWagePaid: async (id: string): Promise<ApiCasualWage> =>
+    mapCasualWage(
+      await request(`/casual-wages/${id}/mark-paid/`, { method: "POST" }),
+    ),
+  deleteCasualWage: async (id: string): Promise<void> =>
+    await request(`/casual-wages/${id}/`, { method: "DELETE" }),
 };
+
+// ---------- Expense DTOs and mappers ----------
+
+export type ApiSupplier = {
+  id: string;
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  createdAt: string;
+};
+
+export type ApiPurchase = {
+  id: string;
+  supplierId?: string;
+  supplierName: string;
+  date: string;
+  category: string;
+  item: string;
+  quantity: number;
+  unit?: string;
+  unitCost: number;
+  total: number;
+  paymentMethod?: string;
+  notes?: string;
+  recordedBy?: string;
+};
+
+export type ApiCasualWorker = {
+  id: string;
+  name: string;
+  phone?: string;
+  dailyRate: number;
+  active: boolean;
+  createdAt: string;
+};
+
+export type ApiCasualWage = {
+  id: string;
+  workerId?: string;
+  workerName: string;
+  date: string;
+  daysWorked: number;
+  ratePerDay: number;
+  total: number;
+  task?: string;
+  paid: boolean;
+  paidAt?: string;
+  notes?: string;
+  recordedBy?: string;
+};
+
+function mapSupplier(s: any): ApiSupplier {
+  return {
+    id: String(s.id),
+    name: s.name ?? "",
+    contactPerson: s.contact_person || undefined,
+    phone: s.phone || undefined,
+    email: s.email || undefined,
+    notes: s.notes || undefined,
+    createdAt: s.created_at ?? "",
+  };
+}
+
+function mapPurchase(p: any): ApiPurchase {
+  return {
+    id: String(p.id),
+    supplierId: p.supplier != null ? String(p.supplier) : undefined,
+    supplierName: p.supplier_name ?? "",
+    date: p.date ?? "",
+    category: p.category ?? "",
+    item: p.item ?? "",
+    quantity: Number(p.quantity ?? 0),
+    unit: p.unit || undefined,
+    unitCost: Number(p.unit_cost ?? 0),
+    total: Number(p.total ?? 0),
+    paymentMethod: p.payment_method || undefined,
+    notes: p.notes || undefined,
+    recordedBy: p.recorded_by ? String(p.recorded_by) : undefined,
+  };
+}
+
+function mapCasualWorker(w: any): ApiCasualWorker {
+  return {
+    id: String(w.id),
+    name: w.name ?? "",
+    phone: w.phone || undefined,
+    dailyRate: Number(w.daily_rate ?? 0),
+    active: !!w.active,
+    createdAt: w.created_at ?? "",
+  };
+}
+
+function mapCasualWage(w: any): ApiCasualWage {
+  return {
+    id: String(w.id),
+    workerId: w.worker != null ? String(w.worker) : undefined,
+    workerName: w.worker_name ?? "",
+    date: w.date ?? "",
+    daysWorked: Number(w.days_worked ?? 0),
+    ratePerDay: Number(w.rate_per_day ?? 0),
+    total: Number(w.total ?? 0),
+    task: w.task || undefined,
+    paid: !!w.paid,
+    paidAt: w.paid_at || undefined,
+    notes: w.notes || undefined,
+    recordedBy: w.recorded_by ? String(w.recorded_by) : undefined,
+  };
+}
+

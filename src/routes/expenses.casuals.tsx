@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,24 +22,49 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, HardHat, Users, Wallet, Trash2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
-import { expensesStore, type CasualWage, type CasualWorker } from "@/lib/expenses-store";
-import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api";
+import { notifyExpensesChanged, type CasualWorker } from "@/lib/expenses-store";
 
 export const Route = createFileRoute("/expenses/casuals")({
   head: () => ({ meta: [{ title: "Casuals — Peaceful Acres" }] }),
   component: CasualsPage,
 });
 
-function useLocalState<T>(compute: () => T, deps: unknown[]): [T, () => void] {
-  const [, tick] = useState(0);
-  const value = useMemo(compute, [tick, ...deps]); // eslint-disable-line react-hooks/exhaustive-deps
-  return [value, () => tick((n) => n + 1)];
-}
-
 function CasualsPage() {
-  const { user } = useAuth();
-  const [workers, refreshWorkers] = useLocalState(() => expensesStore.listWorkers(), []);
-  const [wages, refreshWages] = useLocalState(() => expensesStore.listWages(), []);
+  const qc = useQueryClient();
+
+  const { data: workers = [] } = useQuery({
+    queryKey: ["casual-workers"],
+    queryFn: () => api.listCasualWorkers(),
+  });
+  const { data: wages = [] } = useQuery({
+    queryKey: ["casual-wages"],
+    queryFn: () => api.listCasualWages(),
+  });
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["casual-workers"] });
+    qc.invalidateQueries({ queryKey: ["casual-wages"] });
+    notifyExpensesChanged();
+  };
+
+  const markPaid = useMutation({
+    mutationFn: (id: string) => api.markCasualWagePaid(id),
+    onSuccess: () => { toast.success("Marked as paid"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to update"),
+  });
+
+  const deleteWage = useMutation({
+    mutationFn: (id: string) => api.deleteCasualWage(id),
+    onSuccess: () => { toast.success("Wage entry deleted"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
+  });
+
+  const deleteWorker = useMutation({
+    mutationFn: (id: string) => api.deleteCasualWorker(id),
+    onSuccess: () => { toast.success("Worker removed"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
+  });
 
   const now = new Date();
   const monthTotal = useMemo(
@@ -49,6 +75,7 @@ function CasualsPage() {
           return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
         })
         .reduce((s, w) => s + w.total, 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [wages],
   );
 
@@ -63,8 +90,8 @@ function CasualsPage() {
       description="Track casual workers, log days worked and manage wages."
       actions={
         <div className="flex gap-2">
-          <NewWorkerDialog onCreated={refreshWorkers} />
-          <NewWageDialog workers={workers} onCreated={refreshWages} recordedBy={user?.username} />
+          <NewWorkerDialog onCreated={invalidate} />
+          <NewWageDialog workers={workers} onCreated={invalidate} />
         </div>
       }
     >
@@ -79,18 +106,8 @@ function CasualsPage() {
             return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
           }).length} entries`}
         />
-        <StatCard
-          label="Outstanding (unpaid)"
-          value={formatCurrency(unpaidTotal)}
-          icon={HardHat}
-          tone="earth"
-        />
-        <StatCard
-          label="Workers on roster"
-          value={String(workers.length)}
-          icon={Users}
-          tone="primary"
-        />
+        <StatCard label="Outstanding (unpaid)" value={formatCurrency(unpaidTotal)} icon={HardHat} tone="earth" />
+        <StatCard label="Workers on roster" value={String(workers.length)} icon={Users} tone="primary" />
       </div>
 
       <Tabs defaultValue="wages" className="mt-6">
@@ -101,9 +118,7 @@ function CasualsPage() {
 
         <TabsContent value="wages" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Wage entries</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Wage entries</CardTitle></CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -125,21 +140,13 @@ function CasualsPage() {
                       <TableCell className="font-medium">{w.workerName}</TableCell>
                       <TableCell>
                         <div>{w.task ?? "—"}</div>
-                        {w.notes && (
-                          <p className="mt-1 text-xs text-muted-foreground">{w.notes}</p>
-                        )}
+                        {w.notes && <p className="mt-1 text-xs text-muted-foreground">{w.notes}</p>}
                       </TableCell>
                       <TableCell className="text-right">{w.daysWorked}</TableCell>
                       <TableCell className="text-right">{formatCurrency(w.ratePerDay)}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatCurrency(w.total)}
-                      </TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(w.total)}</TableCell>
                       <TableCell>
-                        {w.paid ? (
-                          <Badge variant="secondary">Paid</Badge>
-                        ) : (
-                          <Badge variant="outline">Unpaid</Badge>
-                        )}
+                        {w.paid ? <Badge variant="secondary">Paid</Badge> : <Badge variant="outline">Unpaid</Badge>}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
@@ -148,11 +155,7 @@ function CasualsPage() {
                               size="icon"
                               variant="ghost"
                               title="Mark paid"
-                              onClick={() => {
-                                expensesStore.updateWage(w.id, { paid: true });
-                                refreshWages();
-                                toast.success("Marked as paid");
-                              }}
+                              onClick={() => markPaid.mutate(w.id)}
                             >
                               <Check className="h-4 w-4" />
                             </Button>
@@ -160,12 +163,7 @@ function CasualsPage() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => {
-                              if (confirm("Delete this wage entry?")) {
-                                expensesStore.removeWage(w.id);
-                                refreshWages();
-                              }
-                            }}
+                            onClick={() => { if (confirm("Delete this wage entry?")) deleteWage.mutate(w.id); }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -188,9 +186,7 @@ function CasualsPage() {
 
         <TabsContent value="workers" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Workers</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Workers</CardTitle></CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -211,12 +207,7 @@ function CasualsPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => {
-                            if (confirm(`Remove ${w.name}?`)) {
-                              expensesStore.removeWorker(w.id);
-                              refreshWorkers();
-                            }
-                          }}
+                          onClick={() => { if (confirm(`Remove ${w.name}?`)) deleteWorker.mutate(w.id); }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -248,15 +239,24 @@ function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
 
   const reset = () => { setName(""); setPhone(""); setRate(""); };
 
+  const createWorker = useMutation({
+    mutationFn: (payload: Parameters<typeof api.createCasualWorker>[0]) => api.createCasualWorker(payload),
+    onSuccess: () => {
+      toast.success("Worker added");
+      onCreated();
+      setOpen(false);
+      reset();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to save worker"),
+  });
+
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger asChild>
         <Button variant="outline"><Plus className="mr-2 h-4 w-4" />New worker</Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New casual worker</DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>New casual worker</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5">
             <Label>Name *</Label>
@@ -276,18 +276,14 @@ function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
           <Button
+            disabled={createWorker.isPending}
             onClick={() => {
               if (!name.trim()) return toast.error("Name is required");
-              const dailyRate = Number(rate) || 0;
-              expensesStore.addWorker({
+              createWorker.mutate({
                 name: name.trim(),
                 phone: phone.trim() || undefined,
-                dailyRate,
+                dailyRate: Number(rate) || 0,
               });
-              toast.success("Worker added");
-              onCreated();
-              setOpen(false);
-              reset();
             }}
           >
             Save worker
@@ -299,13 +295,10 @@ function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
 }
 
 function NewWageDialog({
-  workers,
-  onCreated,
-  recordedBy,
+  workers, onCreated,
 }: {
   workers: CasualWorker[];
   onCreated: () => void;
-  recordedBy?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [workerId, setWorkerId] = useState("");
@@ -327,6 +320,17 @@ function NewWageDialog({
     setDays("1"); setRate(""); setTask(""); setPaid(false); setNotes("");
   };
 
+  const createWage = useMutation({
+    mutationFn: (payload: Parameters<typeof api.createCasualWage>[0]) => api.createCasualWage(payload),
+    onSuccess: () => {
+      toast.success("Wage logged");
+      onCreated();
+      setOpen(false);
+      reset();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to log wage"),
+  });
+
   const submit = () => {
     const worker = workers.find((w) => w.id === workerId);
     const workerName = worker?.name ?? workerNameFallback.trim();
@@ -334,23 +338,16 @@ function NewWageDialog({
     if ((Number(days) || 0) <= 0) return toast.error("Days must be greater than 0");
     if (effectiveRate <= 0) return toast.error("Rate must be greater than 0");
 
-    const payload: Omit<CasualWage, "id"> = {
+    createWage.mutate({
       workerId: worker?.id,
       workerName,
       date,
       daysWorked: Number(days),
       ratePerDay: effectiveRate,
-      total,
       task: task.trim() || undefined,
       paid,
       notes: notes.trim() || undefined,
-      recordedBy,
-    };
-    expensesStore.addWage(payload);
-    toast.success("Wage logged");
-    onCreated();
-    setOpen(false);
-    reset();
+    });
   };
 
   return (
@@ -359,9 +356,7 @@ function NewWageDialog({
         <Button><Plus className="mr-2 h-4 w-4" />Log wage</Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Log casual wage</DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>Log casual wage</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
@@ -378,11 +373,7 @@ function NewWageDialog({
                   </SelectContent>
                 </Select>
               ) : (
-                <Input
-                  value={workerNameFallback}
-                  onChange={(e) => setWorkerNameFallback(e.target.value)}
-                  placeholder="Worker name"
-                />
+                <Input value={workerNameFallback} onChange={(e) => setWorkerNameFallback(e.target.value)} placeholder="Worker name" />
               )}
               {workers.length > 0 && !workerId && (
                 <Input
@@ -444,7 +435,7 @@ function NewWageDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit}>Save wage</Button>
+          <Button onClick={submit} disabled={createWage.isPending}>Save wage</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,8 @@ import { StatCard } from "@/components/stat-card";
 import { Plus, ShoppingBag, Truck, Trash2, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
-import { expensesStore, type Purchase, type Supplier } from "@/lib/expenses-store";
-import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api";
+import { notifyExpensesChanged, type Purchase, type Supplier } from "@/lib/expenses-store";
 
 export const Route = createFileRoute("/expenses/purchases")({
   head: () => ({ meta: [{ title: "Purchases — Peaceful Acres" }] }),
@@ -29,28 +30,40 @@ export const Route = createFileRoute("/expenses/purchases")({
 });
 
 const PURCHASE_CATEGORIES = [
-  "Feed",
-  "Veterinary",
-  "Equipment",
-  "Supplies",
-  "Utilities",
-  "Transport",
-  "Repairs & Maintenance",
-  "Other",
+  "Feed", "Veterinary", "Equipment", "Supplies", "Utilities",
+  "Transport", "Repairs & Maintenance", "Other",
 ];
-
 const PAYMENT_METHODS = ["Cash", "Bank Transfer", "M-Pesa", "Credit", "Cheque"];
 
-function useLocalState<T>(compute: () => T, deps: unknown[]): [T, () => void] {
-  const [, tick] = useState(0);
-  const value = useMemo(compute, [tick, ...deps]); // eslint-disable-line react-hooks/exhaustive-deps
-  return [value, () => tick((n) => n + 1)];
-}
-
 function PurchasesPage() {
-  const { user } = useAuth();
-  const [purchases, refreshPurchases] = useLocalState(() => expensesStore.listPurchases(), []);
-  const [suppliers, refreshSuppliers] = useLocalState(() => expensesStore.listSuppliers(), []);
+  const qc = useQueryClient();
+
+  const { data: purchases = [] } = useQuery({
+    queryKey: ["purchases"],
+    queryFn: () => api.listPurchases(),
+  });
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: () => api.listSuppliers(),
+  });
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["purchases"] });
+    qc.invalidateQueries({ queryKey: ["suppliers"] });
+    notifyExpensesChanged();
+  };
+
+  const deletePurchase = useMutation({
+    mutationFn: (id: string) => api.deletePurchase(id),
+    onSuccess: () => { toast.success("Purchase deleted"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
+  });
+
+  const deleteSupplier = useMutation({
+    mutationFn: (id: string) => api.deleteSupplier(id),
+    onSuccess: () => { toast.success("Supplier removed"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
+  });
 
   const monthTotal = useMemo(() => {
     const now = new Date();
@@ -76,12 +89,8 @@ function PurchasesPage() {
       description="Track supplier purchases and running expenses."
       actions={
         <div className="flex gap-2">
-          <NewSupplierDialog onCreated={refreshSuppliers} />
-          <NewPurchaseDialog
-            suppliers={suppliers}
-            onCreated={refreshPurchases}
-            recordedBy={user?.username}
-          />
+          <NewSupplierDialog onCreated={invalidate} />
+          <NewPurchaseDialog suppliers={suppliers} onCreated={invalidate} />
         </div>
       }
     >
@@ -97,12 +106,7 @@ function PurchasesPage() {
             return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth();
           }).length} entries`}
         />
-        <StatCard
-          label="Year to date"
-          value={formatCurrency(yearTotal)}
-          icon={ShoppingBag}
-          tone="earth"
-        />
+        <StatCard label="Year to date" value={formatCurrency(yearTotal)} icon={ShoppingBag} tone="earth" />
         <StatCard
           label="Suppliers"
           value={String(suppliers.length)}
@@ -120,9 +124,7 @@ function PurchasesPage() {
 
         <TabsContent value="purchases" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>All purchases</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>All purchases</CardTitle></CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -145,28 +147,16 @@ function PurchasesPage() {
                       <TableCell>{p.category}</TableCell>
                       <TableCell>
                         <div>{p.item}</div>
-                        {p.notes && (
-                          <p className="mt-1 text-xs text-muted-foreground">{p.notes}</p>
-                        )}
+                        {p.notes && <p className="mt-1 text-xs text-muted-foreground">{p.notes}</p>}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {p.quantity} {p.unit ?? ""}
-                      </TableCell>
+                      <TableCell className="text-right">{p.quantity} {p.unit ?? ""}</TableCell>
                       <TableCell className="text-right">{formatCurrency(p.unitCost)}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatCurrency(p.total)}
-                      </TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(p.total)}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => {
-                            if (confirm("Delete this purchase?")) {
-                              expensesStore.removePurchase(p.id);
-                              refreshPurchases();
-                              toast.success("Purchase deleted");
-                            }
-                          }}
+                          onClick={() => { if (confirm("Delete this purchase?")) deletePurchase.mutate(p.id); }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -188,9 +178,7 @@ function PurchasesPage() {
 
         <TabsContent value="suppliers" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Suppliers</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Suppliers</CardTitle></CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -215,12 +203,7 @@ function PurchasesPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => {
-                            if (confirm(`Remove ${s.name}?`)) {
-                              expensesStore.removeSupplier(s.id);
-                              refreshSuppliers();
-                            }
-                          }}
+                          onClick={() => { if (confirm(`Remove ${s.name}?`)) deleteSupplier.mutate(s.id); }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -252,9 +235,18 @@ function NewSupplierDialog({ onCreated }: { onCreated: () => void }) {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
 
-  const reset = () => {
-    setName(""); setContact(""); setPhone(""); setEmail(""); setNotes("");
-  };
+  const reset = () => { setName(""); setContact(""); setPhone(""); setEmail(""); setNotes(""); };
+
+  const createSupplier = useMutation({
+    mutationFn: (payload: Parameters<typeof api.createSupplier>[0]) => api.createSupplier(payload),
+    onSuccess: () => {
+      toast.success("Supplier added");
+      onCreated();
+      setOpen(false);
+      reset();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to save supplier"),
+  });
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
@@ -262,9 +254,7 @@ function NewSupplierDialog({ onCreated }: { onCreated: () => void }) {
         <Button variant="outline"><Plus className="mr-2 h-4 w-4" />New supplier</Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New supplier</DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>New supplier</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5">
             <Label>Name *</Label>
@@ -292,19 +282,16 @@ function NewSupplierDialog({ onCreated }: { onCreated: () => void }) {
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
           <Button
+            disabled={createSupplier.isPending}
             onClick={() => {
               if (!name.trim()) return toast.error("Name is required");
-              expensesStore.addSupplier({
+              createSupplier.mutate({
                 name: name.trim(),
                 contactPerson: contactPerson.trim() || undefined,
                 phone: phone.trim() || undefined,
                 email: email.trim() || undefined,
                 notes: notes.trim() || undefined,
               });
-              toast.success("Supplier added");
-              onCreated();
-              setOpen(false);
-              reset();
             }}
           >
             Save supplier
@@ -316,13 +303,10 @@ function NewSupplierDialog({ onCreated }: { onCreated: () => void }) {
 }
 
 function NewPurchaseDialog({
-  suppliers,
-  onCreated,
-  recordedBy,
+  suppliers, onCreated,
 }: {
   suppliers: Supplier[];
   onCreated: () => void;
-  recordedBy?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [supplierId, setSupplierId] = useState<string>("");
@@ -348,16 +332,26 @@ function NewPurchaseDialog({
     setPaymentMethod(PAYMENT_METHODS[0]); setNotes("");
   };
 
+  const createPurchase = useMutation({
+    mutationFn: (payload: Parameters<typeof api.createPurchase>[0]) => api.createPurchase(payload),
+    onSuccess: () => {
+      toast.success("Purchase recorded");
+      onCreated();
+      setOpen(false);
+      reset();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to save purchase"),
+  });
+
   const submit = () => {
     if (!item.trim()) return toast.error("Item description is required");
     if (qty <= 0) return toast.error("Quantity must be greater than 0");
     if (cost <= 0) return toast.error("Unit cost must be greater than 0");
-
     const supplier = suppliers.find((s) => s.id === supplierId);
     const supplierName = supplier?.name ?? supplierNameFallback.trim();
     if (!supplierName) return toast.error("Choose a supplier or enter a name");
 
-    const payload: Omit<Purchase, "id"> = {
+    createPurchase.mutate({
       supplierId: supplier?.id,
       supplierName,
       date,
@@ -366,16 +360,9 @@ function NewPurchaseDialog({
       quantity: qty,
       unit: unit.trim() || undefined,
       unitCost: cost,
-      total,
       paymentMethod,
       notes: notes.trim() || undefined,
-      recordedBy,
-    };
-    expensesStore.addPurchase(payload);
-    toast.success("Purchase recorded");
-    onCreated();
-    setOpen(false);
-    reset();
+    });
   };
 
   return (
@@ -384,9 +371,7 @@ function NewPurchaseDialog({
         <Button><Plus className="mr-2 h-4 w-4" />Record purchase</Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Record purchase</DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>Record purchase</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
@@ -401,11 +386,7 @@ function NewPurchaseDialog({
                   </SelectContent>
                 </Select>
               ) : (
-                <Input
-                  value={supplierNameFallback}
-                  onChange={(e) => setSupplierNameFallback(e.target.value)}
-                  placeholder="Supplier name"
-                />
+                <Input value={supplierNameFallback} onChange={(e) => setSupplierNameFallback(e.target.value)} placeholder="Supplier name" />
               )}
               {suppliers.length > 0 && !supplierId && (
                 <Input
@@ -428,9 +409,7 @@ function NewPurchaseDialog({
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {PURCHASE_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
+                  {PURCHASE_CATEGORIES.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -439,9 +418,7 @@ function NewPurchaseDialog({
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {PAYMENT_METHODS.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
+                  {PAYMENT_METHODS.map((m) => (<SelectItem key={m} value={m}>{m}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -478,7 +455,7 @@ function NewPurchaseDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit}>Save purchase</Button>
+          <Button onClick={submit} disabled={createPurchase.isPending}>Save purchase</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
