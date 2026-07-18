@@ -392,8 +392,8 @@ function WorkerSummary({ workers, logs }: { workers: ApiCasualWorker[]; logs: Ap
   );
 }
 
-function exportLogsCsv(logs: ApiCasualWage[]) {
-  const headers = ["Date", "Worker", "Work Area", "Notes", "Amount", "Status", "Paid Date"];
+function exportLogsCsv(logs: ApiCasualWage[], range?: { from?: string; to?: string }) {
+  const headers = ["Date", "Worker", "Work Area", "Notes", "Paid Status", "Payment Date", "Amount"];
   const rows = [...logs]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((w) =>
@@ -402,19 +402,22 @@ function exportLogsCsv(logs: ApiCasualWage[]) {
         w.workerName,
         (w.task ?? "").replace(/"/g, '""'),
         (w.notes ?? "").replace(/"/g, '""'),
-        w.total.toFixed(2),
         w.paid ? "Paid" : "Unpaid",
         w.paidAt ? w.paidAt.slice(0, 10) : "",
+        w.total.toFixed(2),
       ]
-        .map((v, i) => (i === 2 || i === 3 ? `"${v}"` : String(v)))
+        .map((v, i) => (i === 1 || i === 2 || i === 3 ? `"${v}"` : String(v)))
         .join(","),
     );
 
   const total = logs.reduce((s, w) => s + w.total, 0);
   const unpaid = logs.filter((w) => !w.paid).reduce((s, w) => s + w.total, 0);
   rows.push("");
-  rows.push(`Total,,,,${total.toFixed(2)},,`);
-  rows.push(`Amount due,,,,${unpaid.toFixed(2)},,`);
+  if (range?.from || range?.to) {
+    rows.push(`Range,${range?.from || "…"} to ${range?.to || "…"}`);
+  }
+  rows.push(`Total,,,,,,${total.toFixed(2)}`);
+  rows.push(`Amount due,,,,,,${unpaid.toFixed(2)}`);
 
   const csv = [headers.join(","), ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -428,6 +431,93 @@ function exportLogsCsv(logs: ApiCasualWage[]) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+function EditLogDialog({
+  entry, onOpenChange, onSaved,
+}: {
+  entry: ApiCasualWage | null;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [date, setDate] = useState("");
+  const [area, setArea] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const open = !!entry;
+
+  // Reset form when a new entry is opened.
+  useMemo(() => {
+    if (entry) {
+      setDate(entry.date);
+      setArea(entry.task ?? "");
+      setNotes(entry.notes ?? "");
+    }
+  }, [entry?.id]);
+
+  const updateLog = useMutation({
+    mutationFn: (payload: Parameters<typeof api.updateCasualWage>[1]) =>
+      api.updateCasualWage(entry!.id, payload),
+    onSuccess: () => {
+      toast.success("Entry updated");
+      onSaved();
+      onOpenChange(false);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to update entry"),
+  });
+
+  const submit = () => {
+    if (!entry) return;
+    if (!area.trim()) return toast.error("Work area is required");
+    if (!date) return toast.error("Date is required");
+    updateLog.mutate({ date, task: area.trim(), notes: notes.trim() });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Edit work entry</DialogTitle></DialogHeader>
+        {entry && (
+          <div className="grid gap-3">
+            <div className="rounded-md border bg-muted/30 p-2 text-xs text-muted-foreground">
+              Worker: <span className="font-semibold text-foreground">{entry.workerName}</span>
+              {" · "}Amount: <span className="font-semibold text-foreground">{formatCurrency(entry.total)}</span>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Date *</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Work area / assignment *</Label>
+              <Select value={WORK_AREAS.includes(area) ? area : ""} onValueChange={setArea}>
+                <SelectTrigger><SelectValue placeholder="Select an assignment" /></SelectTrigger>
+                <SelectContent>
+                  {WORK_AREAS.map((a) => (
+                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                className="mt-1"
+                value={WORK_AREAS.includes(area) ? "" : area}
+                onChange={(e) => setArea(e.target.value)}
+                placeholder="…or type a custom assignment"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Notes</Label>
+              <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={submit} disabled={updateLog.isPending}>Save changes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
