@@ -23,7 +23,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 import {
