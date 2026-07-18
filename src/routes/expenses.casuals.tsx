@@ -17,11 +17,19 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
+import { Calendar } from "@/components/ui/calendar";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, HardHat, Users, Wallet, Trash2, Check } from "lucide-react";
+import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
+import {
+  getWorkerAttendance, setWorkerAttendance, ATTENDANCE_CHANGE_EVENT,
+} from "@/lib/attendance-store";
+import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { notifyExpensesChanged, type CasualWorker } from "@/lib/expenses-store";
 
@@ -32,6 +40,8 @@ export const Route = createFileRoute("/expenses/casuals")({
 
 function CasualsPage() {
   const qc = useQueryClient();
+  const [attendanceWorker, setAttendanceWorker] = useState<CasualWorker | null>(null);
+
 
   const { data: workers = [] } = useQuery({
     queryKey: ["casual-workers"],
@@ -200,17 +210,35 @@ function CasualsPage() {
                 <TableBody>
                   {workers.map((w) => (
                     <TableRow key={w.id}>
-                      <TableCell className="font-medium">{w.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <button
+                          type="button"
+                          onClick={() => setAttendanceWorker(w)}
+                          className="text-left text-primary underline-offset-2 hover:underline"
+                        >
+                          {w.name}
+                        </button>
+                      </TableCell>
                       <TableCell>{w.phone ?? "—"}</TableCell>
                       <TableCell className="text-right">{formatCurrency(w.dailyRate)}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => { if (confirm(`Remove ${w.name}?`)) deleteWorker.mutate(w.id); }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Attendance"
+                            onClick={() => setAttendanceWorker(w)}
+                          >
+                            <CalendarDays className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => { if (confirm(`Remove ${w.name}?`)) deleteWorker.mutate(w.id); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -227,9 +255,115 @@ function CasualsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AttendanceSheet
+        worker={attendanceWorker}
+        onClose={() => setAttendanceWorker(null)}
+      />
     </AppShell>
   );
 }
+
+function AttendanceSheet({
+  worker,
+  onClose,
+}: {
+  worker: CasualWorker | null;
+  onClose: () => void;
+}) {
+  const [month, setMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [dates, setDates] = useState<Date[]>([]);
+
+  const workerId = worker?.id ?? "";
+
+  // Load whenever worker changes or attendance is externally updated.
+  useEffect(() => {
+    if (!workerId) return;
+    const load = () => {
+      const isoList = getWorkerAttendance(workerId);
+      setDates(isoList.map((iso) => new Date(iso + "T00:00:00")));
+    };
+    load();
+    window.addEventListener(ATTENDANCE_CHANGE_EVENT, load);
+    return () => window.removeEventListener(ATTENDANCE_CHANGE_EVENT, load);
+  }, [workerId]);
+
+  const toIso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const handleSelect = (selected: Date[] | undefined) => {
+    const next = selected ?? [];
+    setDates(next);
+    if (workerId) setWorkerAttendance(workerId, next.map(toIso));
+  };
+
+  const monthDates = dates.filter(
+    (d) => d.getFullYear() === month.getFullYear() && d.getMonth() === month.getMonth(),
+  );
+
+  const monthLabel = month.toLocaleString("default", { month: "long", year: "numeric" });
+
+  return (
+    <Sheet open={!!worker} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{worker?.name ?? ""} — Attendance</SheetTitle>
+          <SheetDescription>
+            Click a day to toggle attendance. Use the arrows to switch months.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-4 flex items-center justify-between rounded-md border bg-muted/30 p-2">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-sm font-medium">{monthLabel}</div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <Calendar
+            mode="multiple"
+            month={month}
+            onMonthChange={setMonth}
+            selected={dates}
+            onSelect={handleSelect}
+            className="pointer-events-auto"
+          />
+        </div>
+
+        <div className="mt-4 rounded-md border p-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Days present in {monthLabel}</span>
+            <Badge variant="secondary">{monthDates.length}</Badge>
+          </div>
+          {worker && monthDates.length > 0 && (
+            <div className="mt-2 text-xs text-muted-foreground">
+              Estimated wage this month:{" "}
+              <span className="font-semibold text-foreground">
+                {formatCurrency(monthDates.length * worker.dailyRate)}
+              </span>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 
 function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
