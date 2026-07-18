@@ -255,9 +255,115 @@ function CasualsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AttendanceSheet
+        worker={attendanceWorker}
+        onClose={() => setAttendanceWorker(null)}
+      />
     </AppShell>
   );
 }
+
+function AttendanceSheet({
+  worker,
+  onClose,
+}: {
+  worker: CasualWorker | null;
+  onClose: () => void;
+}) {
+  const [month, setMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [dates, setDates] = useState<Date[]>([]);
+
+  const workerId = worker?.id ?? "";
+
+  // Load whenever worker changes or attendance is externally updated.
+  useEffect(() => {
+    if (!workerId) return;
+    const load = () => {
+      const isoList = getWorkerAttendance(workerId);
+      setDates(isoList.map((iso) => new Date(iso + "T00:00:00")));
+    };
+    load();
+    window.addEventListener(ATTENDANCE_CHANGE_EVENT, load);
+    return () => window.removeEventListener(ATTENDANCE_CHANGE_EVENT, load);
+  }, [workerId]);
+
+  const toIso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const handleSelect = (selected: Date[] | undefined) => {
+    const next = selected ?? [];
+    setDates(next);
+    if (workerId) setWorkerAttendance(workerId, next.map(toIso));
+  };
+
+  const monthDates = dates.filter(
+    (d) => d.getFullYear() === month.getFullYear() && d.getMonth() === month.getMonth(),
+  );
+
+  const monthLabel = month.toLocaleString("default", { month: "long", year: "numeric" });
+
+  return (
+    <Sheet open={!!worker} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{worker?.name ?? ""} — Attendance</SheetTitle>
+          <SheetDescription>
+            Click a day to toggle attendance. Use the arrows to switch months.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-4 flex items-center justify-between rounded-md border bg-muted/30 p-2">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-sm font-medium">{monthLabel}</div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <Calendar
+            mode="multiple"
+            month={month}
+            onMonthChange={setMonth}
+            selected={dates}
+            onSelect={handleSelect}
+            className="pointer-events-auto"
+          />
+        </div>
+
+        <div className="mt-4 rounded-md border p-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Days present in {monthLabel}</span>
+            <Badge variant="secondary">{monthDates.length}</Badge>
+          </div>
+          {worker && monthDates.length > 0 && (
+            <div className="mt-2 text-xs text-muted-foreground">
+              Estimated wage this month:{" "}
+              <span className="font-semibold text-foreground">
+                {formatCurrency(monthDates.length * worker.dailyRate)}
+              </span>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 
 function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
