@@ -17,11 +17,19 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
+import { Calendar } from "@/components/ui/calendar";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, HardHat, Users, Wallet, Trash2, Check } from "lucide-react";
+import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
+import {
+  getWorkerAttendance, setWorkerAttendance, ATTENDANCE_CHANGE_EVENT,
+} from "@/lib/attendance-store";
+import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { notifyExpensesChanged, type CasualWorker } from "@/lib/expenses-store";
 
