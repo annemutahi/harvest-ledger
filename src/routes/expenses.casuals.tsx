@@ -406,9 +406,19 @@ function AttendanceSheet({
             <Badge variant="secondary">{monthDayCount}</Badge>
           </div>
           {worker && monthEntries.length > 0 && (
-            <div className="mt-1 text-xs text-muted-foreground">
-              Estimated wage this month:{" "}
-              <span className="font-semibold text-foreground">{formatCurrency(monthWage)}</span>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground">
+                Estimated wage this month:{" "}
+                <span className="font-semibold text-foreground">{formatCurrency(monthWage)}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => exportAttendanceCsv(worker, month, entries)}
+              >
+                <Download className="mr-1 h-4 w-4" />
+                Export CSV
+              </Button>
             </div>
           )}
         </div>
