@@ -82,16 +82,16 @@
   --chart-3: oklch(0.32 0.08 270);
   --chart-4: oklch(0.6 0.1 60);
   --chart-5: oklch(0.55 0.08 200);
-  --sidebar: oklch(0.24 0.06 270);
+  --sidebar: oklch(0.45 0.13 152);
   --sidebar-foreground: oklch(0.96 0.01 95);
   --sidebar-primary: oklch(0.82 0.16 88);
-  --sidebar-primary-foreground: oklch(0.22 0.06 270);
-  --sidebar-accent: oklch(0.3 0.06 270);
+  --sidebar-primary-foreground: oklch(21.075% 0.09013 314.645);
+  --sidebar-accent: oklch(23.226% 0.09082 293.348);
   --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.32 0.05 270);
+  --sidebar-border: oklch(23.226% 0.09082 293.348);
   --sidebar-ring: oklch(0.82 0.16 88);
 }
-
+s
 
 .dark {
   --background: oklch(0.18 0.02 145);

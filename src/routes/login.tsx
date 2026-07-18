@@ -25,8 +25,8 @@ function LoginPage() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden bg-primary p-12 text-primary-foreground lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-2">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary-foreground/10">
-            <Sprout className="h-6 w-6" />
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary-foreground/10">
+            <img src="/assets/favicon.png" alt="" className="h-9 w-9 rounded-full" />
           </div>
           <span className="text-lg font-semibold">Peaceful Acres Farm Limited</span>
         </div>
@@ -36,7 +36,7 @@ function LoginPage() {
             Track sales, manage receivables, and keep your farm's cashflow healthy with a workspace built for growers.
           </p>
         </div>
-        <p className="text-xs text-primary-foreground/60">© 2026 Peaceful Acres Farm Limited</p>
+        <p className="text-xs text-primary-foreground/60">© {new Date().getFullYear()}  Peaceful Acres Farm Limited</p>
       </div>
       <div className="flex items-center justify-center p-6 md:p-12">
         <Card className="w-full max-w-md border-0 shadow-none lg:border lg:shadow-sm">

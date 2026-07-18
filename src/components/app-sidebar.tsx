@@ -49,8 +49,8 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-3">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-            <Drumstick className="h-5 w-5" />
+          <div className="grid h-9 w-9 shrink-0 place-items-center">
+            <img src="/assets/favicon.png" alt="" className="h-9 w-9 rounded-full" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
