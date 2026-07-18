@@ -210,17 +210,35 @@ function CasualsPage() {
                 <TableBody>
                   {workers.map((w) => (
                     <TableRow key={w.id}>
-                      <TableCell className="font-medium">{w.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <button
+                          type="button"
+                          onClick={() => setAttendanceWorker(w)}
+                          className="text-left text-primary underline-offset-2 hover:underline"
+                        >
+                          {w.name}
+                        </button>
+                      </TableCell>
                       <TableCell>{w.phone ?? "—"}</TableCell>
                       <TableCell className="text-right">{formatCurrency(w.dailyRate)}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => { if (confirm(`Remove ${w.name}?`)) deleteWorker.mutate(w.id); }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Attendance"
+                            onClick={() => setAttendanceWorker(w)}
+                          >
+                            <CalendarDays className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => { if (confirm(`Remove ${w.name}?`)) deleteWorker.mutate(w.id); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
