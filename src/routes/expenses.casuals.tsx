@@ -141,18 +141,7 @@ function CasualsPage() {
         </TabsList>
 
         <TabsContent value="log" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-              <CardTitle>Work entries</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={logs.length === 0}
-                onClick={() => exportLogsCsv(logs)}
-              >
-                <Download className="mr-1 h-4 w-4" />
-                Export CSV
-        <TabsContent value="log" className="mt-4">
+
           <Card>
             <CardHeader className="flex flex-col gap-3 space-y-0 md:flex-row md:items-center md:justify-between">
               <CardTitle>Work entries</CardTitle>
