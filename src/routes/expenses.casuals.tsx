@@ -446,7 +446,7 @@ function EditLogDialog({
   const open = !!entry;
 
   // Reset form when a new entry is opened.
-  useMemo(() => {
+  useEffect(() => {
     if (entry) {
       setDate(entry.date);
       setArea(entry.task ?? "");
