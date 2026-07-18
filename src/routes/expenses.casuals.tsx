@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, HardHat, Users, Wallet, Trash2, Check, Download } from "lucide-react";
+import { Plus, HardHat, Users, Wallet, Trash2, Check, Download, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 import { api, type ApiCasualWage, type ApiCasualWorker } from "@/lib/api";
@@ -85,6 +85,18 @@ function CasualsPage() {
     onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
   });
 
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [editing, setEditing] = useState<ApiCasualWage | null>(null);
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter((w) => {
+      if (fromDate && w.date < fromDate) return false;
+      if (toDate && w.date > toDate) return false;
+      return true;
+    });
+  }, [logs, fromDate, toDate]);
+
   const unpaidTotal = useMemo(
     () => logs.filter((w) => !w.paid).reduce((s, w) => s + w.total, 0),
     [logs],
@@ -129,18 +141,48 @@ function CasualsPage() {
         </TabsList>
 
         <TabsContent value="log" className="mt-4">
+
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+            <CardHeader className="flex flex-col gap-3 space-y-0 md:flex-row md:items-center md:justify-between">
               <CardTitle>Work entries</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={logs.length === 0}
-                onClick={() => exportLogsCsv(logs)}
-              >
-                <Download className="mr-1 h-4 w-4" />
-                Export CSV
-              </Button>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="grid gap-1">
+                  <Label className="text-xs">From</Label>
+                  <Input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="h-9 w-[150px]"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-xs">To</Label>
+                  <Input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="h-9 w-[150px]"
+                  />
+                </div>
+                {(fromDate || toDate) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setFromDate(""); setToDate(""); }}
+                  >
+                    <X className="mr-1 h-4 w-4" />Clear
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={filteredLogs.length === 0}
+                  onClick={() => exportLogsCsv(filteredLogs, { from: fromDate, to: toDate })}
+                >
+                  <Download className="mr-1 h-4 w-4" />
+                  Export CSV
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -156,7 +198,7 @@ function CasualsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {logs.map((w) => (
+                  {filteredLogs.map((w) => (
                     <TableRow key={w.id}>
                       <TableCell>{formatDate(w.date)}</TableCell>
                       <TableCell className="font-medium">{w.workerName}</TableCell>
@@ -181,13 +223,23 @@ function CasualsPage() {
                               <Check className="mr-1 h-4 w-4" />Paid
                             </Button>
                           ) : (
-                            <Button
-                              size="sm"
-                              onClick={() => markPaid.mutate(w.id)}
-                              disabled={markPaid.isPending}
-                            >
-                              Mark as paid
-                            </Button>
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setEditing(w)}
+                                title="Edit entry"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => markPaid.mutate(w.id)}
+                                disabled={markPaid.isPending}
+                              >
+                                Mark as paid
+                              </Button>
+                            </>
                           )}
                           <Button
                             size="icon"
@@ -200,10 +252,12 @@ function CasualsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {logs.length === 0 && (
+                  {filteredLogs.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                        No work entries yet. Click "Log work" to record a day.
+                        {logs.length === 0
+                          ? 'No work entries yet. Click "Log work" to record a day.'
+                          : "No entries match the selected date range."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -211,6 +265,11 @@ function CasualsPage() {
               </Table>
             </CardContent>
           </Card>
+          <EditLogDialog
+            entry={editing}
+            onOpenChange={(v) => { if (!v) setEditing(null); }}
+            onSaved={invalidate}
+          />
         </TabsContent>
 
         <TabsContent value="workers" className="mt-4">
@@ -333,8 +392,8 @@ function WorkerSummary({ workers, logs }: { workers: ApiCasualWorker[]; logs: Ap
   );
 }
 
-function exportLogsCsv(logs: ApiCasualWage[]) {
-  const headers = ["Date", "Worker", "Work Area", "Notes", "Amount", "Status", "Paid Date"];
+function exportLogsCsv(logs: ApiCasualWage[], range?: { from?: string; to?: string }) {
+  const headers = ["Date", "Worker", "Work Area", "Notes", "Paid Status", "Payment Date", "Amount"];
   const rows = [...logs]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((w) =>
@@ -343,19 +402,22 @@ function exportLogsCsv(logs: ApiCasualWage[]) {
         w.workerName,
         (w.task ?? "").replace(/"/g, '""'),
         (w.notes ?? "").replace(/"/g, '""'),
-        w.total.toFixed(2),
         w.paid ? "Paid" : "Unpaid",
         w.paidAt ? w.paidAt.slice(0, 10) : "",
+        w.total.toFixed(2),
       ]
-        .map((v, i) => (i === 2 || i === 3 ? `"${v}"` : String(v)))
+        .map((v, i) => (i === 1 || i === 2 || i === 3 ? `"${v}"` : String(v)))
         .join(","),
     );
 
   const total = logs.reduce((s, w) => s + w.total, 0);
   const unpaid = logs.filter((w) => !w.paid).reduce((s, w) => s + w.total, 0);
   rows.push("");
-  rows.push(`Total,,,,${total.toFixed(2)},,`);
-  rows.push(`Amount due,,,,${unpaid.toFixed(2)},,`);
+  if (range?.from || range?.to) {
+    rows.push(`Range,${range?.from || "…"} to ${range?.to || "…"}`);
+  }
+  rows.push(`Total,,,,,,${total.toFixed(2)}`);
+  rows.push(`Amount due,,,,,,${unpaid.toFixed(2)}`);
 
   const csv = [headers.join(","), ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -369,6 +431,93 @@ function exportLogsCsv(logs: ApiCasualWage[]) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+function EditLogDialog({
+  entry, onOpenChange, onSaved,
+}: {
+  entry: ApiCasualWage | null;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [date, setDate] = useState("");
+  const [area, setArea] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const open = !!entry;
+
+  // Reset form when a new entry is opened.
+  useEffect(() => {
+    if (entry) {
+      setDate(entry.date);
+      setArea(entry.task ?? "");
+      setNotes(entry.notes ?? "");
+    }
+  }, [entry?.id]);
+
+  const updateLog = useMutation({
+    mutationFn: (payload: Parameters<typeof api.updateCasualWage>[1]) =>
+      api.updateCasualWage(entry!.id, payload),
+    onSuccess: () => {
+      toast.success("Entry updated");
+      onSaved();
+      onOpenChange(false);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to update entry"),
+  });
+
+  const submit = () => {
+    if (!entry) return;
+    if (!area.trim()) return toast.error("Work area is required");
+    if (!date) return toast.error("Date is required");
+    updateLog.mutate({ date, task: area.trim(), notes: notes.trim() });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Edit work entry</DialogTitle></DialogHeader>
+        {entry && (
+          <div className="grid gap-3">
+            <div className="rounded-md border bg-muted/30 p-2 text-xs text-muted-foreground">
+              Worker: <span className="font-semibold text-foreground">{entry.workerName}</span>
+              {" · "}Amount: <span className="font-semibold text-foreground">{formatCurrency(entry.total)}</span>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Date *</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Work area / assignment *</Label>
+              <Select value={WORK_AREAS.includes(area) ? area : ""} onValueChange={setArea}>
+                <SelectTrigger><SelectValue placeholder="Select an assignment" /></SelectTrigger>
+                <SelectContent>
+                  {WORK_AREAS.map((a) => (
+                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                className="mt-1"
+                value={WORK_AREAS.includes(area) ? "" : area}
+                onChange={(e) => setArea(e.target.value)}
+                placeholder="…or type a custom assignment"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Notes</Label>
+              <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={submit} disabled={updateLog.isPending}>Save changes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
