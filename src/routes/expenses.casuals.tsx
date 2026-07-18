@@ -85,6 +85,18 @@ function CasualsPage() {
     onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
   });
 
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [editing, setEditing] = useState<ApiCasualWage | null>(null);
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter((w) => {
+      if (fromDate && w.date < fromDate) return false;
+      if (toDate && w.date > toDate) return false;
+      return true;
+    });
+  }, [logs, fromDate, toDate]);
+
   const unpaidTotal = useMemo(
     () => logs.filter((w) => !w.paid).reduce((s, w) => s + w.total, 0),
     [logs],
