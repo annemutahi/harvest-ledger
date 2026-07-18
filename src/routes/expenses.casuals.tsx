@@ -23,12 +23,14 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 import {
-  getWorkerAttendance, setWorkerAttendance, ATTENDANCE_CHANGE_EVENT,
+  getWorkerAttendanceMap, setWorkerAttendance, setDayEntry, removeDay,
+  ATTENDANCE_CHANGE_EVENT, type WorkerAttendance, type AttendanceEntry,
 } from "@/lib/attendance-store";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { notifyExpensesChanged, type CasualWorker } from "@/lib/expenses-store";
@@ -264,6 +266,59 @@ function CasualsPage() {
   );
 }
 
+function exportAttendanceCsv(
+  worker: CasualWorker,
+  month: Date,
+  entries: WorkerAttendance,
+) {
+  const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+  const rows = Object.entries(entries)
+    .filter(([iso]) => iso.startsWith(monthKey))
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  const headers = ["Date", "Day", "Fraction", "Standard Pay", "Custom Pay", "Actual Pay", "Note"];
+  const body = rows.map(([iso, entry]) => {
+    const d = new Date(iso + "T00:00:00");
+    const day = d.toLocaleDateString(undefined, { weekday: "long" });
+    const fraction = entry.fraction;
+    const standardPay = fraction * worker.dailyRate;
+    const customPay = entry.pay ?? "";
+    const actualPay = entry.pay != null ? entry.pay : standardPay;
+    const note = (entry.note ?? "").replace(/"/g, '""');
+    return [
+      iso,
+      day,
+      fraction,
+      standardPay.toFixed(2),
+      customPay === "" ? "" : customPay.toFixed(2),
+      actualPay.toFixed(2),
+      `"${note}"`,
+    ].join(",");
+  });
+
+  const total = rows.reduce(
+    (s, [, e]) => s + (e.pay != null ? e.pay : e.fraction * worker.dailyRate),
+    0,
+  );
+  const totalDays = rows.reduce((s, [, e]) => s + e.fraction, 0);
+
+  body.push("");
+  body.push(`Total days,${totalDays.toFixed(2)},,,,,`);
+  body.push(`Estimated wage,,,,,${total.toFixed(2)},`);
+  body.push(`Daily rate,,,,,${worker.dailyRate.toFixed(2)},`);
+
+  const csv = [headers.join(","), ...body].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${worker.name.replace(/\s+/g, "_")}_attendance_${monthKey}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function AttendanceSheet({
   worker,
   onClose,
@@ -275,17 +330,13 @@ function AttendanceSheet({
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
-  const [dates, setDates] = useState<Date[]>([]);
+  const [entries, setEntries] = useState<WorkerAttendance>({});
 
   const workerId = worker?.id ?? "";
 
-  // Load whenever worker changes or attendance is externally updated.
   useEffect(() => {
     if (!workerId) return;
-    const load = () => {
-      const isoList = getWorkerAttendance(workerId);
-      setDates(isoList.map((iso) => new Date(iso + "T00:00:00")));
-    };
+    const load = () => setEntries(getWorkerAttendanceMap(workerId));
     load();
     window.addEventListener(ATTENDANCE_CHANGE_EVENT, load);
     return () => window.removeEventListener(ATTENDANCE_CHANGE_EVENT, load);
@@ -294,15 +345,25 @@ function AttendanceSheet({
   const toIso = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
+  const selectedDates = Object.keys(entries).map((iso) => new Date(iso + "T00:00:00"));
+
   const handleSelect = (selected: Date[] | undefined) => {
-    const next = selected ?? [];
-    setDates(next);
-    if (workerId) setWorkerAttendance(workerId, next.map(toIso));
+    if (!workerId) return;
+    setWorkerAttendance(workerId, (selected ?? []).map(toIso));
   };
 
-  const monthDates = dates.filter(
-    (d) => d.getFullYear() === month.getFullYear() && d.getMonth() === month.getMonth(),
-  );
+  const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+  const monthEntries = Object.entries(entries)
+    .filter(([iso]) => iso.startsWith(monthKey))
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  const monthDayCount = monthEntries.reduce((s, [, e]) => s + e.fraction, 0);
+  const monthWage = worker
+    ? monthEntries.reduce(
+        (s, [, e]) => s + (e.pay != null ? e.pay : e.fraction * worker.dailyRate),
+        0,
+      )
+    : 0;
 
   const monthLabel = month.toLocaleString("default", { month: "long", year: "numeric" });
 
@@ -312,24 +373,18 @@ function AttendanceSheet({
         <SheetHeader>
           <SheetTitle>{worker?.name ?? ""} — Attendance</SheetTitle>
           <SheetDescription>
-            Click a day to toggle attendance. Use the arrows to switch months.
+            Click a day to toggle attendance. Click a listed day below to edit half-day or custom pay.
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 flex items-center justify-between rounded-md border bg-muted/30 p-2">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-          >
+          <Button size="icon" variant="ghost"
+            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="text-sm font-medium">{monthLabel}</div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-          >
+          <Button size="icon" variant="ghost"
+            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -339,7 +394,7 @@ function AttendanceSheet({
             mode="multiple"
             month={month}
             onMonthChange={setMonth}
-            selected={dates}
+            selected={selectedDates}
             onSelect={handleSelect}
             className="pointer-events-auto"
           />
@@ -348,21 +403,163 @@ function AttendanceSheet({
         <div className="mt-4 rounded-md border p-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Days present in {monthLabel}</span>
-            <Badge variant="secondary">{monthDates.length}</Badge>
+            <Badge variant="secondary">{monthDayCount}</Badge>
           </div>
-          {worker && monthDates.length > 0 && (
-            <div className="mt-2 text-xs text-muted-foreground">
-              Estimated wage this month:{" "}
-              <span className="font-semibold text-foreground">
-                {formatCurrency(monthDates.length * worker.dailyRate)}
-              </span>
+          {worker && monthEntries.length > 0 && (
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground">
+                Estimated wage this month:{" "}
+                <span className="font-semibold text-foreground">{formatCurrency(monthWage)}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => exportAttendanceCsv(worker, month, entries)}
+              >
+                <Download className="mr-1 h-4 w-4" />
+                Export CSV
+              </Button>
             </div>
           )}
         </div>
+
+        {worker && monthEntries.length > 0 && (
+          <div className="mt-4 space-y-1">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Day details
+            </div>
+            <div className="rounded-md border divide-y">
+              {monthEntries.map(([iso, entry]) => (
+                <DayRow
+                  key={iso}
+                  iso={iso}
+                  entry={entry}
+                  dailyRate={worker.dailyRate}
+                  onSave={(next) => setDayEntry(workerId, iso, next)}
+                  onRemove={() => removeDay(workerId, iso)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
 }
+
+function DayRow({
+  iso, entry, dailyRate, onSave, onRemove,
+}: {
+  iso: string;
+  entry: AttendanceEntry;
+  dailyRate: number;
+  onSave: (next: AttendanceEntry) => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"full" | "half" | "custom">(
+    entry.pay != null ? "custom" : entry.fraction === 0.5 ? "half" : "full",
+  );
+  const [fraction, setFraction] = useState(String(entry.fraction ?? 1));
+  const [pay, setPay] = useState(entry.pay != null ? String(entry.pay) : "");
+  const [note, setNote] = useState(entry.note ?? "");
+
+  const effectivePay = entry.pay != null ? entry.pay : entry.fraction * dailyRate;
+  const label = new Date(iso + "T00:00:00").toLocaleDateString(undefined, {
+    weekday: "short", day: "numeric", month: "short",
+  });
+
+  const save = () => {
+    let next: AttendanceEntry;
+    if (mode === "full") next = { fraction: 1, note: note.trim() || undefined };
+    else if (mode === "half") next = { fraction: 0.5, note: note.trim() || undefined };
+    else {
+      const f = Number(fraction) || 0;
+      const p = pay.trim() === "" ? undefined : Number(pay);
+      if (f <= 0 && p == null) { toast.error("Enter a fraction or custom pay"); return; }
+      next = { fraction: f > 0 ? f : 1, pay: p, note: note.trim() || undefined };
+    }
+    onSave(next);
+    setOpen(false);
+    toast.success("Day updated");
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between p-2 text-left hover:bg-muted/40"
+        >
+          <div>
+            <div className="text-sm font-medium">{label}</div>
+            <div className="text-xs text-muted-foreground">
+              {entry.fraction === 1 && entry.pay == null
+                ? "Full day"
+                : entry.pay != null
+                  ? `Custom pay (${entry.fraction} day)`
+                  : `${entry.fraction} day`}
+              {entry.note ? ` · ${entry.note}` : ""}
+            </div>
+          </div>
+          <div className="text-sm font-semibold">{formatCurrency(effectivePay)}</div>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="end">
+        <div className="grid gap-3">
+          <div className="text-sm font-medium">Edit {label}</div>
+          <div className="grid gap-1.5">
+            <Label>Type</Label>
+            <Select value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full">Full day (1.0)</SelectItem>
+                <SelectItem value="half">Half day (0.5)</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {mode === "custom" && (
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label>Fraction</Label>
+                <Input
+                  type="number" min="0" step="0.25"
+                  value={fraction}
+                  onChange={(e) => setFraction(e.target.value)}
+                  placeholder="1"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Custom pay</Label>
+                <Input
+                  type="number" min="0" step="any"
+                  value={pay}
+                  onChange={(e) => setPay(e.target.value)}
+                  placeholder={String(dailyRate)}
+                />
+              </div>
+            </div>
+          )}
+          <div className="grid gap-1.5">
+            <Label>Note</Label>
+            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
+          </div>
+          <div className="flex justify-between gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { onRemove(); setOpen(false); }}>
+              <Trash2 className="mr-1 h-4 w-4" />Remove
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button size="sm" onClick={save}>Save</Button>
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
 
 function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
