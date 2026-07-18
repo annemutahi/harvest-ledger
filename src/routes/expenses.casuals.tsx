@@ -23,7 +23,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 import {
@@ -266,6 +266,59 @@ function CasualsPage() {
   );
 }
 
+function exportAttendanceCsv(
+  worker: CasualWorker,
+  month: Date,
+  entries: WorkerAttendance,
+) {
+  const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+  const rows = Object.entries(entries)
+    .filter(([iso]) => iso.startsWith(monthKey))
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  const headers = ["Date", "Day", "Fraction", "Standard Pay", "Custom Pay", "Actual Pay", "Note"];
+  const body = rows.map(([iso, entry]) => {
+    const d = new Date(iso + "T00:00:00");
+    const day = d.toLocaleDateString(undefined, { weekday: "long" });
+    const fraction = entry.fraction;
+    const standardPay = fraction * worker.dailyRate;
+    const customPay = entry.pay ?? "";
+    const actualPay = entry.pay != null ? entry.pay : standardPay;
+    const note = (entry.note ?? "").replace(/"/g, '""');
+    return [
+      iso,
+      day,
+      fraction,
+      standardPay.toFixed(2),
+      customPay === "" ? "" : customPay.toFixed(2),
+      actualPay.toFixed(2),
+      `"${note}"`,
+    ].join(",");
+  });
+
+  const total = rows.reduce(
+    (s, [, e]) => s + (e.pay != null ? e.pay : e.fraction * worker.dailyRate),
+    0,
+  );
+  const totalDays = rows.reduce((s, [, e]) => s + e.fraction, 0);
+
+  body.push("");
+  body.push(`Total days,${totalDays.toFixed(2)},,,,,`);
+  body.push(`Estimated wage,,,,,${total.toFixed(2)},`);
+  body.push(`Daily rate,,,,,${worker.dailyRate.toFixed(2)},`);
+
+  const csv = [headers.join(","), ...body].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${worker.name.replace(/\s+/g, "_")}_attendance_${monthKey}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function AttendanceSheet({
   worker,
   onClose,
@@ -353,9 +406,19 @@ function AttendanceSheet({
             <Badge variant="secondary">{monthDayCount}</Badge>
           </div>
           {worker && monthEntries.length > 0 && (
-            <div className="mt-1 text-xs text-muted-foreground">
-              Estimated wage this month:{" "}
-              <span className="font-semibold text-foreground">{formatCurrency(monthWage)}</span>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground">
+                Estimated wage this month:{" "}
+                <span className="font-semibold text-foreground">{formatCurrency(monthWage)}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => exportAttendanceCsv(worker, month, entries)}
+              >
+                <Download className="mr-1 h-4 w-4" />
+                Export CSV
+              </Button>
             </div>
           )}
         </div>
