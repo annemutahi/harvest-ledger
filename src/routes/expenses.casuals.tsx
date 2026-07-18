@@ -40,6 +40,8 @@ export const Route = createFileRoute("/expenses/casuals")({
 
 function CasualsPage() {
   const qc = useQueryClient();
+  const [attendanceWorker, setAttendanceWorker] = useState<CasualWorker | null>(null);
+
 
   const { data: workers = [] } = useQuery({
     queryKey: ["casual-workers"],
