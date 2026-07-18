@@ -572,6 +572,22 @@ export const api = {
         }),
       }),
     ),
+  updateCasualWorker: async (
+    id: string,
+    patch: Partial<{ name: string; phone: string; dailyRate: number; active: boolean }>,
+  ): Promise<ApiCasualWorker> => {
+    const body: Record<string, unknown> = {};
+    if (patch.name !== undefined) body.name = patch.name;
+    if (patch.phone !== undefined) body.phone = patch.phone;
+    if (patch.dailyRate !== undefined) body.daily_rate = patch.dailyRate;
+    if (patch.active !== undefined) body.active = patch.active;
+    return mapCasualWorker(
+      await request(`/casual-workers/${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    );
+  },
   deleteCasualWorker: async (id: string): Promise<void> =>
     await request(`/casual-workers/${id}/`, { method: "DELETE" }),
 
