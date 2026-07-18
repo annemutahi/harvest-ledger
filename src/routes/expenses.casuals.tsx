@@ -26,13 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
-import {
-  getWorkerAttendanceMap, setWorkerAttendance, setDayEntry, removeDay,
-  ATTENDANCE_CHANGE_EVENT, type WorkerAttendance, type AttendanceEntry,
-} from "@/lib/attendance-store";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useEffect } from "react";
-import { api } from "@/lib/api";
+import { api, type ApiCasualWage } from "@/lib/api";
 import { notifyExpensesChanged, type CasualWorker } from "@/lib/expenses-store";
 
 export const Route = createFileRoute("/expenses/casuals")({
@@ -43,7 +38,6 @@ export const Route = createFileRoute("/expenses/casuals")({
 function CasualsPage() {
   const qc = useQueryClient();
   const [attendanceWorker, setAttendanceWorker] = useState<CasualWorker | null>(null);
-
 
   const { data: workers = [] } = useQuery({
     queryKey: ["casual-workers"],
@@ -130,7 +124,18 @@ function CasualsPage() {
 
         <TabsContent value="wages" className="mt-4">
           <Card>
-            <CardHeader><CardTitle>Wage entries</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+              <CardTitle>Wage entries</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={wages.length === 0}
+                onClick={() => exportWagesCsv(wages)}
+              >
+                <Download className="mr-1 h-4 w-4" />
+                Export CSV
+              </Button>
+            </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -186,7 +191,7 @@ function CasualsPage() {
                   {wages.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
-                        No wage entries yet. Click “Log wage” to record one.
+                        No wage entries yet. Click "Log wage" or open a worker's attendance to record days.
                       </TableCell>
                     </TableRow>
                   )}
@@ -247,7 +252,7 @@ function CasualsPage() {
                   {workers.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
-                        No workers yet. Add one with “New worker”.
+                        No workers yet. Add one with "New worker".
                       </TableCell>
                     </TableRow>
                   )}
@@ -260,59 +265,44 @@ function CasualsPage() {
 
       <AttendanceSheet
         worker={attendanceWorker}
+        wages={wages}
         onClose={() => setAttendanceWorker(null)}
+        onChanged={invalidate}
       />
     </AppShell>
   );
 }
 
-function exportAttendanceCsv(
-  worker: CasualWorker,
-  month: Date,
-  entries: WorkerAttendance,
-) {
-  const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-  const rows = Object.entries(entries)
-    .filter(([iso]) => iso.startsWith(monthKey))
-    .sort(([a], [b]) => a.localeCompare(b));
+function exportWagesCsv(wages: ApiCasualWage[]) {
+  const headers = ["Date", "Worker", "Task", "Days", "Rate", "Total", "Status", "Notes"];
+  const rows = [...wages]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((w) => [
+      w.date,
+      w.workerName,
+      (w.task ?? "").replace(/"/g, '""'),
+      w.daysWorked,
+      w.ratePerDay.toFixed(2),
+      w.total.toFixed(2),
+      w.paid ? "Paid" : "Unpaid",
+      (w.notes ?? "").replace(/"/g, '""'),
+    ]
+      .map((v, i) => (i === 2 || i === 7 ? `"${v}"` : String(v)))
+      .join(","));
 
-  const headers = ["Date", "Day", "Fraction", "Standard Pay", "Custom Pay", "Actual Pay", "Note"];
-  const body = rows.map(([iso, entry]) => {
-    const d = new Date(iso + "T00:00:00");
-    const day = d.toLocaleDateString(undefined, { weekday: "long" });
-    const fraction = entry.fraction;
-    const standardPay = fraction * worker.dailyRate;
-    const customPay = entry.pay ?? "";
-    const actualPay = entry.pay != null ? entry.pay : standardPay;
-    const note = (entry.note ?? "").replace(/"/g, '""');
-    return [
-      iso,
-      day,
-      fraction,
-      standardPay.toFixed(2),
-      customPay === "" ? "" : customPay.toFixed(2),
-      actualPay.toFixed(2),
-      `"${note}"`,
-    ].join(",");
-  });
+  const total = wages.reduce((s, w) => s + w.total, 0);
+  const unpaid = wages.filter((w) => !w.paid).reduce((s, w) => s + w.total, 0);
+  rows.push("");
+  rows.push(`Total wages,,,,,${total.toFixed(2)},,`);
+  rows.push(`Outstanding (unpaid),,,,,${unpaid.toFixed(2)},,`);
 
-  const total = rows.reduce(
-    (s, [, e]) => s + (e.pay != null ? e.pay : e.fraction * worker.dailyRate),
-    0,
-  );
-  const totalDays = rows.reduce((s, [, e]) => s + e.fraction, 0);
-
-  body.push("");
-  body.push(`Total days,${totalDays.toFixed(2)},,,,,`);
-  body.push(`Estimated wage,,,,,${total.toFixed(2)},`);
-  body.push(`Daily rate,,,,,${worker.dailyRate.toFixed(2)},`);
-
-  const csv = [headers.join(","), ...body].join("\n");
+  const csv = [headers.join(","), ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${worker.name.replace(/\s+/g, "_")}_attendance_${monthKey}.csv`;
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.download = `wage_log_${stamp}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -321,49 +311,92 @@ function exportAttendanceCsv(
 
 function AttendanceSheet({
   worker,
+  wages,
   onClose,
+  onChanged,
 }: {
   worker: CasualWorker | null;
+  wages: ApiCasualWage[];
   onClose: () => void;
+  onChanged: () => void;
 }) {
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
-  const [entries, setEntries] = useState<WorkerAttendance>({});
 
   const workerId = worker?.id ?? "";
-
-  useEffect(() => {
-    if (!workerId) return;
-    const load = () => setEntries(getWorkerAttendanceMap(workerId));
-    load();
-    window.addEventListener(ATTENDANCE_CHANGE_EVENT, load);
-    return () => window.removeEventListener(ATTENDANCE_CHANGE_EVENT, load);
-  }, [workerId]);
 
   const toIso = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  const selectedDates = Object.keys(entries).map((iso) => new Date(iso + "T00:00:00"));
+  // Wage entries for this worker keyed by date. If duplicates exist for the
+  // same day, keep them all so the user can still edit/remove; the calendar
+  // uses the first for toggling.
+  const wagesByDate = useMemo(() => {
+    const map = new Map<string, ApiCasualWage>();
+    for (const w of wages) {
+      if (w.workerId !== workerId) continue;
+      if (!map.has(w.date)) map.set(w.date, w);
+    }
+    return map;
+  }, [wages, workerId]);
+
+  const createWage = useMutation({
+    mutationFn: (iso: string) =>
+      api.createCasualWage({
+        workerId,
+        workerName: worker?.name ?? "",
+        date: iso,
+        daysWorked: 1,
+        ratePerDay: worker?.dailyRate ?? 0,
+      }),
+    onSuccess: () => onChanged(),
+    onError: (e: any) => toast.error(e?.message ?? "Failed to add day"),
+  });
+
+  const updateWage = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof api.updateCasualWage>[1] }) =>
+      api.updateCasualWage(id, patch),
+    onSuccess: () => { toast.success("Day updated"); onChanged(); },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to update"),
+  });
+
+  const removeWage = useMutation({
+    mutationFn: (id: string) => api.deleteCasualWage(id),
+    onSuccess: () => onChanged(),
+    onError: (e: any) => toast.error(e?.message ?? "Failed to remove day"),
+  });
+
+  const selectedDates = Array.from(wagesByDate.keys()).map(
+    (iso) => new Date(iso + "T00:00:00"),
+  );
 
   const handleSelect = (selected: Date[] | undefined) => {
-    if (!workerId) return;
-    setWorkerAttendance(workerId, (selected ?? []).map(toIso));
+    if (!workerId || !worker) return;
+    const next = new Set((selected ?? []).map(toIso));
+    const current = new Set(wagesByDate.keys());
+
+    // Additions
+    for (const iso of next) {
+      if (!current.has(iso)) createWage.mutate(iso);
+    }
+    // Removals
+    for (const iso of current) {
+      if (!next.has(iso)) {
+        const w = wagesByDate.get(iso);
+        if (w) removeWage.mutate(w.id);
+      }
+    }
   };
 
   const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-  const monthEntries = Object.entries(entries)
+  const monthEntries = Array.from(wagesByDate.entries())
     .filter(([iso]) => iso.startsWith(monthKey))
     .sort(([a], [b]) => a.localeCompare(b));
 
-  const monthDayCount = monthEntries.reduce((s, [, e]) => s + e.fraction, 0);
-  const monthWage = worker
-    ? monthEntries.reduce(
-        (s, [, e]) => s + (e.pay != null ? e.pay : e.fraction * worker.dailyRate),
-        0,
-      )
-    : 0;
+  const monthDayCount = monthEntries.reduce((s, [, w]) => s + w.daysWorked, 0);
+  const monthWage = monthEntries.reduce((s, [, w]) => s + w.total, 0);
 
   const monthLabel = month.toLocaleString("default", { month: "long", year: "numeric" });
 
@@ -373,7 +406,8 @@ function AttendanceSheet({
         <SheetHeader>
           <SheetTitle>{worker?.name ?? ""} — Attendance</SheetTitle>
           <SheetDescription>
-            Click a day to toggle attendance. Click a listed day below to edit half-day or custom pay.
+            Click a day to log/remove a wage entry. Click a listed day below to
+            edit fraction, rate or notes — every change syncs to the wage log.
           </SheetDescription>
         </SheetHeader>
 
@@ -406,19 +440,9 @@ function AttendanceSheet({
             <Badge variant="secondary">{monthDayCount}</Badge>
           </div>
           {worker && monthEntries.length > 0 && (
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <div className="text-xs text-muted-foreground">
-                Estimated wage this month:{" "}
-                <span className="font-semibold text-foreground">{formatCurrency(monthWage)}</span>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => exportAttendanceCsv(worker, month, entries)}
-              >
-                <Download className="mr-1 h-4 w-4" />
-                Export CSV
-              </Button>
+            <div className="mt-2 text-xs text-muted-foreground">
+              Wage this month:{" "}
+              <span className="font-semibold text-foreground">{formatCurrency(monthWage)}</span>
             </div>
           )}
         </div>
@@ -429,14 +453,14 @@ function AttendanceSheet({
               Day details
             </div>
             <div className="rounded-md border divide-y">
-              {monthEntries.map(([iso, entry]) => (
+              {monthEntries.map(([iso, wage]) => (
                 <DayRow
-                  key={iso}
+                  key={wage.id}
                   iso={iso}
-                  entry={entry}
-                  dailyRate={worker.dailyRate}
-                  onSave={(next) => setDayEntry(workerId, iso, next)}
-                  onRemove={() => removeDay(workerId, iso)}
+                  wage={wage}
+                  defaultRate={worker.dailyRate}
+                  onSave={(patch) => updateWage.mutate({ id: wage.id, patch })}
+                  onRemove={() => removeWage.mutate(wage.id)}
                 />
               ))}
             </div>
@@ -448,41 +472,55 @@ function AttendanceSheet({
 }
 
 function DayRow({
-  iso, entry, dailyRate, onSave, onRemove,
+  iso, wage, defaultRate, onSave, onRemove,
 }: {
   iso: string;
-  entry: AttendanceEntry;
-  dailyRate: number;
-  onSave: (next: AttendanceEntry) => void;
+  wage: ApiCasualWage;
+  defaultRate: number;
+  onSave: (patch: Parameters<typeof api.updateCasualWage>[1]) => void;
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"full" | "half" | "custom">(
-    entry.pay != null ? "custom" : entry.fraction === 0.5 ? "half" : "full",
-  );
-  const [fraction, setFraction] = useState(String(entry.fraction ?? 1));
-  const [pay, setPay] = useState(entry.pay != null ? String(entry.pay) : "");
-  const [note, setNote] = useState(entry.note ?? "");
+  const initialMode: "full" | "half" | "custom" =
+    wage.ratePerDay !== defaultRate ? "custom"
+    : wage.daysWorked === 0.5 ? "half"
+    : wage.daysWorked === 1 ? "full"
+    : "custom";
 
-  const effectivePay = entry.pay != null ? entry.pay : entry.fraction * dailyRate;
+  const [mode, setMode] = useState<"full" | "half" | "custom">(initialMode);
+  const [fraction, setFraction] = useState(String(wage.daysWorked));
+  const [rate, setRate] = useState(String(wage.ratePerDay));
+  const [note, setNote] = useState(wage.notes ?? "");
+
   const label = new Date(iso + "T00:00:00").toLocaleDateString(undefined, {
     weekday: "short", day: "numeric", month: "short",
   });
 
   const save = () => {
-    let next: AttendanceEntry;
-    if (mode === "full") next = { fraction: 1, note: note.trim() || undefined };
-    else if (mode === "half") next = { fraction: 0.5, note: note.trim() || undefined };
-    else {
+    let patch: Parameters<typeof api.updateCasualWage>[1] = {
+      notes: note.trim(),
+    };
+    if (mode === "full") {
+      patch = { ...patch, daysWorked: 1, ratePerDay: defaultRate };
+    } else if (mode === "half") {
+      patch = { ...patch, daysWorked: 0.5, ratePerDay: defaultRate };
+    } else {
       const f = Number(fraction) || 0;
-      const p = pay.trim() === "" ? undefined : Number(pay);
-      if (f <= 0 && p == null) { toast.error("Enter a fraction or custom pay"); return; }
-      next = { fraction: f > 0 ? f : 1, pay: p, note: note.trim() || undefined };
+      const r = Number(rate) || 0;
+      if (f <= 0) { toast.error("Fraction must be > 0"); return; }
+      if (r < 0) { toast.error("Rate must be >= 0"); return; }
+      patch = { ...patch, daysWorked: f, ratePerDay: r };
     }
-    onSave(next);
+    onSave(patch);
     setOpen(false);
-    toast.success("Day updated");
   };
+
+  const summary =
+    wage.daysWorked === 1 && wage.ratePerDay === defaultRate
+      ? "Full day"
+      : wage.ratePerDay !== defaultRate
+        ? `${wage.daysWorked} day · ${formatCurrency(wage.ratePerDay)}/day`
+        : `${wage.daysWorked} day`;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -494,15 +532,12 @@ function DayRow({
           <div>
             <div className="text-sm font-medium">{label}</div>
             <div className="text-xs text-muted-foreground">
-              {entry.fraction === 1 && entry.pay == null
-                ? "Full day"
-                : entry.pay != null
-                  ? `Custom pay (${entry.fraction} day)`
-                  : `${entry.fraction} day`}
-              {entry.note ? ` · ${entry.note}` : ""}
+              {summary}
+              {wage.notes ? ` · ${wage.notes}` : ""}
+              {wage.paid ? " · Paid" : ""}
             </div>
           </div>
-          <div className="text-sm font-semibold">{formatCurrency(effectivePay)}</div>
+          <div className="text-sm font-semibold">{formatCurrency(wage.total)}</div>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-80" align="end">
@@ -531,12 +566,12 @@ function DayRow({
                 />
               </div>
               <div className="grid gap-1.5">
-                <Label>Custom pay</Label>
+                <Label>Rate / day</Label>
                 <Input
                   type="number" min="0" step="any"
-                  value={pay}
-                  onChange={(e) => setPay(e.target.value)}
-                  placeholder={String(dailyRate)}
+                  value={rate}
+                  onChange={(e) => setRate(e.target.value)}
+                  placeholder={String(defaultRate)}
                 />
               </div>
             </div>
@@ -559,8 +594,6 @@ function DayRow({
     </Popover>
   );
 }
-
-
 
 function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
