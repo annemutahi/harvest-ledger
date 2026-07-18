@@ -152,7 +152,48 @@ function CasualsPage() {
               >
                 <Download className="mr-1 h-4 w-4" />
                 Export CSV
-              </Button>
+        <TabsContent value="log" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-col gap-3 space-y-0 md:flex-row md:items-center md:justify-between">
+              <CardTitle>Work entries</CardTitle>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="grid gap-1">
+                  <Label className="text-xs">From</Label>
+                  <Input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="h-9 w-[150px]"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-xs">To</Label>
+                  <Input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="h-9 w-[150px]"
+                  />
+                </div>
+                {(fromDate || toDate) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setFromDate(""); setToDate(""); }}
+                  >
+                    <X className="mr-1 h-4 w-4" />Clear
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={filteredLogs.length === 0}
+                  onClick={() => exportLogsCsv(filteredLogs, { from: fromDate, to: toDate })}
+                >
+                  <Download className="mr-1 h-4 w-4" />
+                  Export CSV
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -168,7 +209,7 @@ function CasualsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {logs.map((w) => (
+                  {filteredLogs.map((w) => (
                     <TableRow key={w.id}>
                       <TableCell>{formatDate(w.date)}</TableCell>
                       <TableCell className="font-medium">{w.workerName}</TableCell>
@@ -193,13 +234,23 @@ function CasualsPage() {
                               <Check className="mr-1 h-4 w-4" />Paid
                             </Button>
                           ) : (
-                            <Button
-                              size="sm"
-                              onClick={() => markPaid.mutate(w.id)}
-                              disabled={markPaid.isPending}
-                            >
-                              Mark as paid
-                            </Button>
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setEditing(w)}
+                                title="Edit entry"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => markPaid.mutate(w.id)}
+                                disabled={markPaid.isPending}
+                              >
+                                Mark as paid
+                              </Button>
+                            </>
                           )}
                           <Button
                             size="icon"
@@ -212,10 +263,12 @@ function CasualsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {logs.length === 0 && (
+                  {filteredLogs.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                        No work entries yet. Click "Log work" to record a day.
+                        {logs.length === 0
+                          ? 'No work entries yet. Click "Log work" to record a day.'
+                          : "No entries match the selected date range."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -223,6 +276,11 @@ function CasualsPage() {
               </Table>
             </CardContent>
           </Card>
+          <EditLogDialog
+            entry={editing}
+            onOpenChange={(v) => { if (!v) setEditing(null); }}
+            onSaved={invalidate}
+          />
         </TabsContent>
 
         <TabsContent value="workers" className="mt-4">
