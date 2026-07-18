@@ -607,6 +607,31 @@ export const api = {
     mapCasualWage(
       await request(`/casual-wages/${id}/mark-paid/`, { method: "POST" }),
     ),
+  updateCasualWage: async (
+    id: string,
+    patch: Partial<{
+      date: string;
+      daysWorked: number;
+      ratePerDay: number;
+      task: string;
+      notes: string;
+      paid: boolean;
+    }>,
+  ): Promise<ApiCasualWage> => {
+    const body: Record<string, unknown> = {};
+    if (patch.date !== undefined) body.date = patch.date;
+    if (patch.daysWorked !== undefined) body.days_worked = patch.daysWorked;
+    if (patch.ratePerDay !== undefined) body.rate_per_day = patch.ratePerDay;
+    if (patch.task !== undefined) body.task = patch.task;
+    if (patch.notes !== undefined) body.notes = patch.notes;
+    if (patch.paid !== undefined) body.paid = patch.paid;
+    return mapCasualWage(
+      await request(`/casual-wages/${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    );
+  },
   deleteCasualWage: async (id: string): Promise<void> =>
     await request(`/casual-wages/${id}/`, { method: "DELETE" }),
 
