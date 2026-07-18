@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 import {
   getWorkerAttendanceMap, setWorkerAttendance, setDayEntry, removeDay,
-  computeWage, ATTENDANCE_CHANGE_EVENT, type WorkerAttendance,
+  ATTENDANCE_CHANGE_EVENT, type WorkerAttendance, type AttendanceEntry,
 } from "@/lib/attendance-store";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEffect } from "react";
