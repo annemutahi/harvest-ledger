@@ -27,8 +27,10 @@ import { Plus, HardHat, Users, Wallet, Trash2, Check, CalendarDays, ChevronLeft,
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/mock-data";
 import {
-  getWorkerAttendance, setWorkerAttendance, ATTENDANCE_CHANGE_EVENT,
+  getWorkerAttendanceMap, setWorkerAttendance, setDayEntry, removeDay,
+  computeWage, ATTENDANCE_CHANGE_EVENT, type WorkerAttendance,
 } from "@/lib/attendance-store";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { notifyExpensesChanged, type CasualWorker } from "@/lib/expenses-store";
