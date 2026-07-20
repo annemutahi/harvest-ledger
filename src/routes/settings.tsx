@@ -62,6 +62,7 @@ function initials(name: string) {
 
 function SettingsPage() {
   const { user } = useAuth();
+  const isManager = canManageProducts(user);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [name, setName] = useState(user?.username ?? "{username}");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -70,6 +71,18 @@ function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [auditFilter, setAuditFilter] = useState<{ model: string; action: string; search: string }>({
+    model: "",
+    action: "",
+    search: "",
+  });
+
+  const auditQuery = useQuery({
+    queryKey: ["audit-logs", auditFilter],
+    queryFn: () => api.listAuditLogs(auditFilter),
+    enabled: isManager,
+    staleTime: 15_000,
+  });
 
   const handlePhotoChange = (file?: File) => {
     if (!file) return;
