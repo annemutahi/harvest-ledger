@@ -19,10 +19,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { StatCard } from "@/components/stat-card";
-import { Badge } from "@/components/ui/badge";
+import { PaidBadge } from "@/components/status-badge";
 import { Plus, HardHat, Users, Wallet, Trash2, Check, Download, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { exportCsv, stampToday } from "@/lib/csv";
 import { api, type ApiCasualWage, type ApiCasualWorker } from "@/lib/api";
 import { notifyExpensesChanged } from "@/lib/expenses-store";
 
@@ -208,13 +209,10 @@ function CasualsPage() {
                       </TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrency(w.total)}</TableCell>
                       <TableCell>
-                        {w.paid ? (
-                          <Badge variant="secondary">
-                            Paid{w.paidAt ? ` · ${formatDate(w.paidAt)}` : ""}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">Unpaid</Badge>
-                        )}
+                        <PaidBadge paid={w.paid} />
+                        {w.paid && w.paidAt ? (
+                          <span className="ml-2 text-xs text-muted-foreground">{formatDate(w.paidAt)}</span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
@@ -396,40 +394,26 @@ function exportLogsCsv(logs: ApiCasualWage[], range?: { from?: string; to?: stri
   const headers = ["Date", "Worker", "Work Area", "Notes", "Paid Status", "Payment Date", "Amount"];
   const rows = [...logs]
     .sort((a, b) => a.date.localeCompare(b.date))
-    .map((w) =>
-      [
-        w.date,
-        w.workerName,
-        (w.task ?? "").replace(/"/g, '""'),
-        (w.notes ?? "").replace(/"/g, '""'),
-        w.paid ? "Paid" : "Unpaid",
-        w.paidAt ? w.paidAt.slice(0, 10) : "",
-        w.total.toFixed(2),
-      ]
-        .map((v, i) => (i === 1 || i === 2 || i === 3 ? `"${v}"` : String(v)))
-        .join(","),
-    );
+    .map((w) => [
+      w.date,
+      w.workerName,
+      w.task ?? "",
+      w.notes ?? "",
+      w.paid ? "Paid" : "Unpaid",
+      w.paidAt ? w.paidAt.slice(0, 10) : "",
+      w.total.toFixed(2),
+    ]);
 
   const total = logs.reduce((s, w) => s + w.total, 0);
   const unpaid = logs.filter((w) => !w.paid).reduce((s, w) => s + w.total, 0);
-  rows.push("");
+  const trailer: (string | number)[][] = [];
   if (range?.from || range?.to) {
-    rows.push(`Range,${range?.from || "…"} to ${range?.to || "…"}`);
+    trailer.push([`Range`, `${range?.from || "…"} to ${range?.to || "…"}`]);
   }
-  rows.push(`Total,,,,,,${total.toFixed(2)}`);
-  rows.push(`Amount due,,,,,,${unpaid.toFixed(2)}`);
+  trailer.push(["Total", "", "", "", "", "", total.toFixed(2)]);
+  trailer.push(["Amount due", "", "", "", "", "", unpaid.toFixed(2)]);
 
-  const csv = [headers.join(","), ...rows].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  const stamp = new Date().toISOString().slice(0, 10);
-  a.download = `work_log_${stamp}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  exportCsv(`work_log_${stampToday()}.csv`, headers, rows, trailer);
 }
 
 function EditLogDialog({
