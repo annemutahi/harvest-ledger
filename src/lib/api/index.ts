@@ -321,6 +321,19 @@ export const api = {
     return setStoredAuth(auth);
   },
   logout: async (): Promise<void> => {
+    // Best-effort: blacklist the refresh token server-side so it can't be reused.
+    const refresh = getRefreshToken();
+    if (refresh) {
+      try {
+        await fetch(`${API_BASE}/auth/token/blacklist/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ refresh }),
+        });
+      } catch {
+        // Ignore — we still clear local state below.
+      }
+    }
     clearStoredAuth();
   },
   me: async (): Promise<AuthUser> => {
