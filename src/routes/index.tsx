@@ -64,45 +64,15 @@ function LandingPage() {
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
 
-  // Expenses summary (server-backed). Refetches on mutation via the change event.
-  const [expensesThisMonth, setExpensesThisMonth] = useState<{ purchases: number; wages: number; total: number }>({
-    purchases: 0,
-    wages: 0,
-    total: 0,
+  // Server-side MTD aggregates: invoice sales, delivered orders, expenses, profit.
+  const { data: summary } = useQuery({
+    queryKey: ["dashboard-summary"],
+    queryFn: () => api.getDashboardSummary(),
+    refetchOnWindowFocus: true,
   });
-  useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      const now = new Date();
-      const from = new Date(now.getFullYear(), now.getMonth(), 1);
-      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      fetchExpensesInRange(from, to).then((v) => { if (!cancelled) setExpensesThisMonth(v); });
-    };
-    load();
-    window.addEventListener(EXPENSES_CHANGE_EVENT, load);
-    return () => {
-      cancelled = true;
-      window.removeEventListener(EXPENSES_CHANGE_EVENT, load);
-    };
-  }, []);
+  const expensesThisMonth = summary?.expenses ?? { purchases: 0, wages: 0, total: 0 };
+  const deliveredOrdersMTD = summary?.sales.deliveredOrders ?? 0;
 
-  // Delivered orders MTD count toward monthly sales.
-  const [deliveredOrdersMTD, setDeliveredOrdersMTD] = useState(0);
-  useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      const now = new Date();
-      const from = new Date(now.getFullYear(), now.getMonth(), 1);
-      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      fetchDeliveredOrdersInRange(from, to).then((v) => { if (!cancelled) setDeliveredOrdersMTD(v); });
-    };
-    load();
-    window.addEventListener(ORDERS_CHANGE_EVENT, load);
-    return () => {
-      cancelled = true;
-      window.removeEventListener(ORDERS_CHANGE_EVENT, load);
-    };
-  }, []);
 
   const monthlySales = useMemo(() => groupMonthlySales(invoices), [invoices]);
 
