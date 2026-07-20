@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { StatCard } from "@/components/stat-card";
@@ -13,9 +13,7 @@ import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp, Walle
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { useEffect, useState } from "react";
-import { EXPENSES_CHANGE_EVENT, fetchExpensesInRange } from "@/lib/expenses-store";
-import { ORDERS_CHANGE_EVENT, fetchDeliveredOrdersInRange } from "@/lib/orders-store";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard - Peaceful Acres" }] }),
