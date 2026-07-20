@@ -1,7 +1,9 @@
 from django.db import models
 
+from audit.models import SoftDeleteModel
 
-class Product(models.Model):
+
+class Product(SoftDeleteModel):
     name = models.CharField(max_length=200, unique=True)
     category = models.CharField(max_length=100, blank=True, default="")
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)

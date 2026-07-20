@@ -321,6 +321,19 @@ export const api = {
     return setStoredAuth(auth);
   },
   logout: async (): Promise<void> => {
+    // Best-effort: blacklist the refresh token server-side so it can't be reused.
+    const refresh = getRefreshToken();
+    if (refresh) {
+      try {
+        await fetch(`${API_BASE}/auth/token/blacklist/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ refresh }),
+        });
+      } catch {
+        // Ignore — we still clear local state below.
+      }
+    }
     clearStoredAuth();
   },
   me: async (): Promise<AuthUser> => {
@@ -743,7 +756,50 @@ export const api = {
       deliveredOrdersCount: Number(raw.delivered_orders_count ?? 0),
     };
   },
+
+  // ---------- Audit log — /api/audit/logs/ (managers only) ----------
+  listAuditLogs: async (params?: {
+    model?: string;
+    action?: string;
+    search?: string;
+    page?: number;
+  }): Promise<ApiAuditLog[]> => {
+    const qs = new URLSearchParams();
+    if (params?.model) qs.set("model", params.model);
+    if (params?.action) qs.set("action", params.action);
+    if (params?.search) qs.set("search", params.search);
+    if (params?.page) qs.set("page", String(params.page));
+    const q = qs.toString();
+    return unwrap<any>(await request(`/audit/logs/${q ? `?${q}` : ""}`)).map(mapAuditLog);
+  },
 };
+
+export type ApiAuditLog = {
+  id: string;
+  timestamp: string;
+  username: string;
+  action: "create" | "update" | "delete" | "restore" | "login" | "logout";
+  model: string;
+  objectId: string;
+  objectRepr: string;
+  changes: any;
+  ipAddress: string | null;
+};
+
+function mapAuditLog(a: any): ApiAuditLog {
+  return {
+    id: String(a.id),
+    timestamp: a.timestamp ?? "",
+    username: a.username ?? "",
+    action: a.action,
+    model: a.model ?? "",
+    objectId: String(a.object_id ?? ""),
+    objectRepr: a.object_repr ?? "",
+    changes: a.changes ?? null,
+    ipAddress: a.ip_address ?? null,
+  };
+}
+
 
 export type DashboardSummary = {
   from: string;

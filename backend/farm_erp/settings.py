@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django_filters",
     # local
     "accounts",
+    "audit",
     "customers",
     "products",
     "sales",
@@ -61,6 +62,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "audit.middleware.CurrentUserMiddleware",
 ]
 
 ROOT_URLCONF = "farm_erp.urls"

@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,8 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/lib/auth-context";
-import { Bell, Camera, KeyRound, UserRound } from "lucide-react";
+import { api } from "@/lib/api";
+import { canManageProducts } from "@/lib/permissions";
+import { formatDate } from "@/lib/format";
+import { Bell, Camera, KeyRound, ShieldCheck, UserRound } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Profile Settings - Peaceful Acres" }] }),
@@ -56,6 +62,7 @@ function initials(name: string) {
 
 function SettingsPage() {
   const { user } = useAuth();
+  const isManager = canManageProducts(user);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [name, setName] = useState(user?.username ?? "{username}");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -64,6 +71,18 @@ function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [auditFilter, setAuditFilter] = useState<{ model: string; action: string; search: string }>({
+    model: "",
+    action: "",
+    search: "",
+  });
+
+  const auditQuery = useQuery({
+    queryKey: ["audit-logs", auditFilter],
+    queryFn: () => api.listAuditLogs(auditFilter),
+    enabled: isManager,
+    staleTime: 15_000,
+  });
 
   const handlePhotoChange = (file?: File) => {
     if (!file) return;
@@ -109,6 +128,12 @@ function SettingsPage() {
             <Bell className="mr-2 h-4 w-4" />
             Notifications
           </TabsTrigger>
+          {isManager && (
+            <TabsTrigger value="audit">
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Audit log
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile">
@@ -235,6 +260,100 @@ function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isManager && (
+          <TabsContent value="audit">
+            <Card>
+              <CardHeader>
+                <CardTitle>Audit log</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-1">
+                    <Label htmlFor="audit-model" className="text-xs">Model</Label>
+                    <Input
+                      id="audit-model"
+                      placeholder="e.g. Customer"
+                      value={auditFilter.model}
+                      onChange={(e) => setAuditFilter((f) => ({ ...f, model: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label htmlFor="audit-action" className="text-xs">Action</Label>
+                    <Input
+                      id="audit-action"
+                      placeholder="create / update / delete"
+                      value={auditFilter.action}
+                      onChange={(e) => setAuditFilter((f) => ({ ...f, action: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label htmlFor="audit-search" className="text-xs">Search</Label>
+                    <Input
+                      id="audit-search"
+                      placeholder="Object or user"
+                      value={auditFilter.search}
+                      onChange={(e) => setAuditFilter((f) => ({ ...f, search: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>When</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Model</TableHead>
+                        <TableHead>Object</TableHead>
+                        <TableHead>IP</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {auditQuery.isLoading && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                            Loading…
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {auditQuery.data?.length === 0 && !auditQuery.isLoading && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                            No audit events match these filters.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {auditQuery.data?.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell className="whitespace-nowrap text-xs">
+                            {formatDate(log.timestamp)}
+                          </TableCell>
+                          <TableCell className="text-xs">{log.username || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">{log.action}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs">{log.model}</TableCell>
+                          <TableCell className="text-xs">
+                            <span className="font-medium">{log.objectRepr || log.objectId}</span>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {log.ipAddress || "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Showing the most recent {auditQuery.data?.length ?? 0} events. Records are immutable
+                  and retained for compliance and rollback.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </AppShell>
   );
