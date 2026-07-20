@@ -128,6 +128,12 @@ function SettingsPage() {
             <Bell className="mr-2 h-4 w-4" />
             Notifications
           </TabsTrigger>
+          {isManager && (
+            <TabsTrigger value="audit">
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Audit log
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile">
