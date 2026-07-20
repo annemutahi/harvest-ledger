@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { StockStatusBadge } from "@/components/status-badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -319,15 +319,4 @@ function StockPage() {
       </Dialog>
     </AppShell>
   );
-}
-
-function StockStatusBadge({ status }: { status: ApiStockEntry["status"] }) {
-  const map: Record<ApiStockEntry["status"], { label: string; className: string }> = {
-    matched: { label: "Stock updated", className: "bg-success/15 text-success border-success/20" },
-    pending: { label: "Pending approval", className: "bg-warning/15 text-warning-foreground border-warning/30" },
-    approved: { label: "Approved", className: "bg-primary/10 text-primary border-primary/20" },
-    rejected: { label: "Rejected", className: "bg-destructive/10 text-destructive border-destructive/20" },
-  };
-  const s = map[status];
-  return <Badge variant="outline" className={s.className}>{s.label}</Badge>;
 }
