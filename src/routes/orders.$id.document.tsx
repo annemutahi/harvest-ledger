@@ -38,7 +38,7 @@ function OrderDocumentPage() {
   const paid = isReceipt || order.status === "delivered";
 
   return (
-    <div className="min-h-screen bg-muted/30 py-6 print:bg-white print:py-0">
+    <div className="print-document min-h-screen bg-muted/30 py-6 print:bg-white print:py-0">
       {/* Toolbar (hidden on print) */}
       <div className="mx-auto mb-4 flex max-w-3xl items-center justify-between px-4 print:hidden">
         <Button variant="outline" size="sm" asChild>
