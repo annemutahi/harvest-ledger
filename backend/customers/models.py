@@ -1,7 +1,9 @@
 from django.db import models
 
+from audit.models import SoftDeleteModel
 
-class Customer(models.Model):
+
+class Customer(SoftDeleteModel):
     INDIVIDUAL = "individual"
     CORPORATE = "corporate"
     TYPE_CHOICES = [(INDIVIDUAL, "Individual"), (CORPORATE, "Corporate")]
