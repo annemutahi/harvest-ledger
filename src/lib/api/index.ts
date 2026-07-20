@@ -683,7 +683,75 @@ export const api = {
         body: JSON.stringify({ status }),
       }),
     ),
+
+  // ---------- Stock (daily produce entries) — /api/stock/ ----------
+  listStockEntries: async (): Promise<ApiStockEntry[]> =>
+    unwrap<any>(await request("/stock/")).map(mapStockEntry),
+  createStockEntry: async (data: {
+    productName: string;
+    category?: string;
+    quantity: number;
+    unit?: string;
+    notes?: string;
+  }): Promise<ApiStockEntry> =>
+    mapStockEntry(
+      await request("/stock/", {
+        method: "POST",
+        body: JSON.stringify({
+          product_name: data.productName,
+          category: data.category ?? "",
+          quantity: data.quantity,
+          unit: data.unit ?? "",
+          notes: data.notes ?? "",
+        }),
+      }),
+    ),
+  approveStockEntry: async (id: string, productId?: string): Promise<ApiStockEntry> =>
+    mapStockEntry(
+      await request(`/stock/${id}/approve/`, {
+        method: "PATCH",
+        body: JSON.stringify(productId ? { product_id: productId } : {}),
+      }),
+    ),
+  rejectStockEntry: async (id: string): Promise<ApiStockEntry> =>
+    mapStockEntry(
+      await request(`/stock/${id}/reject/`, { method: "PATCH" }),
+    ),
 };
+
+export type ApiStockEntryStatus = "matched" | "pending" | "approved" | "rejected";
+
+export type ApiStockEntry = {
+  id: string;
+  productName: string;
+  category: string;
+  quantity: number;
+  unit?: string;
+  notes?: string;
+  status: ApiStockEntryStatus;
+  matchedProductId?: string;
+  recordedBy?: string;
+  approvedBy?: string;
+  recordedAt: string;
+  updatedAt: string;
+};
+
+function mapStockEntry(s: any): ApiStockEntry {
+  return {
+    id: String(s.id),
+    productName: s.product_name ?? "",
+    category: s.category ?? "",
+    quantity: Number(s.quantity ?? 0),
+    unit: s.unit || undefined,
+    notes: s.notes || undefined,
+    status: (s.status ?? "pending") as ApiStockEntryStatus,
+    matchedProductId: s.matched_product != null ? String(s.matched_product) : undefined,
+    recordedBy: s.recorded_by != null ? String(s.recorded_by) : undefined,
+    approvedBy: s.approved_by != null ? String(s.approved_by) : undefined,
+    recordedAt: s.recorded_at ?? "",
+    updatedAt: s.updated_at ?? "",
+  };
+}
 
 // ---------- Expense DTOs and mappers ----------
 
