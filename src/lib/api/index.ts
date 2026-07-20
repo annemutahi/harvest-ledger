@@ -717,6 +717,42 @@ export const api = {
     mapStockEntry(
       await request(`/stock/${id}/reject/`, { method: "PATCH" }),
     ),
+
+  // ---------- Reports ----------
+  getDashboardSummary: async (params?: { from?: string; to?: string }): Promise<DashboardSummary> => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set("from", params.from);
+    if (params?.to) qs.set("to", params.to);
+    const q = qs.toString();
+    const raw: any = await request(`/reports/summary/${q ? `?${q}` : ""}`);
+    return {
+      from: raw.from ?? "",
+      to: raw.to ?? "",
+      sales: {
+        invoices: Number(raw.sales?.invoices ?? 0),
+        deliveredOrders: Number(raw.sales?.delivered_orders ?? 0),
+        total: Number(raw.sales?.total ?? 0),
+      },
+      expenses: {
+        purchases: Number(raw.expenses?.purchases ?? 0),
+        wages: Number(raw.expenses?.wages ?? 0),
+        total: Number(raw.expenses?.total ?? 0),
+      },
+      profit: Number(raw.profit ?? 0),
+      receivablesOutstanding: Number(raw.receivables_outstanding ?? 0),
+      deliveredOrdersCount: Number(raw.delivered_orders_count ?? 0),
+    };
+  },
+};
+
+export type DashboardSummary = {
+  from: string;
+  to: string;
+  sales: { invoices: number; deliveredOrders: number; total: number };
+  expenses: { purchases: number; wages: number; total: number };
+  profit: number;
+  receivablesOutstanding: number;
+  deliveredOrdersCount: number;
 };
 
 export type ApiStockEntryStatus = "matched" | "pending" | "approved" | "rejected";
