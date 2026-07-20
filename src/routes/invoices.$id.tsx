@@ -173,7 +173,7 @@ function InvoiceDetail() {
         </>
       }
     >
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="print-document grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-start justify-between gap-4">
