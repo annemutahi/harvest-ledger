@@ -14,6 +14,9 @@ import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
 import { canEditSales } from "@/lib/permissions";
+import { useTableView } from "@/hooks/use-table-view";
+import { SortableHead, TablePagination } from "@/components/table-controls";
+
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({ meta: [{ title: "Transactions - Peaceful Acres" }] }),
@@ -41,6 +44,31 @@ function TransactionsPage() {
       payment.customerName.toLowerCase().includes(query) ||
       payment.method.toLowerCase().includes(query),
   );
+
+  const salesView = useTableView({
+    data: filteredSales,
+    accessors: {
+      customerName: (s) => s.customerName,
+      date: (s) => s.date,
+      amount: (s) => Number(s.amount),
+      paymentType: (s) => s.paymentType,
+      status: (s) => s.status,
+    },
+    defaultSort: { key: "date", dir: "desc" },
+  });
+
+  const paymentsView = useTableView({
+    data: filteredPayments,
+    accessors: {
+      date: (p) => p.date,
+      customerName: (p) => p.customerName,
+      invoiceNumber: (p) => p.invoiceNumber,
+      method: (p) => p.method,
+      amount: (p) => Number(p.amount),
+    },
+    defaultSort: { key: "date", dir: "desc" },
+  });
+
 
   return (
     <AppShell
@@ -96,26 +124,22 @@ function TransactionsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Status</TableHead>
+                      <SortableHead ctrl={salesView} sortKey="customerName">Customer</SortableHead>
+                      <SortableHead ctrl={salesView} sortKey="date">Date</SortableHead>
+                      <SortableHead ctrl={salesView} sortKey="amount" align="right">Amount</SortableHead>
+                      <SortableHead ctrl={salesView} sortKey="paymentType">Payment</SortableHead>
+                      <SortableHead ctrl={salesView} sortKey="status">Status</SortableHead>
                       {mayEdit && <TableHead className="w-16 text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSales.map((sale) => (
+                    {salesView.total === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={mayEdit ? 6 : 5} className="py-8 text-center text-muted-foreground">No sales match your search.</TableCell>
+                      </TableRow>
+                    )}
+                    {salesView.paged.map((sale) => (
                       <TableRow key={sale.id}>
-                        {/* <TableCell>
-                          <Link
-                            to="/invoices/$id"
-                            params={{ id: sale.invoiceId || sale.id }}
-                            className="font-medium hover:underline"
-                          >
-                            {sale.invoiceNumber || `${sale.invoiceId || sale.id}`}
-                          </Link>
-                        </TableCell> */}
                         <TableCell>{sale.customerName}</TableCell>
                         <TableCell>{formatDate(sale.date)}</TableCell>
                         <TableCell className="text-right font-medium">{formatCurrency(sale.amount)}</TableCell>
@@ -139,6 +163,7 @@ function TransactionsPage() {
                   </TableBody>
                 </Table>
               </div>
+              <TablePagination ctrl={salesView} label="sales" />
             </CardContent>
           </Card>
         </TabsContent>
@@ -150,15 +175,20 @@ function TransactionsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
+                      <SortableHead ctrl={paymentsView} sortKey="date">Date</SortableHead>
+                      <SortableHead ctrl={paymentsView} sortKey="customerName">Customer</SortableHead>
+                      <SortableHead ctrl={paymentsView} sortKey="invoiceNumber">Invoice</SortableHead>
+                      <SortableHead ctrl={paymentsView} sortKey="method">Method</SortableHead>
+                      <SortableHead ctrl={paymentsView} sortKey="amount" align="right">Amount</SortableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPayments.map((payment) => (
+                    {paymentsView.total === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No payments match your search.</TableCell>
+                      </TableRow>
+                    )}
+                    {paymentsView.paged.map((payment) => (
                       <TableRow key={payment.id}>
                         <TableCell>{formatDate(payment.date)}</TableCell>
                         <TableCell className="font-medium">{payment.customerName}</TableCell>
@@ -176,9 +206,11 @@ function TransactionsPage() {
                   </TableBody>
                 </Table>
               </div>
+              <TablePagination ctrl={paymentsView} label="payments" />
             </CardContent>
           </Card>
         </TabsContent>
+
       </Tabs>
     </AppShell>
   );
