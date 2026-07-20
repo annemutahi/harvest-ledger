@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, FileText, CreditCard, BarChart3, Settings, Drumstick, Box, LogOut, Wheat,
   ChevronDown, Wallet, ShoppingBag, HardHat, ClipboardList,
 } from "lucide-react";
-import { COMPANY } from "@/lib/mock-data";
+import { COMPANY } from "@/lib/company";
 import { useAuth } from "@/lib/auth-context";
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,

@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { InvoiceStatus } from "@/lib/mock-data";
+import type { InvoiceStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function StatusBadge({ status }: { status: InvoiceStatus }) {

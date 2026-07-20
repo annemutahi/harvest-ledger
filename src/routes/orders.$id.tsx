@@ -10,7 +10,7 @@ import { ArrowLeft, FileText, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { ORDER_STATUSES, notifyOrdersChanged, type OrderStatus } from "@/lib/orders-store";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/orders/$id")({
   head: () => ({ meta: [{ title: "Order — Peaceful Acres" }] }),

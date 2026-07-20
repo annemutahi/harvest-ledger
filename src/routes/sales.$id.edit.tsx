@@ -35,7 +35,7 @@ import {
 import { Plus, Trash2, ArrowLeft, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
 import { canEditSales } from "@/lib/permissions";
 

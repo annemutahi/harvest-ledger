@@ -20,7 +20,8 @@ import { api, ApiError } from "@/lib/api";
 import { stockStore, type StockEntry } from "@/lib/stock-store";
 import { useAuth } from "@/lib/auth-context";
 import { canManageProducts } from "@/lib/permissions";
-import { formatCurrency, type Product } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/format";
+import type { Product } from "@/lib/types";
 
 export const Route = createFileRoute("/stock")({
   head: () => ({ meta: [{ title: "Stock — Peaceful Acres" }] }),

@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Plus, Search, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
-import { formatCurrency, type CustomerType } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/format";
+import type { CustomerType } from "@/lib/types";
 
 export const Route = createFileRoute("/customers/")({
   head: () => ({ meta: [{ title: "Customers — Peaceful Acres" }] }),

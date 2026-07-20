@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/format";
 
 export const Route = createFileRoute("/sales/new")({
   head: () => ({ meta: [{ title: "New Sale — Peaceful Acres" }] }),
