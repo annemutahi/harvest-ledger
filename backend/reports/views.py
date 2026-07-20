@@ -133,3 +133,71 @@ def pnl_report(request):
         },
         "gross_profit": float(revenue) - expenses_total,
     })
+
+
+def _month_bounds(today: date | None = None):
+    today = today or date.today()
+    start = today.replace(day=1)
+    if start.month == 12:
+        next_start = start.replace(year=start.year + 1, month=1)
+    else:
+        next_start = start.replace(month=start.month + 1)
+    return start, next_start - timedelta(days=1)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def dashboard_summary(request):
+    """Consolidated dashboard aggregates.
+
+    Optional `from`/`to` (YYYY-MM-DD) override the default month-to-date window.
+    Returns invoice sales, delivered-order sales, expenses breakdown, profit,
+    outstanding receivables and payments received in the range.
+    """
+    today = date.today()
+    default_from, default_to = _month_bounds(today)
+    d_from = request.query_params.get("from") or default_from.isoformat()
+    d_to = request.query_params.get("to") or default_to.isoformat()
+
+    invoices_qs = Invoice.objects.filter(issue_date__gte=d_from, issue_date__lte=d_to)
+    invoice_sales = float(invoices_qs.aggregate(t=Sum("total_amount"))["t"] or 0)
+
+    delivered_orders_qs = Order.objects.filter(
+        status=Order.DELIVERED, updated_at__date__gte=d_from, updated_at__date__lte=d_to
+    )
+    delivered_orders_total = float(delivered_orders_qs.aggregate(t=Sum("total"))["t"] or 0)
+
+    purchases = float(
+        Purchase.objects.filter(date__gte=d_from, date__lte=d_to)
+        .aggregate(t=Sum("total"))["t"] or 0
+    )
+    wages = float(
+        CasualWage.objects.filter(date__gte=d_from, date__lte=d_to)
+        .aggregate(t=Sum("total"))["t"] or 0
+    )
+    expenses_total = purchases + wages
+
+    total_sales = invoice_sales + delivered_orders_total
+
+    receivables_outstanding = float(
+        (Invoice.objects.aggregate(t=Sum("total_amount"))["t"] or 0)
+        - (Invoice.objects.aggregate(t=Sum("amount_paid"))["t"] or 0)
+    )
+
+    return Response({
+        "from": d_from,
+        "to": d_to,
+        "sales": {
+            "invoices": invoice_sales,
+            "delivered_orders": delivered_orders_total,
+            "total": total_sales,
+        },
+        "expenses": {
+            "purchases": purchases,
+            "wages": wages,
+            "total": expenses_total,
+        },
+        "profit": total_sales - expenses_total,
+        "receivables_outstanding": receivables_outstanding,
+        "delivered_orders_count": delivered_orders_qs.count(),
+    })
