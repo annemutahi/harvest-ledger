@@ -11,7 +11,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { ArrowLeft, Printer, Pencil, Plus, Trash2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
-import { formatCurrency, formatDate, type SaleItem } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/format";
+import type { SaleItem } from "@/lib/types";
 
 export const Route = createFileRoute("/invoices/$id")({
   head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id} — Peaceful Acres ` }] }),

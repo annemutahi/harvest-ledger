@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/stat-card";
 import { Plus, ShoppingBag, Truck, Trash2, Receipt } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { api } from "@/lib/api";
 import { notifyExpensesChanged, type Purchase, type Supplier } from "@/lib/expenses-store";
 

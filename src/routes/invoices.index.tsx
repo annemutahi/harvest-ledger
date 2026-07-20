@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusBadge } from "@/components/status-badge";
 import { Search, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/invoices/")({

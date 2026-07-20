@@ -22,7 +22,7 @@ import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, HardHat, Users, Wallet, Trash2, Check, Download, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { api, type ApiCasualWage, type ApiCasualWorker } from "@/lib/api";
 import { notifyExpensesChanged } from "@/lib/expenses-store";
 

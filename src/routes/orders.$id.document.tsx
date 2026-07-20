@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, ReceiptText, FileText } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 type DocFormat = "invoice" | "receipt";
 

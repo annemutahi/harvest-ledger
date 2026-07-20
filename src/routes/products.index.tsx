@@ -13,7 +13,8 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 import { Plus, Search, Loader2, Edit3, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
-import { formatCurrency, type Product } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/format";
+import type { Product } from "@/lib/types";
 
 export const Route = createFileRoute("/products/")({
   head: () => ({ meta: [{ title: "Products — Peaceful Acres" }] }),

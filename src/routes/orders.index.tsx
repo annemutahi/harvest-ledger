@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import type { OrderStatus } from "@/lib/orders-store";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/orders/")({
   head: () => ({ meta: [{ title: "Orders — Peaceful Acres" }] }),

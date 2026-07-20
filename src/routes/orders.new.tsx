@@ -13,7 +13,7 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { notifyOrdersChanged } from "@/lib/orders-store";
-import { formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/format";
 
 export const Route = createFileRoute("/orders/new")({
   head: () => ({ meta: [{ title: "New Order — Peaceful Acres" }] }),

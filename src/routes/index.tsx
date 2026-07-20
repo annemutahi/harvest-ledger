@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp, Wallet, PiggyBank } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { EXPENSES_CHANGE_EVENT, fetchExpensesInRange } from "@/lib/expenses-store";
 import { ORDERS_CHANGE_EVENT, fetchDeliveredOrdersInRange } from "@/lib/orders-store";

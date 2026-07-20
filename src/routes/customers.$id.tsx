@@ -9,7 +9,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Mail, Phone, FileDown } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { Customer, formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/format";
+import type { Customer } from "@/lib/types";
 
 export const Route = createFileRoute("/customers/$id")({
   head: ({ params }) => ({ meta: [{ title: `Customer ${params.id} — Peaceful Acres` }] }),
