@@ -10,6 +10,7 @@ api_v1 = [
     path("", include("expenses.urls")),
     path("", include("orders.urls")),
     path("reports/", include("reports.urls")),
+    path("audit/", include("audit.urls")),
     path("public/", include("orders.public_urls")),
 ]
 
