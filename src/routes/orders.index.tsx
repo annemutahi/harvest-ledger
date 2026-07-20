@@ -11,6 +11,9 @@ import { Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import type { OrderStatus } from "@/lib/orders-store";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { useTableView } from "@/hooks/use-table-view";
+import { SortableHead, TablePagination } from "@/components/table-controls";
+
 
 export const Route = createFileRoute("/orders/")({
   head: () => ({ meta: [{ title: "Orders — Peaceful Acres" }] }),
@@ -39,6 +42,20 @@ function OrdersPage() {
   );
 
   const pendingCount = orders.filter((o) => o.status === "pending").length;
+
+  const view = useTableView({
+    data: filtered,
+    accessors: {
+      reference: (o) => o.reference,
+      placedAt: (o) => o.placedAt,
+      customerName: (o) => o.customerName,
+      channel: (o) => o.channel,
+      total: (o) => Number(o.total),
+      status: (o) => o.status,
+    },
+    defaultSort: { key: "placedAt", dir: "desc" },
+  });
+
 
   return (
     <AppShell
@@ -73,23 +90,23 @@ function OrdersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Placed</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Channel</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableHead ctrl={view} sortKey="reference">Reference</SortableHead>
+                  <SortableHead ctrl={view} sortKey="placedAt">Placed</SortableHead>
+                  <SortableHead ctrl={view} sortKey="customerName">Customer</SortableHead>
+                  <SortableHead ctrl={view} sortKey="channel">Channel</SortableHead>
+                  <SortableHead ctrl={view} sortKey="total" align="right">Total</SortableHead>
+                  <SortableHead ctrl={view} sortKey="status">Status</SortableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.length === 0 && (
+                {view.total === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       No orders yet. Online orders will appear here automatically.
                     </TableCell>
                   </TableRow>
                 )}
-                {filtered.map((o) => (
+                {view.paged.map((o) => (
                   <TableRow key={o.id}>
                     <TableCell className="font-medium">
                       <Link to="/orders/$id" params={{ id: o.id }} className="hover:underline">
@@ -116,8 +133,10 @@ function OrdersPage() {
               </TableBody>
             </Table>
           </div>
+          <TablePagination ctrl={view} label="orders" />
         </CardContent>
       </Card>
     </AppShell>
   );
+
 }

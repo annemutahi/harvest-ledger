@@ -16,6 +16,9 @@ import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import type { CustomerType } from "@/lib/types";
+import { useTableView } from "@/hooks/use-table-view";
+import { SortableHead, TablePagination } from "@/components/table-controls";
+
 
 export const Route = createFileRoute("/customers/")({
   head: () => ({ meta: [{ title: "Customers — Peaceful Acres" }] }),
@@ -59,6 +62,19 @@ function CustomersPage() {
     const matchT = type === "all" || c.type === type;
     return matchQ && matchT;
   });
+
+  const view = useTableView({
+    data: filtered,
+    accessors: {
+      name: (c) => c.name,
+      type: (c) => c.type,
+      contact: (c) => c.contactPerson || c.phone,
+      creditLimit: (c) => Number(c.creditLimit ?? 0),
+      outstanding: (c) => Number(c.outstandingBalance ?? 0),
+    },
+    defaultSort: { key: "name", dir: "asc" },
+  });
+
 
   return (
     <AppShell
@@ -135,11 +151,11 @@ function CustomersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead className="text-right">Credit Limit</TableHead>
-                  <TableHead className="text-right">Outstanding</TableHead>
+                  <SortableHead ctrl={view} sortKey="name">Name</SortableHead>
+                  <SortableHead ctrl={view} sortKey="type">Type</SortableHead>
+                  <SortableHead ctrl={view} sortKey="contact">Contact</SortableHead>
+                  <SortableHead ctrl={view} sortKey="creditLimit" align="right">Credit Limit</SortableHead>
+                  <SortableHead ctrl={view} sortKey="outstanding" align="right">Outstanding</SortableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -159,10 +175,10 @@ function CustomersPage() {
                     {error instanceof Error ? error.message : "Failed to load customers"}
                   </TableCell></TableRow>
                 )}
-                {!isLoading && !error && filtered.length === 0 && (
+                {!isLoading && !error && view.total === 0 && (
                   <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No customers match your filters.</TableCell></TableRow>
                 )}
-                {!isLoading && !error && filtered.map((c) => (
+                {!isLoading && !error && view.paged.map((c) => (
                   <TableRow key={c.id} className="cursor-pointer hover:bg-muted/40">
                     <TableCell>
                       <Link to="/customers/$id" params={{ id: c.id }} className="font-medium hover:underline">{c.name}</Link>
@@ -185,8 +201,10 @@ function CustomersPage() {
               </TableBody>
             </Table>
           </div>
+          <TablePagination ctrl={view} label="customers" />
         </CardContent>
       </Card>
     </AppShell>
+
   );
 }

@@ -7,10 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/status-badge";
-import { Search, Loader2 } from "lucide-react";
+import { Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTableView } from "@/hooks/use-table-view";
+import { SortableHead, TablePagination } from "@/components/table-controls";
 
 export const Route = createFileRoute("/invoices/")({
   head: () => ({ meta: [{ title: "Invoices — Peaceful Acres" }] }),
@@ -25,6 +27,21 @@ function InvoicesPage() {
     (!q || i.invoiceNumber.toLowerCase().includes(q.toLowerCase()) || i.customerName.toLowerCase().includes(q.toLowerCase())) &&
     (status === "all" || i.status === status)
   );
+
+  const view = useTableView({
+    data: filtered,
+    accessors: {
+      invoiceNumber: (i) => i.invoiceNumber,
+      customerName: (i) => i.customerName,
+      invoiceDate: (i) => i.invoiceDate,
+      dueDate: (i) => i.dueDate,
+      totalAmount: (i) => Number(i.totalAmount),
+      amountPaid: (i) => Number(i.amountPaid),
+      outstandingBalance: (i) => Number(i.outstandingBalance),
+      status: (i) => i.status,
+    },
+    defaultSort: { key: "invoiceDate", dir: "desc" },
+  });
 
   return (
     <AppShell title="Invoices" description="Track invoice payment status and outstanding balances.">
@@ -52,24 +69,33 @@ function InvoicesPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Invoice</TableHead><TableHead>Customer</TableHead><TableHead>Date Issued</TableHead><TableHead>Due Date</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Amount Paid</TableHead><TableHead className="text-right">Balance</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableHeader>
+                <TableRow>
+                  <SortableHead ctrl={view} sortKey="invoiceNumber">Invoice</SortableHead>
+                  <SortableHead ctrl={view} sortKey="customerName">Customer</SortableHead>
+                  <SortableHead ctrl={view} sortKey="invoiceDate">Date Issued</SortableHead>
+                  <SortableHead ctrl={view} sortKey="dueDate">Due Date</SortableHead>
+                  <SortableHead ctrl={view} sortKey="totalAmount" align="right">Total</SortableHead>
+                  <SortableHead ctrl={view} sortKey="amountPaid" align="right">Amount Paid</SortableHead>
+                  <SortableHead ctrl={view} sortKey="outstandingBalance" align="right">Balance</SortableHead>
+                  <SortableHead ctrl={view} sortKey="status">Status</SortableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {isLoading && Array.from({ length: 5 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    {Array.from({ length: 8 }).map((__, c) => (
+                      <TableCell key={c}><Skeleton className="h-4 w-24" /></TableCell>
+                    ))}
                   </TableRow>
                 ))}
                 {!isLoading && error && (
                   <TableRow><TableCell colSpan={8} className="py-12 text-center text-destructive">{error instanceof Error ? error.message : "Failed to load invoices"}</TableCell></TableRow>
                 )}
-                {!isLoading && !error && filtered.map((i) => (
+                {!isLoading && !error && view.total === 0 && (
+                  <TableRow><TableCell colSpan={8} className="py-12 text-center text-muted-foreground">No invoices match your filters.</TableCell></TableRow>
+                )}
+                {!isLoading && !error && view.paged.map((i) => (
                   <TableRow key={i.id}>
                     <TableCell><Link to="/invoices/$id" params={{ id: i.id }} className="font-medium hover:underline">{i.invoiceNumber}</Link></TableCell>
                     <TableCell>{i.customerName}</TableCell>
@@ -84,6 +110,7 @@ function InvoicesPage() {
               </TableBody>
             </Table>
           </div>
+          <TablePagination ctrl={view} label="invoices" />
         </CardContent>
       </Card>
     </AppShell>

@@ -147,3 +147,67 @@ s
   }
 }
 
+/* ------------------------------------------------------------------
+   Print styles — used by invoice / receipt / order document pages.
+   Any element marked `.print-document` becomes the printed page;
+   everything else (sidebar, app-shell chrome, toolbars) is hidden.
+------------------------------------------------------------------ */
+@media print {
+  @page { size: A4; margin: 14mm; }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt;
+  }
+
+  aside, nav, [data-sidebar],
+  .no-print, [data-print="hide"] {
+    display: none !important;
+  }
+
+  .print-document {
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    color: #000000 !important;
+  }
+
+  .print-document * {
+    color: #000000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .print-document a { text-decoration: none !important; color: #000 !important; }
+
+  .print-document table { width: 100%; border-collapse: collapse; }
+  .print-document th,
+  .print-document td {
+    border-bottom: 1px solid #ddd;
+    padding: 6px 8px;
+  }
+  .print-document thead th {
+    border-bottom: 2px solid #000;
+    text-align: left;
+  }
+
+  .print-document .paid-stamp {
+    border: 2px solid #16803d !important;
+    color: #16803d !important;
+    padding: 2px 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    display: inline-block;
+    transform: rotate(-6deg);
+  }
+
+  .print-document tr,
+  .print-document .print-keep { break-inside: avoid; page-break-inside: avoid; }
+}
+
+

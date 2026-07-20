@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { api } from "@/lib/api";
 import { notifyExpensesChanged, type Purchase, type Supplier } from "@/lib/expenses-store";
+import { useTableView } from "@/hooks/use-table-view";
+import { SortableHead, TablePagination } from "@/components/table-controls";
 
 export const Route = createFileRoute("/expenses/purchases")({
   head: () => ({ meta: [{ title: "Purchases — Peaceful Acres" }] }),
@@ -83,6 +85,31 @@ function PurchasesPage() {
     [purchases],
   );
 
+  const purchasesView = useTableView({
+    data: purchases,
+    accessors: {
+      date: (p: Purchase) => p.date,
+      supplierName: (p: Purchase) => p.supplierName || "",
+      category: (p: Purchase) => p.category,
+      item: (p: Purchase) => p.item,
+      quantity: (p: Purchase) => Number(p.quantity),
+      unitCost: (p: Purchase) => Number(p.unitCost),
+      total: (p: Purchase) => Number(p.total),
+    },
+    defaultSort: { key: "date", dir: "desc" },
+  });
+
+  const suppliersView = useTableView({
+    data: suppliers,
+    accessors: {
+      name: (s: Supplier) => s.name,
+      contact: (s: Supplier) => s.contactPerson || "",
+      phone: (s: Supplier) => s.phone || "",
+      email: (s: Supplier) => s.email || "",
+    },
+    defaultSort: { key: "name", dir: "asc" },
+  });
+
   return (
     <AppShell
       title="Purchases"
@@ -129,18 +156,18 @@ function PurchasesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit cost</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <SortableHead ctrl={purchasesView} sortKey="date">Date</SortableHead>
+                    <SortableHead ctrl={purchasesView} sortKey="supplierName">Supplier</SortableHead>
+                    <SortableHead ctrl={purchasesView} sortKey="category">Category</SortableHead>
+                    <SortableHead ctrl={purchasesView} sortKey="item">Item</SortableHead>
+                    <SortableHead ctrl={purchasesView} sortKey="quantity" align="right">Qty</SortableHead>
+                    <SortableHead ctrl={purchasesView} sortKey="unitCost" align="right">Unit cost</SortableHead>
+                    <SortableHead ctrl={purchasesView} sortKey="total" align="right">Total</SortableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {purchases.map((p) => (
+                  {purchasesView.paged.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>{formatDate(p.date)}</TableCell>
                       <TableCell className="font-medium">{p.supplierName || "—"}</TableCell>
@@ -163,7 +190,7 @@ function PurchasesPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {purchases.length === 0 && (
+                  {purchasesView.total === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
                         No purchases recorded yet. Click “Record purchase” to add one.
@@ -172,6 +199,7 @@ function PurchasesPage() {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination ctrl={purchasesView} label="purchases" />
             </CardContent>
           </Card>
         </TabsContent>
@@ -183,16 +211,16 @@ function PurchasesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Email</TableHead>
+                    <SortableHead ctrl={suppliersView} sortKey="name">Name</SortableHead>
+                    <SortableHead ctrl={suppliersView} sortKey="contact">Contact</SortableHead>
+                    <SortableHead ctrl={suppliersView} sortKey="phone">Phone</SortableHead>
+                    <SortableHead ctrl={suppliersView} sortKey="email">Email</SortableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {suppliers.map((s) => (
+                  {suppliersView.paged.map((s) => (
                     <TableRow key={s.id}>
                       <TableCell className="font-medium">{s.name}</TableCell>
                       <TableCell>{s.contactPerson ?? "—"}</TableCell>
@@ -210,7 +238,7 @@ function PurchasesPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {suppliers.length === 0 && (
+                  {suppliersView.total === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                         No suppliers yet. Add one with “New supplier”.
@@ -219,8 +247,10 @@ function PurchasesPage() {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination ctrl={suppliersView} label="suppliers" />
             </CardContent>
           </Card>
+
         </TabsContent>
       </Tabs>
     </AppShell>
