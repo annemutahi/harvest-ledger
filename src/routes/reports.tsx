@@ -629,6 +629,7 @@ function InventoryReport({ data }: { data: {
               </TableRow></TableHeader>
               <TableBody>
                 {data.products.map((p) => {
+                  const tone = p.availableQuantity <= 0 ? "bg-destructive/10 text-destructive" : p.availableQuantity < 20 ? "bg-warning/15 text-warning-foreground" : "bg-success/15 text-success";
                   const status = p.availableQuantity <= 0 ? "Out of stock" : p.availableQuantity < 20 ? "Low stock" : "OK";
                   return (
                     <TableRow key={p.id}>
@@ -637,10 +638,11 @@ function InventoryReport({ data }: { data: {
                       <TableCell className="text-right tabular-nums">{p.availableQuantity} {p.unit}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatCurrency(p.unitPrice)}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatCurrency(p.availableQuantity * p.unitPrice)}</TableCell>
-                      <TableCell><StatusBadge status={status} /></TableCell>
+                      <TableCell><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{status}</span></TableCell>
                     </TableRow>
                   );
                 })}
+
               </TableBody>
             </Table>
           )}
