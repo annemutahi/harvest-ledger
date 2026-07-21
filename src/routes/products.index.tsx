@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Edit3, Trash } from "lucide-react";
+import { Plus, Search, Loader2, Edit3, Trash, Package, AlertTriangle, Layers, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
 export const Route = createFileRoute("/products/")({
@@ -83,6 +84,43 @@ function ProductsPage() {
     );
   }
 
+  const summary = useMemo(() => {
+    const list = products ?? [];
+    const totalValue = list.reduce((sum, p) => sum + p.availableQuantity * p.unitPrice, 0);
+    const lowStock = list.filter((p) => p.availableQuantity <= 10).length;
+    const categories = Array.from(new Set(list.map((p) => p.category).filter(Boolean)));
+    const byCategory = categories.map((category) => ({
+      category,
+      quantity: list.filter((p) => p.category === category).reduce((sum, p) => sum + p.availableQuantity, 0),
+      value: list.filter((p) => p.category === category).reduce((sum, p) => sum + p.availableQuantity * p.unitPrice, 0),
+      items: list.filter((p) => p.category === category).length,
+    }));
+    const maxCategoryQty = Math.max(1, ...byCategory.map((c) => c.quantity));
+    return { totalValue, lowStock, totalProducts: list.length, categoryCount: categories.length, byCategory, maxCategoryQty };
+  }, [products]);
+
+  function SummaryBar({ quantity, label, sublabel, tone }: { quantity: number; label: string; sublabel: string; tone?: "primary" | "earth" | "success" | "warning" | "destructive" }) {
+    const pct = Math.min(100, Math.max(0, (quantity / summary.maxCategoryQty) * 100));
+    const toneClass = tone ? {
+      primary: "bg-primary",
+      earth: "bg-earth",
+      success: "bg-success",
+      warning: "bg-warning",
+      destructive: "bg-destructive",
+    }[tone] : "bg-primary";
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium">{label}</span>
+          <span className="text-muted-foreground">{sublabel}</span>
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className={cn("h-full rounded-full transition-all", toneClass)} style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AppShell title="Products" description="Manage inventory and pricing.">
       <Card>
@@ -121,6 +159,75 @@ function ProductsPage() {
               </DialogContent>
             </Dialog>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Inventory summary */}
+      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Products</p>
+              <p className="text-2xl font-bold tracking-tight">{summary.totalProducts}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-earth/15 text-earth">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Inventory Value</p>
+              <p className="text-2xl font-bold tracking-tight">{formatCurrency(summary.totalValue)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-destructive/10 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Low Stock</p>
+              <p className="text-2xl font-bold tracking-tight">{summary.lowStock}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-success/15 text-success">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Categories</p>
+              <p className="text-2xl font-bold tracking-tight">{summary.categoryCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="text-base">Inventory by Category</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {summary.byCategory.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No products to summarize.</p>
+          ) : (
+            summary.byCategory.map((c) => (
+              <SummaryBar
+                key={c.category}
+                label={c.category}
+                sublabel={`${c.quantity} units · ${c.items} item${c.items === 1 ? "" : "s"} · ${formatCurrency(c.value)}`}
+                quantity={c.quantity}
+                tone={c.quantity <= 10 ? "destructive" : c.quantity <= 30 ? "warning" : "success"}
+              />
+            ))
+          )}
         </CardContent>
       </Card>
 
