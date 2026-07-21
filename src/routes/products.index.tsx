@@ -68,6 +68,21 @@ function ProductsPage() {
     return matchQ;
   });
 
+  const maxQty = Math.max(1, ...(filtered.map((p) => p.availableQuantity)));
+
+  function StockBar({ quantity }: { quantity: number }) {
+    const pct = Math.min(100, Math.max(0, (quantity / maxQty) * 100));
+    const level = quantity <= 10 ? "bg-destructive" : quantity <= 30 ? "bg-warning" : "bg-success";
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <span className="text-sm font-medium">{quantity}</span>
+        <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+          <div className={`h-full rounded-full ${level}`} style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AppShell title="Products" description="Manage inventory and pricing.">
       <Card>
