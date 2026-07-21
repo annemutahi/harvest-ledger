@@ -84,6 +84,43 @@ function ProductsPage() {
     );
   }
 
+  const summary = useMemo(() => {
+    const list = products ?? [];
+    const totalValue = list.reduce((sum, p) => sum + p.availableQuantity * p.unitPrice, 0);
+    const lowStock = list.filter((p) => p.availableQuantity <= 10).length;
+    const categories = Array.from(new Set(list.map((p) => p.category).filter(Boolean)));
+    const byCategory = categories.map((category) => ({
+      category,
+      quantity: list.filter((p) => p.category === category).reduce((sum, p) => sum + p.availableQuantity, 0),
+      value: list.filter((p) => p.category === category).reduce((sum, p) => sum + p.availableQuantity * p.unitPrice, 0),
+      items: list.filter((p) => p.category === category).length,
+    }));
+    const maxCategoryQty = Math.max(1, ...byCategory.map((c) => c.quantity));
+    return { totalValue, lowStock, totalProducts: list.length, categoryCount: categories.length, byCategory, maxCategoryQty };
+  }, [products]);
+
+  function SummaryBar({ quantity, label, sublabel, tone }: { quantity: number; label: string; sublabel: string; tone?: "primary" | "earth" | "success" | "warning" | "destructive" }) {
+    const pct = Math.min(100, Math.max(0, (quantity / summary.maxCategoryQty) * 100));
+    const toneClass = tone ? {
+      primary: "bg-primary",
+      earth: "bg-earth",
+      success: "bg-success",
+      warning: "bg-warning",
+      destructive: "bg-destructive",
+    }[tone] : "bg-primary";
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium">{label}</span>
+          <span className="text-muted-foreground">{sublabel}</span>
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className={cn("h-full rounded-full transition-all", toneClass)} style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AppShell title="Products" description="Manage inventory and pricing.">
       <Card>
