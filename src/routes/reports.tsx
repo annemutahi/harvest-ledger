@@ -27,8 +27,8 @@ function ReportsPage() {
         <CardHeader><CardTitle>Filters</CardTitle></CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-            <div className="grid gap-2"><Label>From</Label><Input type="date" defaultValue="2026-01-01" /></div>
-            <div className="grid gap-2"><Label>To</Label><Input type="date" defaultValue="2026-06-13" /></div>
+            <div className="grid gap-2"><Label>From</Label><Input type="date" defaultValue="" /></div>
+            <div className="grid gap-2"><Label>To</Label><Input type="date" defaultValue="" /></div>
             <div className="flex gap-2">
               <Button variant="outline"><FileSpreadsheet className="mr-2 h-4 w-4" />Excel</Button>
               <Button variant="outline"><FileDown className="mr-2 h-4 w-4" />PDF</Button>
