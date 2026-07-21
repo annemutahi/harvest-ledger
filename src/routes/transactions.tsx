@@ -202,6 +202,13 @@ function TransactionsPage() {
                         <TableCell className="text-right font-semibold text-success">
                           {formatCurrency(payment.amount)}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" asChild title="Print receipt">
+                            <Link to="/payments/$id/document" params={{ id: payment.id }}>
+                              <Printer className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
