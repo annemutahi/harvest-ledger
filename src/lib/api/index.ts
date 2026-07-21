@@ -475,6 +475,8 @@ export const api = {
   // Payments — /api/payments/
   listPayments: async (): Promise<Payment[]> =>
     unwrap<any>(await request("/payments/")).map(mapPayment),
+  getPayment: async (id: string): Promise<Payment> =>
+    mapPayment(await request(`/payments/${id}/`)),
   createPayment: async (data: {
     invoiceId: string;
     customerId: string;

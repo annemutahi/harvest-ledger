@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
-import { BanknoteArrowUp, Pencil, Plus, Search, ShoppingCart } from "lucide-react";
+import { BanknoteArrowUp, Pencil, Plus, Printer, Search, ShoppingCart } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
@@ -180,6 +180,7 @@ function TransactionsPage() {
                       <SortableHead ctrl={paymentsView} sortKey="invoiceNumber">Invoice</SortableHead>
                       <SortableHead ctrl={paymentsView} sortKey="method">Method</SortableHead>
                       <SortableHead ctrl={paymentsView} sortKey="amount" align="right">Amount</SortableHead>
+                      <TableHead className="w-16 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -200,6 +201,13 @@ function TransactionsPage() {
                         <TableCell>{payment.method}</TableCell>
                         <TableCell className="text-right font-semibold text-success">
                           {formatCurrency(payment.amount)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" asChild title="Print receipt">
+                            <Link to="/payments/$id/document" params={{ id: payment.id }}>
+                              <Printer className="h-4 w-4" />
+                            </Link>
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
