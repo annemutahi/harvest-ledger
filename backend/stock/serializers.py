@@ -6,15 +6,20 @@ from .models import StockEntry
 
 
 class StockEntrySerializer(serializers.ModelSerializer):
+    recorded_by_username = serializers.CharField(source="recorded_by.username", read_only=True, default=None)
+    approved_by_username = serializers.CharField(source="approved_by.username", read_only=True, default=None)
+
     class Meta:
         model = StockEntry
         fields = [
             "id", "product_name", "category", "quantity", "unit",
             "notes", "status", "matched_product", "recorded_by",
             "approved_by", "recorded_at", "updated_at",
+            "recorded_by_username", "approved_by_username",
         ]
         read_only_fields = ["status", "matched_product", "recorded_by",
                             "approved_by", "recorded_at", "updated_at"]
+
 
     def validate_quantity(self, value):
         if value is None or value <= 0:
