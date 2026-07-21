@@ -28,6 +28,7 @@ import { Route as ExpensesPurchasesRouteImport } from './routes/expenses.purchas
 import { Route as ExpensesCasualsRouteImport } from './routes/expenses.casuals'
 import { Route as CustomersIdRouteImport } from './routes/customers.$id'
 import { Route as SalesIdEditRouteImport } from './routes/sales.$id.edit'
+import { Route as PaymentsIdDocumentRouteImport } from './routes/payments.$id.document'
 import { Route as OrdersIdDocumentRouteImport } from './routes/orders.$id.document'
 import { Route as ApiPublicOrdersWebhookRouteImport } from './routes/api/public/orders.webhook'
 
@@ -126,6 +127,11 @@ const SalesIdEditRoute = SalesIdEditRouteImport.update({
   path: '/sales/$id/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PaymentsIdDocumentRoute = PaymentsIdDocumentRouteImport.update({
+  id: '/payments/$id/document',
+  path: '/payments/$id/document',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrdersIdDocumentRoute = OrdersIdDocumentRouteImport.update({
   id: '/document',
   path: '/document',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/orders/$id/document': typeof OrdersIdDocumentRoute
+  '/payments/$id/document': typeof PaymentsIdDocumentRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
   '/api/public/orders/webhook': typeof ApiPublicOrdersWebhookRoute
 }
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/orders': typeof OrdersIndexRoute
   '/products': typeof ProductsIndexRoute
   '/orders/$id/document': typeof OrdersIdDocumentRoute
+  '/payments/$id/document': typeof PaymentsIdDocumentRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
   '/api/public/orders/webhook': typeof ApiPublicOrdersWebhookRoute
 }
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/orders/$id/document': typeof OrdersIdDocumentRoute
+  '/payments/$id/document': typeof PaymentsIdDocumentRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
   '/api/public/orders/webhook': typeof ApiPublicOrdersWebhookRoute
 }
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
     | '/orders/'
     | '/products/'
     | '/orders/$id/document'
+    | '/payments/$id/document'
     | '/sales/$id/edit'
     | '/api/public/orders/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/products'
     | '/orders/$id/document'
+    | '/payments/$id/document'
     | '/sales/$id/edit'
     | '/api/public/orders/webhook'
   id:
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/orders/'
     | '/products/'
     | '/orders/$id/document'
+    | '/payments/$id/document'
     | '/sales/$id/edit'
     | '/api/public/orders/webhook'
   fileRoutesById: FileRoutesById
@@ -298,6 +310,7 @@ export interface RootRouteChildren {
   InvoicesIndexRoute: typeof InvoicesIndexRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
+  PaymentsIdDocumentRoute: typeof PaymentsIdDocumentRoute
   SalesIdEditRoute: typeof SalesIdEditRoute
   ApiPublicOrdersWebhookRoute: typeof ApiPublicOrdersWebhookRoute
 }
@@ -437,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SalesIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/payments/$id/document': {
+      id: '/payments/$id/document'
+      path: '/payments/$id/document'
+      fullPath: '/payments/$id/document'
+      preLoaderRoute: typeof PaymentsIdDocumentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orders/$id/document': {
       id: '/orders/$id/document'
       path: '/document'
@@ -485,6 +505,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoicesIndexRoute: InvoicesIndexRoute,
   OrdersIndexRoute: OrdersIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
+  PaymentsIdDocumentRoute: PaymentsIdDocumentRoute,
   SalesIdEditRoute: SalesIdEditRoute,
   ApiPublicOrdersWebhookRoute: ApiPublicOrdersWebhookRoute,
 }
