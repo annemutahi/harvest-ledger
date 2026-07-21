@@ -162,6 +162,75 @@ function ProductsPage() {
         </CardContent>
       </Card>
 
+      {/* Inventory summary */}
+      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Products</p>
+              <p className="text-2xl font-bold tracking-tight">{summary.totalProducts}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-earth/15 text-earth">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Inventory Value</p>
+              <p className="text-2xl font-bold tracking-tight">{formatCurrency(summary.totalValue)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-destructive/10 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Low Stock</p>
+              <p className="text-2xl font-bold tracking-tight">{summary.lowStock}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-success/15 text-success">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Categories</p>
+              <p className="text-2xl font-bold tracking-tight">{summary.categoryCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="text-base">Inventory by Category</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {summary.byCategory.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No products to summarize.</p>
+          ) : (
+            summary.byCategory.map((c) => (
+              <SummaryBar
+                key={c.category}
+                label={c.category}
+                sublabel={`${c.quantity} units · ${c.items} item${c.items === 1 ? "" : "s"} · ${formatCurrency(c.value)}`}
+                quantity={c.quantity}
+                tone={c.quantity <= 10 ? "destructive" : c.quantity <= 30 ? "warning" : "success"}
+              />
+            ))
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="mt-4">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
