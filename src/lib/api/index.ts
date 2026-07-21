@@ -838,7 +838,7 @@ function mapStockEntry(s: any): ApiStockEntry {
     notes: s.notes || undefined,
     status: (s.status ?? "pending") as ApiStockEntryStatus,
     matchedProductId: s.matched_product != null ? String(s.matched_product) : undefined,
-    recordedBy: s.recorded_by != null ? String(s.recorded_by) : undefined,
+    recordedBy: s.recorded_by_username ?? (s.recorded_by != null ? String(s.recorded_by) : undefined),
     approvedBy: s.approved_by != null ? String(s.approved_by) : undefined,
     recordedAt: s.recorded_at ?? "",
     updatedAt: s.updated_at ?? "",
