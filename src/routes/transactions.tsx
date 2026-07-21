@@ -180,6 +180,7 @@ function TransactionsPage() {
                       <SortableHead ctrl={paymentsView} sortKey="invoiceNumber">Invoice</SortableHead>
                       <SortableHead ctrl={paymentsView} sortKey="method">Method</SortableHead>
                       <SortableHead ctrl={paymentsView} sortKey="amount" align="right">Amount</SortableHead>
+                      <TableHead className="w-16 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
