@@ -161,7 +161,7 @@ function ProductsPage() {
                     </TableCell>
                     <TableCell>{p.category}</TableCell>
                     <TableCell className="text-right">{formatCurrency(p.unitPrice)}</TableCell>
-                    <TableCell className="text-right">{p.availableQuantity}</TableCell>
+                    <TableCell className="text-right"><StockBar quantity={p.availableQuantity} /></TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-end">
                         <Button size="sm" variant="ghost" onClick={() => { setEditing(p); setForm({ name: p.name, category: p.category, unitPrice: p.unitPrice, availableQuantity: p.availableQuantity }); }}>
