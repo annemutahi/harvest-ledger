@@ -25,6 +25,9 @@ class PurchaseViewSet(viewsets.ModelViewSet):
     search_fields = ["item", "supplier_name", "notes"]
     ordering_fields = ["date", "total"]
 
+    def get_queryset(self):
+        return apply_date_range(super().get_queryset(), self.request, "date")
+
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)
 
