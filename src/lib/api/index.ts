@@ -198,6 +198,17 @@ function unwrap<T>(data: any): T[] {
   return [];
 }
 
+// Build a `?from=...&to=...` query string for list endpoints that
+// support server-side date-range filtering. Returns "" when the caller
+// passes nothing so existing call sites keep working.
+function buildRange(params?: { from?: string; to?: string }): string {
+  if (!params?.from && !params?.to) return "";
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  return `?${qs.toString()}`;
+}
+
 // ---------- Mappers (snake_case -> camelCase) ----------
 
 const cap = (s: string) =>
@@ -408,8 +419,8 @@ export const api = {
     }),
 
   // Sales — /api/sales/
-  listSales: async (): Promise<Sale[]> =>
-    unwrap<any>(await request("/sales/")).map(mapSale),
+  listSales: async (params?: { from?: string; to?: string }): Promise<Sale[]> =>
+    unwrap<any>(await request(`/sales/${buildRange(params)}`)).map(mapSale),
   createSale: async (data: {
     customerId: string;
     paymentType: PaymentType;
@@ -467,14 +478,14 @@ export const api = {
     await request(`/sales/${id}/`, { method: "DELETE" }),
 
   // Invoices — /api/invoices/
-  listInvoices: async (): Promise<Invoice[]> =>
-    unwrap<any>(await request("/invoices/")).map(mapInvoice),
+  listInvoices: async (params?: { from?: string; to?: string }): Promise<Invoice[]> =>
+    unwrap<any>(await request(`/invoices/${buildRange(params)}`)).map(mapInvoice),
   getInvoice: async (id: string): Promise<Invoice> =>
     mapInvoice(await request(`/invoices/${id}/`)),
 
   // Payments — /api/payments/
-  listPayments: async (): Promise<Payment[]> =>
-    unwrap<any>(await request("/payments/")).map(mapPayment),
+  listPayments: async (params?: { from?: string; to?: string }): Promise<Payment[]> =>
+    unwrap<any>(await request(`/payments/${buildRange(params)}`)).map(mapPayment),
   getPayment: async (id: string): Promise<Payment> =>
     mapPayment(await request(`/payments/${id}/`)),
   createPayment: async (data: {
@@ -523,8 +534,8 @@ export const api = {
     await request(`/suppliers/${id}/`, { method: "DELETE" }),
 
   // ---------- Expenses: Purchases ----------
-  listPurchases: async (): Promise<ApiPurchase[]> =>
-    unwrap<any>(await request("/purchases/")).map(mapPurchase),
+  listPurchases: async (params?: { from?: string; to?: string }): Promise<ApiPurchase[]> =>
+    unwrap<any>(await request(`/purchases/${buildRange(params)}`)).map(mapPurchase),
   createPurchase: async (data: {
     supplierId?: string;
     supplierName: string;
@@ -596,8 +607,8 @@ export const api = {
     await request(`/casual-workers/${id}/`, { method: "DELETE" }),
 
   // ---------- Expenses: Casual wages ----------
-  listCasualWages: async (): Promise<ApiCasualWage[]> =>
-    unwrap<any>(await request("/casual-wages/")).map(mapCasualWage),
+  listCasualWages: async (params?: { from?: string; to?: string }): Promise<ApiCasualWage[]> =>
+    unwrap<any>(await request(`/casual-wages/${buildRange(params)}`)).map(mapCasualWage),
   createCasualWage: async (data: {
     workerId?: string;
     workerName: string;
@@ -656,8 +667,8 @@ export const api = {
     await request(`/casual-wages/${id}/`, { method: "DELETE" }),
 
   // ---------- Orders ----------
-  listOrders: async (): Promise<ApiOrder[]> =>
-    unwrap<any>(await request("/orders/")).map(mapOrder),
+  listOrders: async (params?: { from?: string; to?: string }): Promise<ApiOrder[]> =>
+    unwrap<any>(await request(`/orders/${buildRange(params)}`)).map(mapOrder),
   getOrder: async (id: string): Promise<ApiOrder> =>
     mapOrder(await request(`/orders/${id}/`)),
   createOrder: async (data: {
@@ -700,8 +711,8 @@ export const api = {
     ),
 
   // ---------- Stock (daily produce entries) — /api/stock/ ----------
-  listStockEntries: async (): Promise<ApiStockEntry[]> =>
-    unwrap<any>(await request("/stock/")).map(mapStockEntry),
+  listStockEntries: async (params?: { from?: string; to?: string }): Promise<ApiStockEntry[]> =>
+    unwrap<any>(await request(`/stock/${buildRange(params)}`)).map(mapStockEntry),
   createStockEntry: async (data: {
     productName: string;
     category?: string;

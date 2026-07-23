@@ -30,7 +30,7 @@ const statusVariant: Record<OrderStatus, string> = {
 };
 
 function OrdersPage() {
-  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: api.listOrders });
+  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => api.listOrders() });
   const [q, setQ] = useState("");
   const query = q.toLowerCase();
   const filtered = orders.filter(

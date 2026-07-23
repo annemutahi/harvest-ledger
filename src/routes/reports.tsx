@@ -42,6 +42,8 @@ import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { api } from "@/lib/api";
+import { useTableView } from "@/hooks/use-table-view";
+import { SortableHead, TablePagination } from "@/components/table-controls";
 
 export const Route = createFileRoute("/reports")({
   head: () => ({ meta: [{ title: "Reports — Peaceful Acres" }] }),
@@ -84,16 +86,17 @@ function ReportsPage() {
   const [month, setMonth] = useState<number | "all">(now.getMonth());
   const period = useMemo(() => computePeriod(year, month), [year, month]);
 
-  const invoicesQ = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
-  const salesQ = useQuery({ queryKey: ["sales"], queryFn: api.listSales });
-  const paymentsQ = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
+  const range = { from: period.from, to: period.to };
+  const invoicesQ = useQuery({ queryKey: ["invoices", range], queryFn: () => api.listInvoices(range) });
+  const salesQ = useQuery({ queryKey: ["sales", range], queryFn: () => api.listSales(range) });
+  const paymentsQ = useQuery({ queryKey: ["payments", range], queryFn: () => api.listPayments(range) });
   const customersQ = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
   const productsQ = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
-  const purchasesQ = useQuery({ queryKey: ["purchases"], queryFn: api.listPurchases });
-  const wagesQ = useQuery({ queryKey: ["casual-wages"], queryFn: api.listCasualWages });
+  const purchasesQ = useQuery({ queryKey: ["purchases", range], queryFn: () => api.listPurchases(range) });
+  const wagesQ = useQuery({ queryKey: ["casual-wages", range], queryFn: () => api.listCasualWages(range) });
   const workersQ = useQuery({ queryKey: ["casual-workers"], queryFn: api.listCasualWorkers });
-  const stockQ = useQuery({ queryKey: ["stock"], queryFn: api.listStockEntries });
-  const ordersQ = useQuery({ queryKey: ["orders"], queryFn: api.listOrders });
+  const stockQ = useQuery({ queryKey: ["stock", range], queryFn: () => api.listStockEntries(range) });
+  const ordersQ = useQuery({ queryKey: ["orders", range], queryFn: () => api.listOrders(range) });
 
   const loading =
     invoicesQ.isLoading || salesQ.isLoading || paymentsQ.isLoading || customersQ.isLoading ||
@@ -617,38 +620,58 @@ function InventoryReport({ data }: { data: {
 
       <Card>
         <CardHeader><CardTitle className="text-base">Current Stock</CardTitle></CardHeader>
-        <CardContent>
-          {data.products.length === 0 ? <EmptyState label="No products" /> : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Product</TableHead><TableHead>Category</TableHead>
-                <TableHead className="text-right">Available</TableHead>
-                <TableHead className="text-right">Unit Price</TableHead>
-                <TableHead className="text-right">Value</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {data.products.map((p) => {
-                  const tone = p.availableQuantity <= 0 ? "bg-destructive/10 text-destructive" : p.availableQuantity < 20 ? "bg-warning/15 text-warning-foreground" : "bg-success/15 text-success";
-                  const status = p.availableQuantity <= 0 ? "Out of stock" : p.availableQuantity < 20 ? "Low stock" : "OK";
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell>{p.name}</TableCell>
-                      <TableCell>{p.category}</TableCell>
-                      <TableCell className="text-right tabular-nums">{p.availableQuantity} {p.unit}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(p.unitPrice)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(p.availableQuantity * p.unitPrice)}</TableCell>
-                      <TableCell><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{status}</span></TableCell>
-                    </TableRow>
-                  );
-                })}
-
-              </TableBody>
-            </Table>
+        <CardContent className="p-0">
+          {data.products.length === 0 ? <div className="p-6"><EmptyState label="No products" /></div> : (
+            <InventoryStockTable rows={data.products} />
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function InventoryStockTable({ rows }: { rows: any[] }) {
+  const ctrl = useTableView({
+    data: rows,
+    accessors: {
+      name: (r) => r.name,
+      category: (r) => r.category,
+      available: (r) => Number(r.availableQuantity ?? 0),
+      unitPrice: (r) => Number(r.unitPrice ?? 0),
+      value: (r) => Number(r.availableQuantity ?? 0) * Number(r.unitPrice ?? 0),
+    },
+    defaultSort: { key: "name", dir: "asc" },
+  });
+  return (
+    <>
+      <Table>
+        <TableHeader><TableRow>
+          <SortableHead ctrl={ctrl} sortKey="name">Product</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="category">Category</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="available" align="right">Available</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="unitPrice" align="right">Unit Price</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="value" align="right">Value</SortableHead>
+          <TableHead>Status</TableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {ctrl.paged.map((p) => {
+            const tone = p.availableQuantity <= 0 ? "bg-destructive/10 text-destructive" : p.availableQuantity < 20 ? "bg-warning/15 text-warning-foreground" : "bg-success/15 text-success";
+            const status = p.availableQuantity <= 0 ? "Out of stock" : p.availableQuantity < 20 ? "Low stock" : "OK";
+            return (
+              <TableRow key={p.id}>
+                <TableCell>{p.name}</TableCell>
+                <TableCell>{p.category}</TableCell>
+                <TableCell className="text-right tabular-nums">{p.availableQuantity} {p.unit}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCurrency(p.unitPrice)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCurrency(p.availableQuantity * p.unitPrice)}</TableCell>
+                <TableCell><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{status}</span></TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+      <TablePagination ctrl={ctrl} label="products" />
+    </>
   );
 }
 
@@ -697,32 +720,55 @@ function CasualsReport({ data }: { data: {
 
       <Card>
         <CardHeader><CardTitle className="text-base">Work Activity</CardTitle></CardHeader>
-        <CardContent>
-          {data.wages.length === 0 ? <EmptyState label="No entries" /> : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Date</TableHead><TableHead>Worker</TableHead><TableHead>Task</TableHead>
-                <TableHead className="text-right">Days</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Payment</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {data.wages.slice(0, 50).map((w) => (
-                  <TableRow key={w.id}>
-                    <TableCell>{formatDate(w.date)}</TableCell>
-                    <TableCell>{w.workerName}</TableCell>
-                    <TableCell className="text-muted-foreground">{w.task ?? "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{w.daysWorked}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(w.total)}</TableCell>
-                    <TableCell><StatusBadge status={w.paid ? "Paid" : "Unpaid"} /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        <CardContent className="p-0">
+          {data.wages.length === 0 ? <div className="p-6"><EmptyState label="No entries" /></div> : (
+            <WorkActivityTable rows={data.wages} />
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function WorkActivityTable({ rows }: { rows: any[] }) {
+  const ctrl = useTableView<any>({
+    data: rows,
+    accessors: {
+      date: (r) => r.date,
+      worker: (r) => r.workerName,
+      task: (r) => r.task ?? "",
+      days: (r) => Number(r.daysWorked ?? 0),
+      amount: (r) => Number(r.total ?? 0),
+      paid: (r) => (r.paid ? 1 : 0),
+    },
+    defaultSort: { key: "date", dir: "desc" },
+  });
+  return (
+    <>
+      <Table>
+        <TableHeader><TableRow>
+          <SortableHead ctrl={ctrl} sortKey="date">Date</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="worker">Worker</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="task">Task</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="days" align="right">Days</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="amount" align="right">Amount</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="paid">Payment</SortableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {ctrl.paged.map((w) => (
+            <TableRow key={w.id}>
+              <TableCell>{formatDate(w.date)}</TableCell>
+              <TableCell>{w.workerName}</TableCell>
+              <TableCell className="text-muted-foreground">{w.task ?? "—"}</TableCell>
+              <TableCell className="text-right tabular-nums">{w.daysWorked}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatCurrency(w.total)}</TableCell>
+              <TableCell><StatusBadge status={w.paid ? "Paid" : "Unpaid"} /></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination ctrl={ctrl} label="entries" />
+    </>
   );
 }
 
@@ -772,32 +818,56 @@ function CustomersReport({ data }: { data: {
 
       <Card>
         <CardHeader><CardTitle className="text-base">All Customers</CardTitle></CardHeader>
-        <CardContent>
-          {data.rows.length === 0 ? <EmptyState label="No customers" /> : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Customer</TableHead><TableHead>Type</TableHead>
-                <TableHead className="text-right">Orders</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-                <TableHead className="text-right">Outstanding</TableHead>
-                <TableHead>Last Purchase</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {data.rows.map((c) => (
-                  <TableRow key={c.id || c.name}>
-                    <TableCell>{c.name}</TableCell>
-                    <TableCell>{c.type}</TableCell>
-                    <TableCell className="text-right tabular-nums">{c.orders}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(c.revenue)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(c.outstanding)}</TableCell>
-                    <TableCell>{c.lastPurchase ? formatDate(c.lastPurchase) : "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        <CardContent className="p-0">
+          {data.rows.length === 0 ? <div className="p-6"><EmptyState label="No customers" /></div> : (
+            <AllCustomersTable rows={data.rows} />
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function AllCustomersTable({ rows }: { rows: {
+  id: string; name: string; type: string; orders: number; revenue: number; lastPurchase: string; outstanding: number;
+}[] }) {
+  const ctrl = useTableView({
+    data: rows,
+    accessors: {
+      name: (r) => r.name,
+      type: (r) => r.type,
+      orders: (r) => r.orders,
+      revenue: (r) => r.revenue,
+      outstanding: (r) => r.outstanding,
+      lastPurchase: (r) => r.lastPurchase,
+    },
+    defaultSort: { key: "revenue", dir: "desc" },
+  });
+  return (
+    <>
+      <Table>
+        <TableHeader><TableRow>
+          <SortableHead ctrl={ctrl} sortKey="name">Customer</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="type">Type</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="orders" align="right">Orders</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="revenue" align="right">Revenue</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="outstanding" align="right">Outstanding</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="lastPurchase">Last Purchase</SortableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {ctrl.paged.map((c) => (
+            <TableRow key={c.id || c.name}>
+              <TableCell>{c.name}</TableCell>
+              <TableCell>{c.type}</TableCell>
+              <TableCell className="text-right tabular-nums">{c.orders}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatCurrency(c.revenue)}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatCurrency(c.outstanding)}</TableCell>
+              <TableCell>{c.lastPurchase ? formatDate(c.lastPurchase) : "—"}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination ctrl={ctrl} label="customers" />
+    </>
   );
 }

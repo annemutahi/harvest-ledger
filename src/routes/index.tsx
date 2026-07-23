@@ -61,8 +61,8 @@ function groupMonthlySales(invoices: Array<{ invoiceDate: string; totalAmount: n
 }
 
 function LandingPage() {
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
-  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => api.listInvoices() });
+  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: () => api.listPayments() });
 
   // Server-side MTD aggregates: invoice sales, delivered orders, expenses, profit.
   const { data: summary } = useQuery({
@@ -82,7 +82,7 @@ function LandingPage() {
   const [chartYear, setChartYear] = useState<number>(now.getFullYear() < 2026 ? 2026 : now.getFullYear());
   const [chartMonth, setChartMonth] = useState<number>(now.getMonth());
 
-  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: api.listOrders });
+  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => api.listOrders() });
 
   const chartData = useMemo(() => {
     type Point = { label: string; sales: number };

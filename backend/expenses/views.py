@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import decorators, response, status, viewsets
 
 from accounts.permissions import IsManagerOrReadOnly, ReadOnlyForFarmhands, is_manager
+from farm_erp.date_filter import apply_date_range
 
 from .models import CasualWage, CasualWorker, Purchase, Supplier
 from .serializers import (CasualWageSerializer, CasualWorkerSerializer,
@@ -23,6 +24,9 @@ class PurchaseViewSet(viewsets.ModelViewSet):
     filterset_fields = ["supplier", "category", "payment_method"]
     search_fields = ["item", "supplier_name", "notes"]
     ordering_fields = ["date", "total"]
+
+    def get_queryset(self):
+        return apply_date_range(super().get_queryset(), self.request, "date")
 
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)
@@ -55,6 +59,9 @@ class CasualWageViewSet(viewsets.ModelViewSet):
     filterset_fields = ["worker", "paid"]
     search_fields = ["worker_name", "task"]
     ordering_fields = ["date", "total"]
+
+    def get_queryset(self):
+        return apply_date_range(super().get_queryset(), self.request, "date")
 
     def get_permissions(self):
         # Farmhands may list + create. Only managers may update/delete.

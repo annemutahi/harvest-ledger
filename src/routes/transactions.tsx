@@ -28,8 +28,8 @@ function TransactionsPage() {
   const query = q.toLowerCase();
   const { user } = useAuth();
   const mayEdit = canEditSales(user);
-  const { data: sales = [] } = useQuery({ queryKey: ["sales"], queryFn: api.listSales });
-  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
+  const { data: sales = [] } = useQuery({ queryKey: ["sales"], queryFn: () => api.listSales() });
+  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: () => api.listPayments() });
 
   const filteredSales = sales.filter(
     (sale) =>
