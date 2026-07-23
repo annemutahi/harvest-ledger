@@ -793,11 +793,11 @@ function InventoryStockTable({ rows }: { rows: any[] }) {
 }
 
 /* ---------------- Casuals ---------------- */
-function CasualsReport({ data }: { data: {
+function CasualsReport({ data, period }: { data: {
   workers: any[]; wages: any[]; wagesDue: number; wagesPaid: number; wagesUnpaid: number;
   activeWorkers: number;
   byWorker: { name: string; days: number; total: number; paid: number; unpaid: number }[];
-} }) {
+}; period: Period }) {
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -808,7 +808,12 @@ function CasualsReport({ data }: { data: {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Worker Summary</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Worker Summary"
+          onExport={() => exportSheet("casuals-summary", "Worker Summary", data.byWorker.map((w) => ({
+            Worker: w.name, DaysWorked: w.days, TotalDue: w.total, Paid: w.paid, Unpaid: w.unpaid,
+          })), period)}
+        />
         <CardContent>
           {data.byWorker.length === 0 ? <EmptyState label="No work logged in this period" /> : (
             <Table>
@@ -836,7 +841,12 @@ function CasualsReport({ data }: { data: {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Work Activity</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Work Activity"
+          onExport={() => exportSheet("casuals-work-activity", "Work Activity", data.wages.map((w: any) => ({
+            Date: w.date, Worker: w.workerName, Task: w.task ?? "", Days: w.daysWorked, Amount: w.total, Paid: w.paid ? "Yes" : "No",
+          })), period)}
+        />
         <CardContent className="p-0">
           {data.wages.length === 0 ? <div className="p-6"><EmptyState label="No entries" /></div> : (
             <WorkActivityTable rows={data.wages} />
@@ -846,6 +856,7 @@ function CasualsReport({ data }: { data: {
     </div>
   );
 }
+
 
 function WorkActivityTable({ rows }: { rows: any[] }) {
   const ctrl = useTableView<any>({
