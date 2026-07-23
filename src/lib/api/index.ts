@@ -711,8 +711,8 @@ export const api = {
     ),
 
   // ---------- Stock (daily produce entries) — /api/stock/ ----------
-  listStockEntries: async (): Promise<ApiStockEntry[]> =>
-    unwrap<any>(await request("/stock/")).map(mapStockEntry),
+  listStockEntries: async (params?: { from?: string; to?: string }): Promise<ApiStockEntry[]> =>
+    unwrap<any>(await request(`/stock/${buildRange(params)}`)).map(mapStockEntry),
   createStockEntry: async (data: {
     productName: string;
     category?: string;
