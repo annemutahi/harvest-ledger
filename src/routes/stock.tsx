@@ -45,7 +45,7 @@ function StockPage() {
 
   const { data: entries = [], isLoading: entriesLoading } = useQuery({
     queryKey: ["stock-entries"],
-    queryFn: api.listStockEntries,
+    queryFn: () => api.listStockEntries(),
   });
 
   const invalidateStock = () => {

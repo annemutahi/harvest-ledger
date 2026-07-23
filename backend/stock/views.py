@@ -3,6 +3,7 @@ from django.db.models import F
 from rest_framework import decorators, response, status, viewsets
 
 from accounts.permissions import is_manager
+from farm_erp.date_filter import apply_date_range
 from products.models import Product
 
 from .models import StockEntry
@@ -16,6 +17,9 @@ class StockEntryViewSet(viewsets.ModelViewSet):
     queryset = StockEntry.objects.select_related("matched_product")
     serializer_class = StockEntrySerializer
     filterset_fields = ["status", "matched_product"]
+
+    def get_queryset(self):
+        return apply_date_range(super().get_queryset(), self.request, "recorded_at")
 
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)

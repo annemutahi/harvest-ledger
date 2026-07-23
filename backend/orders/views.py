@@ -9,6 +9,7 @@ from rest_framework import decorators, response, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.permissions import is_manager
+from farm_erp.date_filter import apply_date_range
 
 from .models import Order, OrderItem
 from .serializers import OrderSerializer
@@ -23,6 +24,9 @@ class OrderViewSet(viewsets.ModelViewSet):
     filterset_fields = ["status", "channel"]
     search_fields = ["reference", "customer_name", "customer_phone", "customer_email"]
     ordering_fields = ["placed_at", "total"]
+
+    def get_queryset(self):
+        return apply_date_range(super().get_queryset(), self.request, "placed_at")
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, channel=Order.IN_PERSON)
