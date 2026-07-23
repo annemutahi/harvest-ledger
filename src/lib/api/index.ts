@@ -667,8 +667,8 @@ export const api = {
     await request(`/casual-wages/${id}/`, { method: "DELETE" }),
 
   // ---------- Orders ----------
-  listOrders: async (): Promise<ApiOrder[]> =>
-    unwrap<any>(await request("/orders/")).map(mapOrder),
+  listOrders: async (params?: { from?: string; to?: string }): Promise<ApiOrder[]> =>
+    unwrap<any>(await request(`/orders/${buildRange(params)}`)).map(mapOrder),
   getOrder: async (id: string): Promise<ApiOrder> =>
     mapOrder(await request(`/orders/${id}/`)),
   createOrder: async (data: {
