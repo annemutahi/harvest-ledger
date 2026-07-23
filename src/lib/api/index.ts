@@ -607,8 +607,8 @@ export const api = {
     await request(`/casual-workers/${id}/`, { method: "DELETE" }),
 
   // ---------- Expenses: Casual wages ----------
-  listCasualWages: async (): Promise<ApiCasualWage[]> =>
-    unwrap<any>(await request("/casual-wages/")).map(mapCasualWage),
+  listCasualWages: async (params?: { from?: string; to?: string }): Promise<ApiCasualWage[]> =>
+    unwrap<any>(await request(`/casual-wages/${buildRange(params)}`)).map(mapCasualWage),
   createCasualWage: async (data: {
     workerId?: string;
     workerName: string;
