@@ -1,32 +1,40 @@
-"""Shared helper: apply ?from=YYYY-MM-DD&to=YYYY-MM-DD to a queryset.
-
-Used by list endpoints (Sales, Invoices, Purchases, CasualWages, Orders,
-Stock) so the Reports module and any date-scoped view can push the range
-filter to the database instead of downloading everything to the client.
+"""Shared helper: apply ``?from=YYYY-MM-DD&to=YYYY-MM-DD`` filters to a
+queryset. Detects whether the target field is a ``DateField`` or a
+``DateTimeField`` so the lookup uses ``__date`` when needed.
 """
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Optional
 
-def apply_date_range(qs, request, field: str):
-    """Filter *qs* by request.query_params[from|to] against *field*.
+from django.db.models import DateField, DateTimeField, QuerySet
 
-    For DateTimeField, uses `__date__gte` / `__date__lte` so a plain date
-    string works. For DateField, uses `__gte` / `__lte`.
-    """
-    d_from = request.query_params.get("from")
-    d_to = request.query_params.get("to")
-    if not (d_from or d_to):
-        return qs
-    # Detect datetime vs date by field descriptor.
+
+def _parse(d: Optional[str]):
+    if not d:
+        return None
     try:
-        model_field = qs.model._meta.get_field(field)
-        is_datetime = model_field.get_internal_type() == "DateTimeField"
-    except Exception:
-        is_datetime = False
-    gte = f"{field}__date__gte" if is_datetime else f"{field}__gte"
-    lte = f"{field}__date__lte" if is_datetime else f"{field}__lte"
+        return datetime.strptime(d[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def apply_date_range(qs: QuerySet, request, field: str) -> QuerySet:
+    d_from = _parse(request.query_params.get("from"))
+    d_to = _parse(request.query_params.get("to"))
+    if not d_from and not d_to:
+        return qs
+
+    model_field = qs.model._meta.get_field(field)
+    if isinstance(model_field, DateTimeField):
+        lookup = f"{field}__date"
+    elif isinstance(model_field, DateField):
+        lookup = field
+    else:
+        return qs
+
     if d_from:
-        qs = qs.filter(**{gte: d_from})
+        qs = qs.filter(**{f"{lookup}__gte": d_from})
     if d_to:
-        qs = qs.filter(**{lte: d_to})
+        qs = qs.filter(**{f"{lookup}__lte": d_to})
     return qs
