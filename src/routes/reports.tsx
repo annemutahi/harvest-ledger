@@ -720,32 +720,55 @@ function CasualsReport({ data }: { data: {
 
       <Card>
         <CardHeader><CardTitle className="text-base">Work Activity</CardTitle></CardHeader>
-        <CardContent>
-          {data.wages.length === 0 ? <EmptyState label="No entries" /> : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Date</TableHead><TableHead>Worker</TableHead><TableHead>Task</TableHead>
-                <TableHead className="text-right">Days</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Payment</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {data.wages.slice(0, 50).map((w) => (
-                  <TableRow key={w.id}>
-                    <TableCell>{formatDate(w.date)}</TableCell>
-                    <TableCell>{w.workerName}</TableCell>
-                    <TableCell className="text-muted-foreground">{w.task ?? "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{w.daysWorked}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(w.total)}</TableCell>
-                    <TableCell><StatusBadge status={w.paid ? "Paid" : "Unpaid"} /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        <CardContent className="p-0">
+          {data.wages.length === 0 ? <div className="p-6"><EmptyState label="No entries" /></div> : (
+            <WorkActivityTable rows={data.wages} />
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function WorkActivityTable({ rows }: { rows: any[] }) {
+  const ctrl = useTableView<any>({
+    data: rows,
+    accessors: {
+      date: (r) => r.date,
+      worker: (r) => r.workerName,
+      task: (r) => r.task ?? "",
+      days: (r) => Number(r.daysWorked ?? 0),
+      amount: (r) => Number(r.total ?? 0),
+      paid: (r) => (r.paid ? 1 : 0),
+    },
+    defaultSort: { key: "date", dir: "desc" },
+  });
+  return (
+    <>
+      <Table>
+        <TableHeader><TableRow>
+          <SortableHead ctrl={ctrl} sortKey="date">Date</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="worker">Worker</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="task">Task</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="days" align="right">Days</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="amount" align="right">Amount</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="paid">Payment</SortableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {ctrl.paged.map((w) => (
+            <TableRow key={w.id}>
+              <TableCell>{formatDate(w.date)}</TableCell>
+              <TableCell>{w.workerName}</TableCell>
+              <TableCell className="text-muted-foreground">{w.task ?? "—"}</TableCell>
+              <TableCell className="text-right tabular-nums">{w.daysWorked}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatCurrency(w.total)}</TableCell>
+              <TableCell><StatusBadge status={w.paid ? "Paid" : "Unpaid"} /></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination ctrl={ctrl} label="entries" />
+    </>
   );
 }
 
