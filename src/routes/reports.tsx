@@ -620,38 +620,58 @@ function InventoryReport({ data }: { data: {
 
       <Card>
         <CardHeader><CardTitle className="text-base">Current Stock</CardTitle></CardHeader>
-        <CardContent>
-          {data.products.length === 0 ? <EmptyState label="No products" /> : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Product</TableHead><TableHead>Category</TableHead>
-                <TableHead className="text-right">Available</TableHead>
-                <TableHead className="text-right">Unit Price</TableHead>
-                <TableHead className="text-right">Value</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {data.products.map((p) => {
-                  const tone = p.availableQuantity <= 0 ? "bg-destructive/10 text-destructive" : p.availableQuantity < 20 ? "bg-warning/15 text-warning-foreground" : "bg-success/15 text-success";
-                  const status = p.availableQuantity <= 0 ? "Out of stock" : p.availableQuantity < 20 ? "Low stock" : "OK";
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell>{p.name}</TableCell>
-                      <TableCell>{p.category}</TableCell>
-                      <TableCell className="text-right tabular-nums">{p.availableQuantity} {p.unit}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(p.unitPrice)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(p.availableQuantity * p.unitPrice)}</TableCell>
-                      <TableCell><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{status}</span></TableCell>
-                    </TableRow>
-                  );
-                })}
-
-              </TableBody>
-            </Table>
+        <CardContent className="p-0">
+          {data.products.length === 0 ? <div className="p-6"><EmptyState label="No products" /></div> : (
+            <InventoryStockTable rows={data.products} />
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function InventoryStockTable({ rows }: { rows: any[] }) {
+  const ctrl = useTableView({
+    data: rows,
+    accessors: {
+      name: (r) => r.name,
+      category: (r) => r.category,
+      available: (r) => Number(r.availableQuantity ?? 0),
+      unitPrice: (r) => Number(r.unitPrice ?? 0),
+      value: (r) => Number(r.availableQuantity ?? 0) * Number(r.unitPrice ?? 0),
+    },
+    defaultSort: { key: "name", dir: "asc" },
+  });
+  return (
+    <>
+      <Table>
+        <TableHeader><TableRow>
+          <SortableHead ctrl={ctrl} sortKey="name">Product</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="category">Category</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="available" align="right">Available</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="unitPrice" align="right">Unit Price</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="value" align="right">Value</SortableHead>
+          <TableHead>Status</TableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {ctrl.paged.map((p) => {
+            const tone = p.availableQuantity <= 0 ? "bg-destructive/10 text-destructive" : p.availableQuantity < 20 ? "bg-warning/15 text-warning-foreground" : "bg-success/15 text-success";
+            const status = p.availableQuantity <= 0 ? "Out of stock" : p.availableQuantity < 20 ? "Low stock" : "OK";
+            return (
+              <TableRow key={p.id}>
+                <TableCell>{p.name}</TableCell>
+                <TableCell>{p.category}</TableCell>
+                <TableCell className="text-right tabular-nums">{p.availableQuantity} {p.unit}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCurrency(p.unitPrice)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCurrency(p.availableQuantity * p.unitPrice)}</TableCell>
+                <TableCell><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{status}</span></TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+      <TablePagination ctrl={ctrl} label="products" />
+    </>
   );
 }
 
