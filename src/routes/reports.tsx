@@ -685,10 +685,10 @@ function PnlReport({ data, monthMode, period }: { data: {
 
 
 /* ---------------- Inventory ---------------- */
-function InventoryReport({ data }: { data: {
+function InventoryReport({ data, period }: { data: {
   products: any[]; stockEntries: any[]; received: number; sold: number;
   lowStock: any[]; outOfStock: any[]; totalUnits: number; inventoryValue: number;
-} }) {
+}; period: Period }) {
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -704,16 +704,48 @@ function InventoryReport({ data }: { data: {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Current Stock</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Current Stock"
+          onExport={() => exportSheet("inventory-current-stock", "Current Stock", data.products.map((p: any) => ({
+            Product: p.name, Category: p.category, Available: p.availableQuantity, Unit: p.unit, UnitPrice: p.unitPrice, Value: p.availableQuantity * p.unitPrice,
+          })), period)}
+        />
         <CardContent className="p-0">
           {data.products.length === 0 ? <div className="p-6"><EmptyState label="No products" /></div> : (
             <InventoryStockTable rows={data.products} />
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <TableCardHeader
+          title="Stock Movements"
+          onExport={() => exportSheet("stock-movements", "Stock Movements", data.stockEntries.map((e: any) => ({
+            Date: e.recordedAt?.slice(0, 10), Product: e.productName, Quantity: e.quantity, Status: e.status, RecordedBy: e.recordedByUsername ?? "",
+          })), period)}
+        />
+        <CardContent>
+          {data.stockEntries.length === 0 ? <EmptyState label="No stock activity in this period" /> : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Product</TableHead><TableHead className="text-right">Qty</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {data.stockEntries.slice(0, 10).map((e: any) => (
+                  <TableRow key={e.id}>
+                    <TableCell>{e.recordedAt ? formatDate(e.recordedAt) : "—"}</TableCell>
+                    <TableCell>{e.productName}</TableCell>
+                    <TableCell className="text-right tabular-nums">{e.quantity}</TableCell>
+                    <TableCell><StatusBadge status={e.status} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
 
 function InventoryStockTable({ rows }: { rows: any[] }) {
   const ctrl = useTableView({
