@@ -402,7 +402,7 @@ function TableCardHeader({ title, onExport }: { title: string; onExport: () => v
 
 
 /* ---------------- Sales ---------------- */
-function SalesReport({ data }: { data: ReturnType<typeof useSalesData> }) {
+function SalesReport({ data, period }: { data: SalesDataShape; period: Period }) {
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -412,23 +412,59 @@ function SalesReport({ data }: { data: ReturnType<typeof useSalesData> }) {
         <StatCard label="Avg Order Value" value={formatCurrency(data.orders ? data.totalSales / data.orders : 0)} icon={PiggyBank} tone="warning" />
       </div>
 
-      <ChartCard title="Sales Trend">
-        {data.trend.length === 0 ? <EmptyState label="No sales in this period" /> : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data.trend} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
-              <Line type="monotone" dataKey="sales" stroke={CHART_COLORS[0]} strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </ChartCard>
+      <Card>
+        <TableCardHeader
+          title="Sales Trend"
+          onExport={() => exportSheet("sales-trend", "Sales Trend", data.trend.map((t) => ({ Period: t.label, Sales: t.sales })), period)}
+        />
+        <CardContent className="h-80 pr-2">
+          {data.trend.length === 0 ? <EmptyState label="No sales in this period" /> : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.trend} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                <Line type="monotone" dataKey="sales" stroke={CHART_COLORS[0]} strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <TableCardHeader
+          title="All Sales"
+          onExport={() => exportSheet("sales", "Sales", data.sales.map((s: any) => ({
+            Date: s.date, Invoice: s.invoiceNumber, Customer: s.customerName, Amount: s.amount, Status: s.status, PaymentType: s.paymentType,
+          })), period)}
+        />
+        <CardContent>
+          {data.sales.length === 0 ? <EmptyState label="No sales in this period" /> : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Invoice</TableHead><TableHead>Customer</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {data.sales.slice(0, 15).map((s: any) => (
+                  <TableRow key={s.id}>
+                    <TableCell>{formatDate(s.date)}</TableCell>
+                    <TableCell>{s.invoiceNumber ?? "—"}</TableCell>
+                    <TableCell>{s.customerName ?? "Walk-in"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(s.amount)}</TableCell>
+                    <TableCell><StatusBadge status={s.status} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Top Products</CardTitle></CardHeader>
+          <TableCardHeader
+            title="Top Products"
+            onExport={() => exportSheet("sales-by-product", "Sales by Product", data.byProduct.map((p) => ({ Product: p.name, Quantity: p.qty, Revenue: p.revenue })), period)}
+          />
           <CardContent>
             {data.byProduct.length === 0 ? <EmptyState label="No product sales" /> : (
               <Table>
@@ -444,7 +480,10 @@ function SalesReport({ data }: { data: ReturnType<typeof useSalesData> }) {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Top Customers</CardTitle></CardHeader>
+          <TableCardHeader
+            title="Top Customers"
+            onExport={() => exportSheet("sales-by-customer", "Sales by Customer", data.byCustomer.map((c) => ({ Customer: c.name, Orders: c.count, Revenue: c.revenue })), period)}
+          />
           <CardContent>
             {data.byCustomer.length === 0 ? <EmptyState label="No customer sales" /> : (
               <Table>
@@ -468,7 +507,7 @@ type SalesDataShape = {
   byCustomer: { name: string; count: number; revenue: number }[];
   trend: { label: string; sales: number }[];
 };
-function useSalesData(): SalesDataShape { return {} as SalesDataShape; } // type helper
+
 
 /* ---------------- Expenses ---------------- */
 function ExpensesReport({ data }: { data: {
