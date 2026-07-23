@@ -28,7 +28,7 @@ function RecordPaymentPage() {
   const [notes, setNotes] = useState("");
 
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => api.listInvoices() });
   const createPaymentMutation = useMutation({
     mutationFn: (payload: Parameters<typeof api.createPayment>[0]) => api.createPayment(payload),
     onSuccess: () => {

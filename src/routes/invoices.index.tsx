@@ -22,7 +22,7 @@ export const Route = createFileRoute("/invoices/")({
 function InvoicesPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
-  const { data: invoices = [], isLoading, error } = useQuery({ queryKey: ["invoices"], queryFn: api.listInvoices });
+  const { data: invoices = [], isLoading, error } = useQuery({ queryKey: ["invoices"], queryFn: () => api.listInvoices() });
   const filtered = invoices.filter((i) =>
     (!q || i.invoiceNumber.toLowerCase().includes(q.toLowerCase()) || i.customerName.toLowerCase().includes(q.toLowerCase())) &&
     (status === "all" || i.status === status)

@@ -53,7 +53,7 @@ function InvoiceDetail() {
     enabled: !!initialInvoice?.id,
   });
 
-  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
+  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: () => api.listPayments() });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
 
   const [editing, setEditing] = useState(false);
