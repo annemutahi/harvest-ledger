@@ -60,6 +60,9 @@ class CasualWageViewSet(viewsets.ModelViewSet):
     search_fields = ["worker_name", "task"]
     ordering_fields = ["date", "total"]
 
+    def get_queryset(self):
+        return apply_date_range(super().get_queryset(), self.request, "date")
+
     def get_permissions(self):
         # Farmhands may list + create. Only managers may update/delete.
         if self.action in ("list", "retrieve", "create", "mark_paid", "summary"):
