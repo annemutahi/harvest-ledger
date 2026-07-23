@@ -42,6 +42,8 @@ import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { api } from "@/lib/api";
+import { useTableView } from "@/hooks/use-table-view";
+import { SortableHead, TablePagination } from "@/components/table-controls";
 
 export const Route = createFileRoute("/reports")({
   head: () => ({ meta: [{ title: "Reports — Peaceful Acres" }] }),
