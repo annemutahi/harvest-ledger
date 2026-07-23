@@ -557,7 +557,10 @@ function ExpensesReport({ data, period }: { data: {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Top Expense Categories</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Top Expense Categories"
+          onExport={() => exportSheet("expenses-by-category", "By Category", data.categories.map((c) => ({ Category: c.name, Amount: c.value, Percent: data.total ? +((c.value / data.total) * 100).toFixed(2) : 0 })), period)}
+        />
         <CardContent>
           {data.categories.length === 0 ? <EmptyState label="No expenses in this period" /> : (
             <Table>
@@ -571,9 +574,54 @@ function ExpensesReport({ data, period }: { data: {
           )}
         </CardContent>
       </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <TableCardHeader
+            title="Purchases"
+            onExport={() => exportSheet("purchases", "Purchases", data.purchases.map((p: any) => ({
+              Date: p.date, Category: p.category, Item: p.item, Supplier: p.supplierName, Amount: p.total,
+            })), period)}
+          />
+          <CardContent>
+            {data.purchases.length === 0 ? <EmptyState label="No purchases" /> : (
+              <Table>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Item</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {data.purchases.slice(0, 10).map((p: any) => (
+                    <TableRow key={p.id}><TableCell>{formatDate(p.date)}</TableCell><TableCell>{p.item}</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(p.total)}</TableCell></TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <TableCardHeader
+            title="Casual Wages"
+            onExport={() => exportSheet("wages", "Wages", data.wages.map((w: any) => ({
+              Date: w.date, Worker: w.workerName, Task: w.task ?? "", Days: w.daysWorked, Amount: w.total, Paid: w.paid ? "Yes" : "No",
+            })), period)}
+          />
+          <CardContent>
+            {data.wages.length === 0 ? <EmptyState label="No wages" /> : (
+              <Table>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Worker</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {data.wages.slice(0, 10).map((w: any) => (
+                    <TableRow key={w.id}><TableCell>{formatDate(w.date)}</TableCell><TableCell>{w.workerName}</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(w.total)}</TableCell></TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
+
 
 /* ---------------- P&L ---------------- */
 function PnlReport({ data, monthMode }: { data: {
