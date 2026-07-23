@@ -288,51 +288,6 @@ function ReportsPage() {
     return { rows, total: customers.length, active: active.length, inactive: inactive.length, top };
   }, [customersQ.data, salesData.sales]);
 
-  // ---------- Excel export ----------
-  const handleExportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    const meta = [["Report Period", period.label], ["From", period.from], ["To", period.to], ["Generated", new Date().toISOString()]];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(meta), "Overview");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesData.sales.map((s) => ({
-      Date: s.date, Invoice: s.invoiceNumber, Customer: s.customerName, Amount: s.amount, Status: s.status, PaymentType: s.paymentType,
-    }))), "Sales");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesData.byProduct.map((p) => ({
-      Product: p.name, QuantitySold: p.qty, Revenue: p.revenue,
-    }))), "Sales by Product");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesData.byCustomer.map((c) => ({
-      Customer: c.name, Orders: c.count, Revenue: c.revenue,
-    }))), "Sales by Customer");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-      ...expenseData.purchases.map((p) => ({ Type: "Purchase", Date: p.date, Category: p.category, Item: p.item, Amount: p.total, Supplier: p.supplierName })),
-      ...expenseData.wages.map((w) => ({ Type: "Wage", Date: w.date, Category: "Casual Wages", Item: w.task ?? "", Amount: w.total, Supplier: w.workerName })),
-    ]), "Expenses");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-      ["Revenue", pnl.revenue],
-      ["Expenses", pnl.expenses],
-      ["Net Profit / Loss", pnl.net],
-      ["Margin (%)", pnl.margin.toFixed(2)],
-    ]), "Profit & Loss");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inventory.products.map((p) => ({
-      Product: p.name, Category: p.category, Available: p.availableQuantity, Unit: p.unit, UnitPrice: p.unitPrice, Value: p.availableQuantity * p.unitPrice,
-    }))), "Inventory");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(casual.byWorker.map((w) => ({
-      Worker: w.name, DaysWorked: w.days, TotalDue: w.total, Paid: w.paid, Unpaid: w.unpaid,
-    }))), "Casual Workers");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerReport.rows.map((c) => ({
-      Customer: c.name, Type: c.type, Orders: c.orders, Revenue: c.revenue, LastPurchase: c.lastPurchase, Outstanding: c.outstanding,
-    }))), "Customers");
-
-    XLSX.writeFile(wb, `peaceful-acres-report-${period.from}_${period.to}.xlsx`);
-  };
-
   const handlePrint = () => window.print();
 
   return (
@@ -340,16 +295,12 @@ function ReportsPage() {
       title="Reports & Analytics"
       description={`Business insights for ${period.label}`}
       actions={
-        <>
-          <Button variant="outline" onClick={handleExportExcel} disabled={loading}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
-          </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" /> Print
-          </Button>
-        </>
+        <Button variant="outline" onClick={handlePrint}>
+          <Printer className="mr-2 h-4 w-4" /> Print
+        </Button>
       }
     >
+
       <div className="print-document">
         <Card className="print:hidden">
           <CardHeader><CardTitle className="text-base">Filters</CardTitle></CardHeader>
