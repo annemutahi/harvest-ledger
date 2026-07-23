@@ -288,51 +288,6 @@ function ReportsPage() {
     return { rows, total: customers.length, active: active.length, inactive: inactive.length, top };
   }, [customersQ.data, salesData.sales]);
 
-  // ---------- Excel export ----------
-  const handleExportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    const meta = [["Report Period", period.label], ["From", period.from], ["To", period.to], ["Generated", new Date().toISOString()]];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(meta), "Overview");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesData.sales.map((s) => ({
-      Date: s.date, Invoice: s.invoiceNumber, Customer: s.customerName, Amount: s.amount, Status: s.status, PaymentType: s.paymentType,
-    }))), "Sales");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesData.byProduct.map((p) => ({
-      Product: p.name, QuantitySold: p.qty, Revenue: p.revenue,
-    }))), "Sales by Product");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesData.byCustomer.map((c) => ({
-      Customer: c.name, Orders: c.count, Revenue: c.revenue,
-    }))), "Sales by Customer");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-      ...expenseData.purchases.map((p) => ({ Type: "Purchase", Date: p.date, Category: p.category, Item: p.item, Amount: p.total, Supplier: p.supplierName })),
-      ...expenseData.wages.map((w) => ({ Type: "Wage", Date: w.date, Category: "Casual Wages", Item: w.task ?? "", Amount: w.total, Supplier: w.workerName })),
-    ]), "Expenses");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-      ["Revenue", pnl.revenue],
-      ["Expenses", pnl.expenses],
-      ["Net Profit / Loss", pnl.net],
-      ["Margin (%)", pnl.margin.toFixed(2)],
-    ]), "Profit & Loss");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inventory.products.map((p) => ({
-      Product: p.name, Category: p.category, Available: p.availableQuantity, Unit: p.unit, UnitPrice: p.unitPrice, Value: p.availableQuantity * p.unitPrice,
-    }))), "Inventory");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(casual.byWorker.map((w) => ({
-      Worker: w.name, DaysWorked: w.days, TotalDue: w.total, Paid: w.paid, Unpaid: w.unpaid,
-    }))), "Casual Workers");
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerReport.rows.map((c) => ({
-      Customer: c.name, Type: c.type, Orders: c.orders, Revenue: c.revenue, LastPurchase: c.lastPurchase, Outstanding: c.outstanding,
-    }))), "Customers");
-
-    XLSX.writeFile(wb, `peaceful-acres-report-${period.from}_${period.to}.xlsx`);
-  };
-
   const handlePrint = () => window.print();
 
   return (
@@ -340,16 +295,12 @@ function ReportsPage() {
       title="Reports & Analytics"
       description={`Business insights for ${period.label}`}
       actions={
-        <>
-          <Button variant="outline" onClick={handleExportExcel} disabled={loading}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
-          </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" /> Print
-          </Button>
-        </>
+        <Button variant="outline" onClick={handlePrint}>
+          <Printer className="mr-2 h-4 w-4" /> Print
+        </Button>
       }
     >
+
       <div className="print-document">
         <Card className="print:hidden">
           <CardHeader><CardTitle className="text-base">Filters</CardTitle></CardHeader>
@@ -393,14 +344,15 @@ function ReportsPage() {
 
           {loading ? <LoadingBlock /> : (
             <>
-              <TabsContent value="sales"><SalesReport data={salesData} /></TabsContent>
-              <TabsContent value="expenses"><ExpensesReport data={expenseData} /></TabsContent>
-              <TabsContent value="pnl"><PnlReport data={pnl} monthMode={month === "all"} /></TabsContent>
-              <TabsContent value="inventory"><InventoryReport data={inventory} /></TabsContent>
-              <TabsContent value="casuals"><CasualsReport data={casual} /></TabsContent>
-              <TabsContent value="customers"><CustomersReport data={customerReport} /></TabsContent>
+              <TabsContent value="sales"><SalesReport data={salesData} period={period} /></TabsContent>
+              <TabsContent value="expenses"><ExpensesReport data={expenseData} period={period} /></TabsContent>
+              <TabsContent value="pnl"><PnlReport data={pnl} monthMode={month === "all"} period={period} /></TabsContent>
+              <TabsContent value="inventory"><InventoryReport data={inventory} period={period} /></TabsContent>
+              <TabsContent value="casuals"><CasualsReport data={casual} period={period} /></TabsContent>
+              <TabsContent value="customers"><CustomersReport data={customerReport} period={period} /></TabsContent>
             </>
           )}
+
         </Tabs>
       </div>
     </AppShell>
@@ -429,8 +381,28 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
+function exportSheet(filenameBase: string, sheetName: string, rows: Record<string, unknown>[], period: Period) {
+  const wb = XLSX.utils.book_new();
+  const meta = [["Report", sheetName], ["Period", period.label], ["From", period.from], ["To", period.to], ["Generated", new Date().toISOString()]];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(meta), "Overview");
+  XLSX.utils.book_append_sheet(wb, rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([["No data"]]), sheetName.slice(0, 31));
+  XLSX.writeFile(wb, `${filenameBase}-${period.from}_${period.to}.xlsx`);
+}
+
+function TableCardHeader({ title, onExport }: { title: string; onExport: () => void }) {
+  return (
+    <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+      <CardTitle className="text-base">{title}</CardTitle>
+      <Button variant="outline" size="sm" onClick={onExport} className="print:hidden">
+        <FileSpreadsheet className="mr-2 h-3.5 w-3.5" /> Export Excel
+      </Button>
+    </CardHeader>
+  );
+}
+
+
 /* ---------------- Sales ---------------- */
-function SalesReport({ data }: { data: ReturnType<typeof useSalesData> }) {
+function SalesReport({ data, period }: { data: SalesDataShape; period: Period }) {
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -440,23 +412,59 @@ function SalesReport({ data }: { data: ReturnType<typeof useSalesData> }) {
         <StatCard label="Avg Order Value" value={formatCurrency(data.orders ? data.totalSales / data.orders : 0)} icon={PiggyBank} tone="warning" />
       </div>
 
-      <ChartCard title="Sales Trend">
-        {data.trend.length === 0 ? <EmptyState label="No sales in this period" /> : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data.trend} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
-              <Line type="monotone" dataKey="sales" stroke={CHART_COLORS[0]} strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </ChartCard>
+      <Card>
+        <TableCardHeader
+          title="Sales Trend"
+          onExport={() => exportSheet("sales-trend", "Sales Trend", data.trend.map((t) => ({ Period: t.label, Sales: t.sales })), period)}
+        />
+        <CardContent className="h-80 pr-2">
+          {data.trend.length === 0 ? <EmptyState label="No sales in this period" /> : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.trend} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                <Line type="monotone" dataKey="sales" stroke={CHART_COLORS[0]} strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <TableCardHeader
+          title="All Sales"
+          onExport={() => exportSheet("sales", "Sales", data.sales.map((s: any) => ({
+            Date: s.date, Invoice: s.invoiceNumber, Customer: s.customerName, Amount: s.amount, Status: s.status, PaymentType: s.paymentType,
+          })), period)}
+        />
+        <CardContent>
+          {data.sales.length === 0 ? <EmptyState label="No sales in this period" /> : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Invoice</TableHead><TableHead>Customer</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {data.sales.slice(0, 15).map((s: any) => (
+                  <TableRow key={s.id}>
+                    <TableCell>{formatDate(s.date)}</TableCell>
+                    <TableCell>{s.invoiceNumber ?? "—"}</TableCell>
+                    <TableCell>{s.customerName ?? "Walk-in"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(s.amount)}</TableCell>
+                    <TableCell><StatusBadge status={s.status} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Top Products</CardTitle></CardHeader>
+          <TableCardHeader
+            title="Top Products"
+            onExport={() => exportSheet("sales-by-product", "Sales by Product", data.byProduct.map((p) => ({ Product: p.name, Quantity: p.qty, Revenue: p.revenue })), period)}
+          />
           <CardContent>
             {data.byProduct.length === 0 ? <EmptyState label="No product sales" /> : (
               <Table>
@@ -472,7 +480,10 @@ function SalesReport({ data }: { data: ReturnType<typeof useSalesData> }) {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Top Customers</CardTitle></CardHeader>
+          <TableCardHeader
+            title="Top Customers"
+            onExport={() => exportSheet("sales-by-customer", "Sales by Customer", data.byCustomer.map((c) => ({ Customer: c.name, Orders: c.count, Revenue: c.revenue })), period)}
+          />
           <CardContent>
             {data.byCustomer.length === 0 ? <EmptyState label="No customer sales" /> : (
               <Table>
@@ -496,14 +507,15 @@ type SalesDataShape = {
   byCustomer: { name: string; count: number; revenue: number }[];
   trend: { label: string; sales: number }[];
 };
-function useSalesData(): SalesDataShape { return {} as SalesDataShape; } // type helper
+
 
 /* ---------------- Expenses ---------------- */
-function ExpensesReport({ data }: { data: {
+function ExpensesReport({ data, period }: { data: {
   purchases: any[]; wages: any[]; purchasesTotal: number; wagesTotal: number; total: number;
   categories: { name: string; value: number }[];
   trend: { label: string; purchases: number; wages: number }[];
-} }) {
+}; period: Period }) {
+
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -545,7 +557,10 @@ function ExpensesReport({ data }: { data: {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Top Expense Categories</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Top Expense Categories"
+          onExport={() => exportSheet("expenses-by-category", "By Category", data.categories.map((c) => ({ Category: c.name, Amount: c.value, Percent: data.total ? +((c.value / data.total) * 100).toFixed(2) : 0 })), period)}
+        />
         <CardContent>
           {data.categories.length === 0 ? <EmptyState label="No expenses in this period" /> : (
             <Table>
@@ -559,16 +574,61 @@ function ExpensesReport({ data }: { data: {
           )}
         </CardContent>
       </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <TableCardHeader
+            title="Purchases"
+            onExport={() => exportSheet("purchases", "Purchases", data.purchases.map((p: any) => ({
+              Date: p.date, Category: p.category, Item: p.item, Supplier: p.supplierName, Amount: p.total,
+            })), period)}
+          />
+          <CardContent>
+            {data.purchases.length === 0 ? <EmptyState label="No purchases" /> : (
+              <Table>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Item</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {data.purchases.slice(0, 10).map((p: any) => (
+                    <TableRow key={p.id}><TableCell>{formatDate(p.date)}</TableCell><TableCell>{p.item}</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(p.total)}</TableCell></TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <TableCardHeader
+            title="Casual Wages"
+            onExport={() => exportSheet("wages", "Wages", data.wages.map((w: any) => ({
+              Date: w.date, Worker: w.workerName, Task: w.task ?? "", Days: w.daysWorked, Amount: w.total, Paid: w.paid ? "Yes" : "No",
+            })), period)}
+          />
+          <CardContent>
+            {data.wages.length === 0 ? <EmptyState label="No wages" /> : (
+              <Table>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Worker</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {data.wages.slice(0, 10).map((w: any) => (
+                    <TableRow key={w.id}><TableCell>{formatDate(w.date)}</TableCell><TableCell>{w.workerName}</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(w.total)}</TableCell></TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
 
+
 /* ---------------- P&L ---------------- */
-function PnlReport({ data, monthMode }: { data: {
+function PnlReport({ data, monthMode, period }: { data: {
   revenue: number; expenses: number; net: number; margin: number;
   comparison: { name: string; value: number }[];
   buckets: { label: string; revenue: number; expenses: number; net: number }[];
-}; monthMode: boolean }) {
+}; monthMode: boolean; period: Period }) {
   const netTone = data.net >= 0 ? "success" : "destructive";
   return (
     <div className="mt-6 space-y-6">
@@ -595,15 +655,40 @@ function PnlReport({ data, monthMode }: { data: {
           </ResponsiveContainer>
         )}
       </ChartCard>
+
+      <Card>
+        <TableCardHeader
+          title="P&L Summary"
+          onExport={() => exportSheet("profit-and-loss", "P&L", [
+            { Metric: "Revenue", Value: data.revenue },
+            { Metric: "Expenses", Value: data.expenses },
+            { Metric: data.net >= 0 ? "Net Profit" : "Net Loss", Value: data.net },
+            { Metric: "Margin (%)", Value: +data.margin.toFixed(2) },
+            ...data.buckets.map((b) => ({ Metric: b.label, Value: `Rev ${b.revenue} / Exp ${b.expenses} / Net ${b.net}` })),
+          ], period)}
+        />
+        <CardContent>
+          <Table>
+            <TableHeader><TableRow><TableHead>Metric</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+            <TableBody>
+              <TableRow><TableCell>Revenue</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.revenue)}</TableCell></TableRow>
+              <TableRow><TableCell>Expenses</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.expenses)}</TableCell></TableRow>
+              <TableRow><TableCell className="font-medium">{data.net >= 0 ? "Net Profit" : "Net Loss"}</TableCell><TableCell className="text-right tabular-nums font-medium">{formatCurrency(Math.abs(data.net))}</TableCell></TableRow>
+              <TableRow><TableCell>Margin</TableCell><TableCell className="text-right tabular-nums">{data.margin.toFixed(1)}%</TableCell></TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
+
 /* ---------------- Inventory ---------------- */
-function InventoryReport({ data }: { data: {
+function InventoryReport({ data, period }: { data: {
   products: any[]; stockEntries: any[]; received: number; sold: number;
   lowStock: any[]; outOfStock: any[]; totalUnits: number; inventoryValue: number;
-} }) {
+}; period: Period }) {
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -619,16 +704,48 @@ function InventoryReport({ data }: { data: {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Current Stock</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Current Stock"
+          onExport={() => exportSheet("inventory-current-stock", "Current Stock", data.products.map((p: any) => ({
+            Product: p.name, Category: p.category, Available: p.availableQuantity, Unit: p.unit, UnitPrice: p.unitPrice, Value: p.availableQuantity * p.unitPrice,
+          })), period)}
+        />
         <CardContent className="p-0">
           {data.products.length === 0 ? <div className="p-6"><EmptyState label="No products" /></div> : (
             <InventoryStockTable rows={data.products} />
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <TableCardHeader
+          title="Stock Movements"
+          onExport={() => exportSheet("stock-movements", "Stock Movements", data.stockEntries.map((e: any) => ({
+            Date: e.recordedAt?.slice(0, 10), Product: e.productName, Quantity: e.quantity, Status: e.status, RecordedBy: e.recordedByUsername ?? "",
+          })), period)}
+        />
+        <CardContent>
+          {data.stockEntries.length === 0 ? <EmptyState label="No stock activity in this period" /> : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Product</TableHead><TableHead className="text-right">Qty</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {data.stockEntries.slice(0, 10).map((e: any) => (
+                  <TableRow key={e.id}>
+                    <TableCell>{e.recordedAt ? formatDate(e.recordedAt) : "—"}</TableCell>
+                    <TableCell>{e.productName}</TableCell>
+                    <TableCell className="text-right tabular-nums">{e.quantity}</TableCell>
+                    <TableCell><StatusBadge status={e.status} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
 
 function InventoryStockTable({ rows }: { rows: any[] }) {
   const ctrl = useTableView({
@@ -676,11 +793,11 @@ function InventoryStockTable({ rows }: { rows: any[] }) {
 }
 
 /* ---------------- Casuals ---------------- */
-function CasualsReport({ data }: { data: {
+function CasualsReport({ data, period }: { data: {
   workers: any[]; wages: any[]; wagesDue: number; wagesPaid: number; wagesUnpaid: number;
   activeWorkers: number;
   byWorker: { name: string; days: number; total: number; paid: number; unpaid: number }[];
-} }) {
+}; period: Period }) {
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -691,7 +808,12 @@ function CasualsReport({ data }: { data: {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Worker Summary</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Worker Summary"
+          onExport={() => exportSheet("casuals-summary", "Worker Summary", data.byWorker.map((w) => ({
+            Worker: w.name, DaysWorked: w.days, TotalDue: w.total, Paid: w.paid, Unpaid: w.unpaid,
+          })), period)}
+        />
         <CardContent>
           {data.byWorker.length === 0 ? <EmptyState label="No work logged in this period" /> : (
             <Table>
@@ -719,7 +841,12 @@ function CasualsReport({ data }: { data: {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Work Activity</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Work Activity"
+          onExport={() => exportSheet("casuals-work-activity", "Work Activity", data.wages.map((w: any) => ({
+            Date: w.date, Worker: w.workerName, Task: w.task ?? "", Days: w.daysWorked, Amount: w.total, Paid: w.paid ? "Yes" : "No",
+          })), period)}
+        />
         <CardContent className="p-0">
           {data.wages.length === 0 ? <div className="p-6"><EmptyState label="No entries" /></div> : (
             <WorkActivityTable rows={data.wages} />
@@ -729,6 +856,7 @@ function CasualsReport({ data }: { data: {
     </div>
   );
 }
+
 
 function WorkActivityTable({ rows }: { rows: any[] }) {
   const ctrl = useTableView<any>({
@@ -773,11 +901,14 @@ function WorkActivityTable({ rows }: { rows: any[] }) {
 }
 
 /* ---------------- Customers ---------------- */
-function CustomersReport({ data }: { data: {
+function CustomersReport({ data, period }: { data: {
   rows: { id: string; name: string; type: string; orders: number; revenue: number; lastPurchase: string; outstanding: number }[];
   total: number; active: number; inactive: number;
   top: { id: string; name: string; type: string; orders: number; revenue: number; lastPurchase: string; outstanding: number }[];
-} }) {
+}; period: Period }) {
+  const rowsForExport = (rs: typeof data.rows) => rs.map((c) => ({
+    Customer: c.name, Type: c.type, Orders: c.orders, Revenue: c.revenue, Outstanding: c.outstanding, LastPurchase: c.lastPurchase,
+  }));
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -788,7 +919,10 @@ function CustomersReport({ data }: { data: {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Top Customers by Revenue</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Top Customers by Revenue"
+          onExport={() => exportSheet("customers-top", "Top Customers", rowsForExport(data.top), period)}
+        />
         <CardContent>
           {data.top.length === 0 ? <EmptyState label="No customer activity" /> : (
             <Table>
@@ -817,7 +951,10 @@ function CustomersReport({ data }: { data: {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">All Customers</CardTitle></CardHeader>
+        <TableCardHeader
+          title="All Customers"
+          onExport={() => exportSheet("customers-all", "All Customers", rowsForExport(data.rows), period)}
+        />
         <CardContent className="p-0">
           {data.rows.length === 0 ? <div className="p-6"><EmptyState label="No customers" /></div> : (
             <AllCustomersTable rows={data.rows} />
@@ -827,6 +964,7 @@ function CustomersReport({ data }: { data: {
     </div>
   );
 }
+
 
 function AllCustomersTable({ rows }: { rows: {
   id: string; name: string; type: string; orders: number; revenue: number; lastPurchase: string; outstanding: number;
