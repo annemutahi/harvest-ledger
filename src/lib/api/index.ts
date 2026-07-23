@@ -198,6 +198,17 @@ function unwrap<T>(data: any): T[] {
   return [];
 }
 
+// Build a `?from=...&to=...` query string for list endpoints that
+// support server-side date-range filtering. Returns "" when the caller
+// passes nothing so existing call sites keep working.
+function buildRange(params?: { from?: string; to?: string }): string {
+  if (!params?.from && !params?.to) return "";
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  return `?${qs.toString()}`;
+}
+
 // ---------- Mappers (snake_case -> camelCase) ----------
 
 const cap = (s: string) =>
