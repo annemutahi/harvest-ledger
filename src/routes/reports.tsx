@@ -84,16 +84,17 @@ function ReportsPage() {
   const [month, setMonth] = useState<number | "all">(now.getMonth());
   const period = useMemo(() => computePeriod(year, month), [year, month]);
 
-  const invoicesQ = useQuery({ queryKey: ["invoices"], queryFn: () => api.listInvoices() });
-  const salesQ = useQuery({ queryKey: ["sales"], queryFn: () => api.listSales() });
-  const paymentsQ = useQuery({ queryKey: ["payments"], queryFn: () => api.listPayments() });
+  const range = { from: period.from, to: period.to };
+  const invoicesQ = useQuery({ queryKey: ["invoices", range], queryFn: () => api.listInvoices(range) });
+  const salesQ = useQuery({ queryKey: ["sales", range], queryFn: () => api.listSales(range) });
+  const paymentsQ = useQuery({ queryKey: ["payments", range], queryFn: () => api.listPayments(range) });
   const customersQ = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
   const productsQ = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
-  const purchasesQ = useQuery({ queryKey: ["purchases"], queryFn: () => api.listPurchases() });
-  const wagesQ = useQuery({ queryKey: ["casual-wages"], queryFn: () => api.listCasualWages() });
+  const purchasesQ = useQuery({ queryKey: ["purchases", range], queryFn: () => api.listPurchases(range) });
+  const wagesQ = useQuery({ queryKey: ["casual-wages", range], queryFn: () => api.listCasualWages(range) });
   const workersQ = useQuery({ queryKey: ["casual-workers"], queryFn: api.listCasualWorkers });
-  const stockQ = useQuery({ queryKey: ["stock"], queryFn: () => api.listStockEntries() });
-  const ordersQ = useQuery({ queryKey: ["orders"], queryFn: () => api.listOrders() });
+  const stockQ = useQuery({ queryKey: ["stock", range], queryFn: () => api.listStockEntries(range) });
+  const ordersQ = useQuery({ queryKey: ["orders", range], queryFn: () => api.listOrders(range) });
 
   const loading =
     invoicesQ.isLoading || salesQ.isLoading || paymentsQ.isLoading || customersQ.isLoading ||
