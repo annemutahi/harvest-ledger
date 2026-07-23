@@ -818,32 +818,56 @@ function CustomersReport({ data }: { data: {
 
       <Card>
         <CardHeader><CardTitle className="text-base">All Customers</CardTitle></CardHeader>
-        <CardContent>
-          {data.rows.length === 0 ? <EmptyState label="No customers" /> : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Customer</TableHead><TableHead>Type</TableHead>
-                <TableHead className="text-right">Orders</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-                <TableHead className="text-right">Outstanding</TableHead>
-                <TableHead>Last Purchase</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {data.rows.map((c) => (
-                  <TableRow key={c.id || c.name}>
-                    <TableCell>{c.name}</TableCell>
-                    <TableCell>{c.type}</TableCell>
-                    <TableCell className="text-right tabular-nums">{c.orders}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(c.revenue)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(c.outstanding)}</TableCell>
-                    <TableCell>{c.lastPurchase ? formatDate(c.lastPurchase) : "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        <CardContent className="p-0">
+          {data.rows.length === 0 ? <div className="p-6"><EmptyState label="No customers" /></div> : (
+            <AllCustomersTable rows={data.rows} />
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function AllCustomersTable({ rows }: { rows: {
+  id: string; name: string; type: string; orders: number; revenue: number; lastPurchase: string; outstanding: number;
+}[] }) {
+  const ctrl = useTableView({
+    data: rows,
+    accessors: {
+      name: (r) => r.name,
+      type: (r) => r.type,
+      orders: (r) => r.orders,
+      revenue: (r) => r.revenue,
+      outstanding: (r) => r.outstanding,
+      lastPurchase: (r) => r.lastPurchase,
+    },
+    defaultSort: { key: "revenue", dir: "desc" },
+  });
+  return (
+    <>
+      <Table>
+        <TableHeader><TableRow>
+          <SortableHead ctrl={ctrl} sortKey="name">Customer</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="type">Type</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="orders" align="right">Orders</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="revenue" align="right">Revenue</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="outstanding" align="right">Outstanding</SortableHead>
+          <SortableHead ctrl={ctrl} sortKey="lastPurchase">Last Purchase</SortableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {ctrl.paged.map((c) => (
+            <TableRow key={c.id || c.name}>
+              <TableCell>{c.name}</TableCell>
+              <TableCell>{c.type}</TableCell>
+              <TableCell className="text-right tabular-nums">{c.orders}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatCurrency(c.revenue)}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatCurrency(c.outstanding)}</TableCell>
+              <TableCell>{c.lastPurchase ? formatDate(c.lastPurchase) : "—"}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination ctrl={ctrl} label="customers" />
+    </>
   );
 }
