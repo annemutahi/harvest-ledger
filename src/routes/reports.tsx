@@ -624,11 +624,11 @@ function ExpensesReport({ data, period }: { data: {
 
 
 /* ---------------- P&L ---------------- */
-function PnlReport({ data, monthMode }: { data: {
+function PnlReport({ data, monthMode, period }: { data: {
   revenue: number; expenses: number; net: number; margin: number;
   comparison: { name: string; value: number }[];
   buckets: { label: string; revenue: number; expenses: number; net: number }[];
-}; monthMode: boolean }) {
+}; monthMode: boolean; period: Period }) {
   const netTone = data.net >= 0 ? "success" : "destructive";
   return (
     <div className="mt-6 space-y-6">
@@ -655,9 +655,34 @@ function PnlReport({ data, monthMode }: { data: {
           </ResponsiveContainer>
         )}
       </ChartCard>
+
+      <Card>
+        <TableCardHeader
+          title="P&L Summary"
+          onExport={() => exportSheet("profit-and-loss", "P&L", [
+            { Metric: "Revenue", Value: data.revenue },
+            { Metric: "Expenses", Value: data.expenses },
+            { Metric: data.net >= 0 ? "Net Profit" : "Net Loss", Value: data.net },
+            { Metric: "Margin (%)", Value: +data.margin.toFixed(2) },
+            ...data.buckets.map((b) => ({ Metric: b.label, Value: `Rev ${b.revenue} / Exp ${b.expenses} / Net ${b.net}` })),
+          ], period)}
+        />
+        <CardContent>
+          <Table>
+            <TableHeader><TableRow><TableHead>Metric</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+            <TableBody>
+              <TableRow><TableCell>Revenue</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.revenue)}</TableCell></TableRow>
+              <TableRow><TableCell>Expenses</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.expenses)}</TableCell></TableRow>
+              <TableRow><TableCell className="font-medium">{data.net >= 0 ? "Net Profit" : "Net Loss"}</TableCell><TableCell className="text-right tabular-nums font-medium">{formatCurrency(Math.abs(data.net))}</TableCell></TableRow>
+              <TableRow><TableCell>Margin</TableCell><TableCell className="text-right tabular-nums">{data.margin.toFixed(1)}%</TableCell></TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
 
 /* ---------------- Inventory ---------------- */
 function InventoryReport({ data }: { data: {
