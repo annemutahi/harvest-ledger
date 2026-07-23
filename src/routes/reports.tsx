@@ -344,14 +344,15 @@ function ReportsPage() {
 
           {loading ? <LoadingBlock /> : (
             <>
-              <TabsContent value="sales"><SalesReport data={salesData} /></TabsContent>
-              <TabsContent value="expenses"><ExpensesReport data={expenseData} /></TabsContent>
-              <TabsContent value="pnl"><PnlReport data={pnl} monthMode={month === "all"} /></TabsContent>
-              <TabsContent value="inventory"><InventoryReport data={inventory} /></TabsContent>
-              <TabsContent value="casuals"><CasualsReport data={casual} /></TabsContent>
-              <TabsContent value="customers"><CustomersReport data={customerReport} /></TabsContent>
+              <TabsContent value="sales"><SalesReport data={salesData} period={period} /></TabsContent>
+              <TabsContent value="expenses"><ExpensesReport data={expenseData} period={period} /></TabsContent>
+              <TabsContent value="pnl"><PnlReport data={pnl} monthMode={month === "all"} period={period} /></TabsContent>
+              <TabsContent value="inventory"><InventoryReport data={inventory} period={period} /></TabsContent>
+              <TabsContent value="casuals"><CasualsReport data={casual} period={period} /></TabsContent>
+              <TabsContent value="customers"><CustomersReport data={customerReport} period={period} /></TabsContent>
             </>
           )}
+
         </Tabs>
       </div>
     </AppShell>
