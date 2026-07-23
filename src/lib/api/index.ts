@@ -534,8 +534,8 @@ export const api = {
     await request(`/suppliers/${id}/`, { method: "DELETE" }),
 
   // ---------- Expenses: Purchases ----------
-  listPurchases: async (): Promise<ApiPurchase[]> =>
-    unwrap<any>(await request("/purchases/")).map(mapPurchase),
+  listPurchases: async (params?: { from?: string; to?: string }): Promise<ApiPurchase[]> =>
+    unwrap<any>(await request(`/purchases/${buildRange(params)}`)).map(mapPurchase),
   createPurchase: async (data: {
     supplierId?: string;
     supplierName: string;
