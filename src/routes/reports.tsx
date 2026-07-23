@@ -901,11 +901,14 @@ function WorkActivityTable({ rows }: { rows: any[] }) {
 }
 
 /* ---------------- Customers ---------------- */
-function CustomersReport({ data }: { data: {
+function CustomersReport({ data, period }: { data: {
   rows: { id: string; name: string; type: string; orders: number; revenue: number; lastPurchase: string; outstanding: number }[];
   total: number; active: number; inactive: number;
   top: { id: string; name: string; type: string; orders: number; revenue: number; lastPurchase: string; outstanding: number }[];
-} }) {
+}; period: Period }) {
+  const rowsForExport = (rs: typeof data.rows) => rs.map((c) => ({
+    Customer: c.name, Type: c.type, Orders: c.orders, Revenue: c.revenue, Outstanding: c.outstanding, LastPurchase: c.lastPurchase,
+  }));
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -916,7 +919,10 @@ function CustomersReport({ data }: { data: {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Top Customers by Revenue</CardTitle></CardHeader>
+        <TableCardHeader
+          title="Top Customers by Revenue"
+          onExport={() => exportSheet("customers-top", "Top Customers", rowsForExport(data.top), period)}
+        />
         <CardContent>
           {data.top.length === 0 ? <EmptyState label="No customer activity" /> : (
             <Table>
@@ -945,7 +951,10 @@ function CustomersReport({ data }: { data: {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">All Customers</CardTitle></CardHeader>
+        <TableCardHeader
+          title="All Customers"
+          onExport={() => exportSheet("customers-all", "All Customers", rowsForExport(data.rows), period)}
+        />
         <CardContent className="p-0">
           {data.rows.length === 0 ? <div className="p-6"><EmptyState label="No customers" /></div> : (
             <AllCustomersTable rows={data.rows} />
@@ -955,6 +964,7 @@ function CustomersReport({ data }: { data: {
     </div>
   );
 }
+
 
 function AllCustomersTable({ rows }: { rows: {
   id: string; name: string; type: string; orders: number; revenue: number; lastPurchase: string; outstanding: number;
