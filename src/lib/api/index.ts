@@ -408,8 +408,8 @@ export const api = {
     }),
 
   // Sales — /api/sales/
-  listSales: async (): Promise<Sale[]> =>
-    unwrap<any>(await request("/sales/")).map(mapSale),
+  listSales: async (params?: { from?: string; to?: string }): Promise<Sale[]> =>
+    unwrap<any>(await request(`/sales/${buildRange(params)}`)).map(mapSale),
   createSale: async (data: {
     customerId: string;
     paymentType: PaymentType;
