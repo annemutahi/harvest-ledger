@@ -510,11 +510,12 @@ type SalesDataShape = {
 
 
 /* ---------------- Expenses ---------------- */
-function ExpensesReport({ data }: { data: {
+function ExpensesReport({ data, period }: { data: {
   purchases: any[]; wages: any[]; purchasesTotal: number; wagesTotal: number; total: number;
   categories: { name: string; value: number }[];
   trend: { label: string; purchases: number; wages: number }[];
-} }) {
+}; period: Period }) {
+
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
