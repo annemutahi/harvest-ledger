@@ -478,14 +478,14 @@ export const api = {
     await request(`/sales/${id}/`, { method: "DELETE" }),
 
   // Invoices — /api/invoices/
-  listInvoices: async (): Promise<Invoice[]> =>
-    unwrap<any>(await request("/invoices/")).map(mapInvoice),
+  listInvoices: async (params?: { from?: string; to?: string }): Promise<Invoice[]> =>
+    unwrap<any>(await request(`/invoices/${buildRange(params)}`)).map(mapInvoice),
   getInvoice: async (id: string): Promise<Invoice> =>
     mapInvoice(await request(`/invoices/${id}/`)),
 
   // Payments — /api/payments/
-  listPayments: async (): Promise<Payment[]> =>
-    unwrap<any>(await request("/payments/")).map(mapPayment),
+  listPayments: async (params?: { from?: string; to?: string }): Promise<Payment[]> =>
+    unwrap<any>(await request(`/payments/${buildRange(params)}`)).map(mapPayment),
   getPayment: async (id: string): Promise<Payment> =>
     mapPayment(await request(`/payments/${id}/`)),
   createPayment: async (data: {
