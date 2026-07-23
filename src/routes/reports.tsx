@@ -381,6 +381,26 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
+function exportSheet(filenameBase: string, sheetName: string, rows: Record<string, unknown>[], period: Period) {
+  const wb = XLSX.utils.book_new();
+  const meta = [["Report", sheetName], ["Period", period.label], ["From", period.from], ["To", period.to], ["Generated", new Date().toISOString()]];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(meta), "Overview");
+  XLSX.utils.book_append_sheet(wb, rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([["No data"]]), sheetName.slice(0, 31));
+  XLSX.writeFile(wb, `${filenameBase}-${period.from}_${period.to}.xlsx`);
+}
+
+function TableCardHeader({ title, onExport }: { title: string; onExport: () => void }) {
+  return (
+    <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+      <CardTitle className="text-base">{title}</CardTitle>
+      <Button variant="outline" size="sm" onClick={onExport} className="print:hidden">
+        <FileSpreadsheet className="mr-2 h-3.5 w-3.5" /> Export Excel
+      </Button>
+    </CardHeader>
+  );
+}
+
+
 /* ---------------- Sales ---------------- */
 function SalesReport({ data }: { data: ReturnType<typeof useSalesData> }) {
   return (
