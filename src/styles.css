@@ -162,19 +162,27 @@
     font-size: 11pt;
   }
 
-  aside, nav, [data-sidebar],
-  .no-print, [data-print="hide"] {
-    display: none !important;
+  /* Hide everything by default, then reveal the print document subtree.
+     This guarantees only the invoice/receipt/report is printed, regardless
+     of surrounding app-shell chrome (sidebar, header, toolbars, etc.). */
+  body * {
+    visibility: hidden;
   }
-
+  .print-document,
+  .print-document * {
+    visibility: visible;
+  }
   .print-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
     background: #ffffff !important;
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
-    width: 100% !important;
     color: #000000 !important;
   }
 
@@ -182,6 +190,14 @@
     color: #000000 !important;
     background: transparent !important;
     box-shadow: none !important;
+  }
+
+  /* Explicit hide for any element opting out of print. */
+  .no-print,
+  [data-print="hide"],
+  .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
   }
 
   .print-document a { text-decoration: none !important; color: #000 !important; }
@@ -210,5 +226,6 @@
   .print-document tr,
   .print-document .print-keep { break-inside: avoid; page-break-inside: avoid; }
 }
+
 
 
