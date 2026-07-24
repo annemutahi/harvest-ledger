@@ -104,9 +104,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetInactivityTimer();
       },
       logout: async () => {
-        await api.logout();
-        setUser(null);
+        try { await api.logout(); } finally {
+          setUser(null);
+          // Replace history so Back can't return to a protected page.
+          if (typeof window !== "undefined") {
+            window.location.replace("/login");
+          }
+        }
       },
+
     }),
     [user, loading],
   );
