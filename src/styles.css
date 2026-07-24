@@ -210,11 +210,19 @@
   }
   .print-document thead th {
     border-bottom: 2px solid #000;
+    text-align: left;
+    font-weight: 600;
+    vertical-align: bottom;
+    white-space: nowrap;
   }
   .print-document th.text-right,
-  .print-document td.text-right { text-align: right; }
+  .print-document td.text-right { text-align: right !important; }
   .print-document th.text-center,
-  .print-document td.text-center { text-align: center; }
+  .print-document td.text-center { text-align: center !important; }
+  .print-document table { table-layout: auto; }
+  .print-document thead { display: table-header-group; }
+  .print-document tfoot { display: table-footer-group; }
+
 
 
   .print-document .paid-stamp {
