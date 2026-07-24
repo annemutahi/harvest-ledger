@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,11 +15,25 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Trap the back button while signed out so users can't navigate back
+  // into a protected page they already visited in this tab's history.
+  useEffect(() => {
+    if (user) return;
+    const trap = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+    trap();
+    window.addEventListener("popstate", trap);
+    return () => window.removeEventListener("popstate", trap);
+  }, [user]);
+
+
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
