@@ -210,8 +210,12 @@
   }
   .print-document thead th {
     border-bottom: 2px solid #000;
-    text-align: left;
   }
+  .print-document th.text-right,
+  .print-document td.text-right { text-align: right; }
+  .print-document th.text-center,
+  .print-document td.text-center { text-align: center; }
+
 
   .print-document .paid-stamp {
     border: 2px solid #16803d !important;
