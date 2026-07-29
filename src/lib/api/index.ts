@@ -98,7 +98,19 @@ function setRefreshToken(token: string) {
   storage()?.setItem(REFRESH_TOKEN_KEY, token);
 }
 
+let refreshInFlight: Promise<string> | null = null;
+
 async function refreshAccessToken(): Promise<string> {
+  // Single-flight: several parallel 401s must share ONE refresh call, otherwise
+  // the losing calls fail and wipe the session while the user is mid-form.
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = doRefreshAccessToken().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function doRefreshAccessToken(): Promise<string> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
     throw new ApiError(401, "No refresh token available.");
@@ -132,6 +144,7 @@ async function refreshAccessToken(): Promise<string> {
   if (newRefreshToken) setRefreshToken(newRefreshToken);
   return accessToken;
 }
+
 
 function setStoredAuth(auth: LoginResponse): AuthUser {
   const accessToken = auth.access ?? auth.token ?? auth.access_token;
