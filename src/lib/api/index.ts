@@ -188,18 +188,20 @@ async function request<T>(path: string, init?: RequestOptions): Promise<T> {
     return (await res.json()) as T;
   }
 
-  if ((res.status === 401 || res.status === 403) && !init?.skipRefresh) {
+  // 403 = "you lack permission for this action" — NOT an expired session.
+  // Signing the user out on 403 was killing open forms; only 401 refreshes/clears.
+  if (res.status === 401 && !init?.skipRefresh) {
     try {
       await refreshAccessToken();
       return await request(path, { ...init, skipRefresh: true });
-    } catch (refreshError) {
+    } catch {
       clearStoredAuth();
       const body = await res.text().catch(() => "");
       throw new ApiError(res.status, `API ${res.status} ${res.statusText} on ${path}: ${body}`);
     }
   }
 
-  if (res.status === 401 || res.status === 403) clearStoredAuth();
+  if (res.status === 401) clearStoredAuth();
   const body = await res.text().catch(() => "");
   throw new ApiError(res.status, `API ${res.status} ${res.statusText} on ${path}: ${body}`);
 }
