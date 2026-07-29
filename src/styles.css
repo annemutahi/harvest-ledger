@@ -90,6 +90,42 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(23.226% 0.09082 293.348);
   --sidebar-ring: oklch(0.82 0.16 88);
+
+  /* ------------------------------------------------------------
+     Typography system
+     Display/headings: Plus Jakarta Sans (a grotesk with a little
+     warmth in its curves — fits the agricultural brand without
+     tipping into "playful app" territory).
+     Body/UI: Inter (the workhorse for dense, data-heavy screens —
+     excellent legibility at small sizes, huge x-height).
+     Numeric/mono: IBM Plex Mono, used only for figures in tables,
+     invoices, and receipts so columns of numbers align cleanly.
+  ------------------------------------------------------------- */
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Type scale — a ~1.2 (minor third) ratio, tuned by hand for
+     readability at desktop UI sizes. Base bumped from the browser
+     default 16px feel to a slightly larger, more generous rhythm. */
+  --text-xs: 0.8125rem;    /* 13px  — table meta, timestamps, badges */
+  --text-sm: 0.875rem;     /* 14px  — secondary UI text, form hints */
+  --text-base: 1.0625rem;  /* 17px  — body copy, table cells, inputs (was 16px default) */
+  --text-lg: 1.125rem;     /* 18px  — card titles, section labels */
+  --text-xl: 1.25rem;      /* 20px  — panel headings */
+  --text-2xl: 1.5rem;      /* 24px  — page titles */
+  --text-3xl: 1.875rem;    /* 30px  — dashboard hero numbers */
+  --text-4xl: 2.25rem;     /* 36px  — large stat callouts */
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.06em;
 }
 
 
@@ -139,12 +175,104 @@
   * {
     border-color: var(--color-border);
   }
-  html, body {
-    font-family: "Fredoka", system-ui, -apple-system, sans-serif;
+
+  html {
+    /* Kept at the standard 16px so spacing/padding/icons (all rem-based)
+       stay at their normal scale — only text sizes are bumped, via the
+       --text-* variables below, to avoid the two increases compounding. */
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
   }
+
+  html, body {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-weight: 400;
+    letter-spacing: var(--tracking-normal);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-foreground);
+  }
+
+  h1 { font-size: var(--text-3xl); font-weight: 800; }
+  h2 { font-size: var(--text-2xl); font-weight: 700; }
+  h3 { font-size: var(--text-xl); font-weight: 700; }
+  h4 { font-size: var(--text-lg); font-weight: 600; }
+  h5 { font-size: var(--text-base); font-weight: 600; }
+  h6 {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--color-muted-foreground);
+  }
+
+  p {
+    line-height: var(--leading-relaxed);
+  }
+
+  small, .text-caption {
+    font-size: var(--text-xs);
+    color: var(--color-muted-foreground);
+    line-height: var(--leading-normal);
+  }
+
+  label {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    letter-spacing: var(--tracking-normal);
+  }
+
+  /* Numeric alignment — apply to any figure the eye needs to compare
+     down a column: prices, quantities, invoice totals, stat cards. */
+  .tabular-nums,
+  table td.text-right,
+  table th.text-right {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* Buttons and inputs inherit the bumped base size automatically via
+     rem units, but tighten letter-spacing slightly for a crisper,
+     more "product UI" feel at button scale. */
+  button, input, select, textarea {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-normal);
+  }
+
+  /* Data tables: slightly larger than default UI text so financial
+     figures stay comfortably legible, with generous row height. */
+  table {
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+  }
+  th {
+    font-weight: 600;
+    letter-spacing: var(--tracking-wide);
+    color: var(--color-muted-foreground);
+    text-transform: uppercase;
+    font-size: var(--text-xs);
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-accent-foreground);
   }
 }
 
@@ -159,7 +287,7 @@
   html, body {
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11pt;
+    font-size: 12pt;
   }
 
   /* Hide everything by default, then reveal the print document subtree.
@@ -223,8 +351,6 @@
   .print-document thead { display: table-header-group; }
   .print-document tfoot { display: table-footer-group; }
 
-
-
   .print-document .paid-stamp {
     border: 2px solid #16803d !important;
     color: #16803d !important;
@@ -238,6 +364,3 @@
   .print-document tr,
   .print-document .print-keep { break-inside: avoid; page-break-inside: avoid; }
 }
-
-
-

@@ -210,7 +210,7 @@ function ProductsPage() {
         </Card>
       </div>
 
-      <Card className="mt-4">
+      {/* <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-base">Inventory by Category</CardTitle>
         </CardHeader>
@@ -229,7 +229,7 @@ function ProductsPage() {
             ))
           )}
         </CardContent>
-      </Card>
+      </Card> */}
 
       <Card className="mt-4">
         <CardContent className="p-0">
