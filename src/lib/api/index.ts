@@ -98,7 +98,19 @@ function setRefreshToken(token: string) {
   storage()?.setItem(REFRESH_TOKEN_KEY, token);
 }
 
+let refreshInFlight: Promise<string> | null = null;
+
 async function refreshAccessToken(): Promise<string> {
+  // Single-flight: several parallel 401s must share ONE refresh call, otherwise
+  // the losing calls fail and wipe the session while the user is mid-form.
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = doRefreshAccessToken().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function doRefreshAccessToken(): Promise<string> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
     throw new ApiError(401, "No refresh token available.");
@@ -132,6 +144,7 @@ async function refreshAccessToken(): Promise<string> {
   if (newRefreshToken) setRefreshToken(newRefreshToken);
   return accessToken;
 }
+
 
 function setStoredAuth(auth: LoginResponse): AuthUser {
   const accessToken = auth.access ?? auth.token ?? auth.access_token;
@@ -175,18 +188,20 @@ async function request<T>(path: string, init?: RequestOptions): Promise<T> {
     return (await res.json()) as T;
   }
 
-  if ((res.status === 401 || res.status === 403) && !init?.skipRefresh) {
+  // 403 = "you lack permission for this action" — NOT an expired session.
+  // Signing the user out on 403 was killing open forms; only 401 refreshes/clears.
+  if (res.status === 401 && !init?.skipRefresh) {
     try {
       await refreshAccessToken();
       return await request(path, { ...init, skipRefresh: true });
-    } catch (refreshError) {
+    } catch {
       clearStoredAuth();
       const body = await res.text().catch(() => "");
       throw new ApiError(res.status, `API ${res.status} ${res.statusText} on ${path}: ${body}`);
     }
   }
 
-  if (res.status === 401 || res.status === 403) clearStoredAuth();
+  if (res.status === 401) clearStoredAuth();
   const body = await res.text().catch(() => "");
   throw new ApiError(res.status, `API ${res.status} ${res.statusText} on ${path}: ${body}`);
 }

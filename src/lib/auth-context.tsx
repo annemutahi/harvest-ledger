@@ -58,7 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const syncAuthState = async () => {
       try {
-        setUser(await api.me());
+        const next = await api.me();
+        // Only swap the object when it actually changed. A new identity object
+        // re-renders the whole tree (and re-runs the route guard), which was
+        // tearing down open dialogs mid-entry.
+        setUser((prev) =>
+          prev && next && prev.id === next.id && prev.username === next.username ? prev : next,
+        );
       } catch {
         setUser(null);
       }
@@ -67,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener(AUTH_CHANGED_EVENT, syncAuthState);
     return () => window.removeEventListener(AUTH_CHANGED_EVENT, syncAuthState);
   }, []);
+
 
   useEffect(() => {
     if (!user) return;
