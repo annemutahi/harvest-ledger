@@ -192,6 +192,8 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
+            onPointerDownOutside={() => setOpenMobile(false)}
+            onInteractOutside={() => setOpenMobile(false)}
             className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
             style={
               {
