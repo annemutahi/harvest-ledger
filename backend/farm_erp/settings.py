@@ -146,7 +146,7 @@ REST_FRAMEWORK = {
         "login": "10/min",
         "webhook": "120/min",
     },
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "farm_erp.pagination.DefaultPagination",
     "PAGE_SIZE": 50,
 }
 
