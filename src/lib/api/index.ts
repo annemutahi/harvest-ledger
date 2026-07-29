@@ -493,8 +493,16 @@ export const api = {
     await request(`/sales/${id}/`, { method: "DELETE" }),
 
   // Invoices — /api/invoices/
-  listInvoices: async (params?: { from?: string; to?: string }): Promise<Invoice[]> =>
-    unwrap<any>(await request(`/invoices/${buildRange(params)}`)).map(mapInvoice),
+  listInvoices: async (params?: { from?: string; to?: string; customer?: string }): Promise<Invoice[]> => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set("from", params.from);
+    if (params?.to) qs.set("to", params.to);
+    if (params?.customer) qs.set("customer", params.customer);
+    // DRF paginates at 50 by default; request a large page so lookups
+    // (e.g. picking an invoice to pay) aren't silently truncated.
+    qs.set("page_size", "1000");
+    return unwrap<any>(await request(`/invoices/?${qs.toString()}`)).map(mapInvoice);
+  },
   getInvoice: async (id: string): Promise<Invoice> =>
     mapInvoice(await request(`/invoices/${id}/`)),
 
