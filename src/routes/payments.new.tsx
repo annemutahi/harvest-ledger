@@ -73,8 +73,10 @@ function RecordPaymentPage() {
         onSubmit={(e) => {
           e.preventDefault();
           if (!customerId || !invoiceId || amount <= 0) return;
+          if (createPaymentMutation.isPending || createPaymentMutation.isSuccess) return;
           createPaymentMutation.mutate({ invoiceId, customerId, amount, method, notes });
         }}
+
       >
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>Payment Details</CardTitle></CardHeader>
