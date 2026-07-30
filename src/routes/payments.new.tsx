@@ -121,9 +121,18 @@ function RecordPaymentPage() {
               </div>
             </div>
             <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional reference…" /></div>
-            <Button type="submit" className="w-full" disabled={!inv || amount <= 0 || createPaymentMutation.isPending}>
-              Record Payment
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!inv || amount <= 0 || createPaymentMutation.isPending || createPaymentMutation.isSuccess}
+            >
+              {createPaymentMutation.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recording payment…</>
+              ) : (
+                "Record Payment"
+              )}
             </Button>
+
           </CardContent>
         </Card>
         <Card>
