@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -35,16 +35,24 @@ function RecordPaymentPage() {
   });
   const createPaymentMutation = useMutation({
     mutationFn: (payload: Parameters<typeof api.createPayment>[0]) => api.createPayment(payload),
-    onSuccess: () => {
-      toast.success("Payment recorded");
-      qc.invalidateQueries({ queryKey: ["payments"] });
-      qc.invalidateQueries({ queryKey: ["invoices"] });
+    onSuccess: async () => {
+      toast.success("Payment recorded", {
+        description: `${formatCurrency(amount)} applied to ${inv?.invoiceNumber ?? "invoice"}.`,
+      });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["payments"] }),
+        qc.invalidateQueries({ queryKey: ["invoices"] }),
+        qc.invalidateQueries({ queryKey: ["invoice"] }),
+        qc.invalidateQueries({ queryKey: ["customers"] }),
+        qc.invalidateQueries({ queryKey: ["dashboard"] }),
+      ]);
       navigate({ to: "/transactions" });
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Failed to record payment");
     },
   });
+
 
   const customerInvoices = useMemo(
     () => invoices.filter((i) => i.customerId === customerId && i.outstandingBalance > 0),
@@ -65,8 +73,10 @@ function RecordPaymentPage() {
         onSubmit={(e) => {
           e.preventDefault();
           if (!customerId || !invoiceId || amount <= 0) return;
+          if (createPaymentMutation.isPending || createPaymentMutation.isSuccess) return;
           createPaymentMutation.mutate({ invoiceId, customerId, amount, method, notes });
         }}
+
       >
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>Payment Details</CardTitle></CardHeader>
@@ -111,9 +121,18 @@ function RecordPaymentPage() {
               </div>
             </div>
             <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional reference…" /></div>
-            <Button type="submit" className="w-full" disabled={!inv || amount <= 0 || createPaymentMutation.isPending}>
-              Record Payment
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!inv || amount <= 0 || createPaymentMutation.isPending || createPaymentMutation.isSuccess}
+            >
+              {createPaymentMutation.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recording payment…</>
+              ) : (
+                "Record Payment"
+              )}
             </Button>
+
           </CardContent>
         </Card>
         <Card>
