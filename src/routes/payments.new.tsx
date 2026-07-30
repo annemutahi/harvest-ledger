@@ -35,16 +35,24 @@ function RecordPaymentPage() {
   });
   const createPaymentMutation = useMutation({
     mutationFn: (payload: Parameters<typeof api.createPayment>[0]) => api.createPayment(payload),
-    onSuccess: () => {
-      toast.success("Payment recorded");
-      qc.invalidateQueries({ queryKey: ["payments"] });
-      qc.invalidateQueries({ queryKey: ["invoices"] });
+    onSuccess: async () => {
+      toast.success("Payment recorded", {
+        description: `${formatCurrency(amount)} applied to ${inv?.invoiceNumber ?? "invoice"}.`,
+      });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["payments"] }),
+        qc.invalidateQueries({ queryKey: ["invoices"] }),
+        qc.invalidateQueries({ queryKey: ["invoice"] }),
+        qc.invalidateQueries({ queryKey: ["customers"] }),
+        qc.invalidateQueries({ queryKey: ["dashboard"] }),
+      ]);
       navigate({ to: "/transactions" });
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Failed to record payment");
     },
   });
+
 
   const customerInvoices = useMemo(
     () => invoices.filter((i) => i.customerId === customerId && i.outstandingBalance > 0),
