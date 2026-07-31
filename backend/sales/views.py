@@ -47,5 +47,33 @@ class PaymentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return apply_date_range(super().get_queryset(), self.request, "date")
 
+    def create(self, request, *args, **kwargs):
+        # Idempotency: a repeated submit with the same key returns the
+        # original payment instead of creating a duplicate record.
+        key = (
+            request.data.get("idempotency_key")
+            or request.headers.get("Idempotency-Key")
+            or ""
+        ).strip()
+        if key:
+            existing = Payment.objects.filter(idempotency_key=key).first()
+            if existing:
+                return Response(
+                    self.get_serializer(existing).data, status=status.HTTP_200_OK,
+                )
+        serializer = self.get_serializer(data={**request.data, "idempotency_key": key or None})
+        serializer.is_valid(raise_exception=True)
+        try:
+            self.perform_create(serializer)
+        except IntegrityError:
+            existing = Payment.objects.filter(idempotency_key=key).first() if key else None
+            if existing:
+                return Response(
+                    self.get_serializer(existing).data, status=status.HTTP_200_OK,
+                )
+            raise
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)
+
