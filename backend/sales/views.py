@@ -1,5 +1,7 @@
+from django.db import IntegrityError
 from rest_framework import status, viewsets
 from rest_framework.response import Response
+
 
 from accounts.permissions import ReadOnlyForFarmhands
 from farm_erp.date_filter import apply_date_range
