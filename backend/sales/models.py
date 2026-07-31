@@ -98,6 +98,9 @@ class Payment(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name="payments_recorded",
     )
+    idempotency_key = models.CharField(
+        max_length=64, null=True, blank=True, unique=True, db_index=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

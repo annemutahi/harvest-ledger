@@ -517,16 +517,20 @@ export const api = {
     amount: number;
     method: PaymentMethod;
     notes?: string;
+    /** Stable per-submission key so retries/double-clicks can't duplicate. */
+    idempotencyKey?: string;
   }): Promise<Payment> =>
     mapPayment(
       await request("/payments/", {
         method: "POST",
+        headers: data.idempotencyKey ? { "Idempotency-Key": data.idempotencyKey } : undefined,
         body: JSON.stringify({
           invoice: data.invoiceId,
           customer: data.customerId,
           amount: data.amount,
           method: data.method.toLowerCase().replace(/ /g, "_"),
           notes: data.notes ?? "",
+          idempotency_key: data.idempotencyKey ?? null,
         }),
       }),
     ),

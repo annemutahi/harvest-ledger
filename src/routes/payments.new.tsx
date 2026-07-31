@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,9 @@ function RecordPaymentPage() {
   const [amount, setAmount] = useState(0);
   const [method, setMethod] = useState<"Cash" | "Bank Transfer" | "Mobile Money" | "Cheque">("Cash");
   const [notes, setNotes] = useState("");
+  // One stable key per submission attempt: retries/double-clicks reuse it,
+  // so the backend returns the original payment instead of duplicating it.
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
   const { data: invoices = [] } = useQuery({
@@ -74,7 +77,20 @@ function RecordPaymentPage() {
           e.preventDefault();
           if (!customerId || !invoiceId || amount <= 0) return;
           if (createPaymentMutation.isPending || createPaymentMutation.isSuccess) return;
-          createPaymentMutation.mutate({ invoiceId, customerId, amount, method, notes });
+          if (!idempotencyKeyRef.current) {
+            idempotencyKeyRef.current =
+              typeof crypto !== "undefined" && "randomUUID" in crypto
+                ? crypto.randomUUID()
+                : `pay-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+          }
+          createPaymentMutation.mutate({
+            invoiceId,
+            customerId,
+            amount,
+            method,
+            notes,
+            idempotencyKey: idempotencyKeyRef.current,
+          });
         }}
 
       >
