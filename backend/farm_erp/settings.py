@@ -172,6 +172,7 @@ CORS_ALLOW_HEADERS = (
     "origin",
     "x-webhook-secret",
     "x-requested-with",
+    "idempotency-key",
 )
 
 # --- Security headers (auto-relaxed in DEBUG) ---
