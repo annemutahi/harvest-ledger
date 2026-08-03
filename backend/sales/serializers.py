@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from products.models import Product
 
-from .models import Invoice, Payment, Sale, SaleItem
+from .models import CreditApplication, Invoice, InvoiceAdjustment, Payment, Sale, SaleItem
 
 
 def next_invoice_number() -> str:
@@ -31,6 +31,13 @@ class SaleItemSerializer(serializers.ModelSerializer):
         read_only_fields = ["product_name", "line_total"]
 
 
+class InvoiceAdjustmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceAdjustment
+        fields = ["id", "kind", "previous_total", "new_total", "amount", "notes", "created_at"]
+        read_only_fields = fields
+
+
 class InvoiceSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     outstanding_balance = serializers.DecimalField(
@@ -39,6 +46,9 @@ class InvoiceSerializer(serializers.ModelSerializer):
     items = serializers.SerializerMethodField()
     sale_id = serializers.SerializerMethodField()
     payment_type = serializers.SerializerMethodField()
+    adjustments = InvoiceAdjustmentSerializer(many=True, read_only=True)
+    credit_applied = serializers.SerializerMethodField()
+    available_credit = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -46,7 +56,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "id", "invoice_number", "customer", "customer_name",
             "issue_date", "due_date", "total_amount", "amount_paid",
             "outstanding_balance", "status", "items", "sale_id",
-            "payment_type", "created_at",
+            "payment_type", "adjustments", "credit_applied", "available_credit", "created_at",
         ]
         read_only_fields = fields
 
@@ -57,6 +67,12 @@ class InvoiceSerializer(serializers.ModelSerializer):
     def get_payment_type(self, obj):
         sale = getattr(obj, "sale", None)
         return sale.payment_type if sale else None
+
+    def get_credit_applied(self, obj):
+        return sum((application.amount for application in obj.credit_applications.all()), Decimal("0"))
+
+    def get_available_credit(self, obj):
+        return obj.available_credit
 
 
     def get_items(self, obj):
@@ -73,13 +89,14 @@ class SaleSerializer(serializers.ModelSerializer):
     status = serializers.CharField(source="invoice.status", read_only=True)
     due_date = serializers.DateField(write_only=True, required=False)
     invoice_date = serializers.DateField(write_only=True, required=False)
+    adjustment_note = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Sale
         fields = [
             "id", "invoice", "invoice_number", "customer", "customer_name",
             "date", "payment_type", "total", "status", "items",
-            "due_date", "invoice_date", "created_at",
+            "due_date", "invoice_date", "adjustment_note", "created_at",
         ]
         read_only_fields = ["invoice", "total", "created_at"]
 
@@ -99,17 +116,41 @@ class SaleSerializer(serializers.ModelSerializer):
         due_date = validated_data.pop("due_date", None)
         invoice_date = validated_data.pop("invoice_date", validated_data.get("date"))
         total = sum(Decimal(i["quantity"]) * Decimal(i["unit_price"]) for i in items)
+        customer = validated_data["customer"]
+        remaining_credit_to_apply = total
+        credit_allocations = []
+        applied_credit = Decimal("0")
+        credit_sources = Invoice.objects.select_for_update().filter(
+            customer=customer, status=Invoice.CREDIT,
+        ).prefetch_related("credit_uses")
+        for source_invoice in credit_sources:
+            if remaining_credit_to_apply <= 0:
+                break
+            amount = min(source_invoice.available_credit, remaining_credit_to_apply)
+            if amount > 0:
+                credit_allocations.append((source_invoice, amount))
+                applied_credit += amount
+                remaining_credit_to_apply -= amount
 
         invoice = Invoice.objects.create(
             invoice_number=next_invoice_number(),
-            customer=validated_data["customer"],
+            customer=customer,
             issue_date=invoice_date or timezone.localdate(),
             due_date=due_date or timezone.localdate(),
             total_amount=total,
-            amount_paid=(total if validated_data.get("payment_type") == Sale.CASH else 0),
+            amount_paid=(total if validated_data.get("payment_type") == Sale.CASH else applied_credit),
         )
         invoice.recompute_status()
         invoice.save(update_fields=["status", "amount_paid"])
+        for source_invoice, amount in credit_allocations:
+            CreditApplication.objects.create(
+                source_invoice=source_invoice, target_invoice=invoice, amount=amount,
+            )
+            # Refresh so the available-credit calculation sees the application
+            # just created rather than a prefetched related-object cache.
+            source_invoice.refresh_from_db()
+            source_invoice.recompute_status()
+            source_invoice.save(update_fields=["status", "updated_at"])
 
         sale = Sale.objects.create(
             invoice=invoice, total=total, **validated_data,
@@ -131,6 +172,8 @@ class SaleSerializer(serializers.ModelSerializer):
         items = validated_data.pop("items", None)
         due_date = validated_data.pop("due_date", None)
         invoice_date = validated_data.pop("invoice_date", None)
+        adjustment_note = validated_data.pop("adjustment_note", "")
+        previous_total = instance.invoice.total_amount
 
         # Restore inventory for old items, then rewrite them.
         if items is not None:
@@ -164,6 +207,17 @@ class SaleSerializer(serializers.ModelSerializer):
 
         instance.invoice.recompute_status()
         instance.invoice.save()
+        total_change = instance.invoice.total_amount - previous_total
+        if total_change:
+            InvoiceAdjustment.objects.create(
+                invoice=instance.invoice,
+                kind=InvoiceAdjustment.DEBIT if total_change > 0 else InvoiceAdjustment.CREDIT,
+                previous_total=previous_total,
+                new_total=instance.invoice.total_amount,
+                amount=abs(total_change),
+                notes=adjustment_note.strip(),
+                created_by=self.context["request"].user if self.context.get("request") else None,
+            )
         instance.save()
         return instance
 
@@ -185,10 +239,43 @@ class PaymentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Amount must be > 0.")
         return value
 
+    def validate(self, attrs):
+        """Keep a payment tied to its invoice and prevent overpayments."""
+        invoice = attrs.get("invoice", getattr(self.instance, "invoice", None))
+        customer = attrs.get("customer", getattr(self.instance, "customer", None))
+        amount = attrs.get("amount", getattr(self.instance, "amount", None))
+
+        if invoice and customer and invoice.customer_id != customer.id:
+            raise serializers.ValidationError({
+                "customer": "The selected customer does not own this invoice.",
+            })
+
+        if invoice and amount is not None:
+            existing_amount = self.instance.amount if self.instance else Decimal("0")
+            outstanding = invoice.outstanding_balance + existing_amount
+            if amount > outstanding:
+                raise serializers.ValidationError({
+                    "amount": f"Payment cannot exceed the outstanding balance of {outstanding}.",
+                })
+
+        return attrs
+
     @transaction.atomic
     def create(self, validated_data):
+        # Lock the invoice and re-check its balance to avoid concurrent
+        # submissions creating an overpayment.
+        invoice = Invoice.objects.select_for_update().get(pk=validated_data["invoice"].pk)
+        if validated_data["customer"].pk != invoice.customer_id:
+            raise serializers.ValidationError({
+                "customer": "The selected customer does not own this invoice.",
+            })
+        if validated_data["amount"] > invoice.outstanding_balance:
+            raise serializers.ValidationError({
+                "amount": f"Payment cannot exceed the outstanding balance of {invoice.outstanding_balance}.",
+            })
+
+        validated_data["invoice"] = invoice
         payment = super().create(validated_data)
-        invoice = payment.invoice
         invoice.amount_paid = (invoice.amount_paid or 0) + payment.amount
         invoice.recompute_status()
         invoice.save(update_fields=["amount_paid", "status", "updated_at"])

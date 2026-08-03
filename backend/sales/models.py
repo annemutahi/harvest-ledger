@@ -13,9 +13,10 @@ class Invoice(models.Model):
     PARTIAL = "partially_paid"
     PAID = "paid"
     OVERDUE = "overdue"
+    CREDIT = "credit"
     STATUS_CHOICES = [
         (UNPAID, "Unpaid"), (PARTIAL, "Partially Paid"),
-        (PAID, "Paid"), (OVERDUE, "Overdue"),
+        (PAID, "Paid"), (OVERDUE, "Overdue"), (CREDIT, "Credit"),
     ]
 
     invoice_number = models.CharField(max_length=32, unique=True)
@@ -32,7 +33,9 @@ class Invoice(models.Model):
         ordering = ["-issue_date", "-id"]
 
     def recompute_status(self):
-        if self.amount_paid >= self.total_amount and self.total_amount > 0:
+        if self.available_credit > 0:
+            self.status = self.CREDIT
+        elif self.amount_paid >= self.total_amount and self.total_amount > 0:
             self.status = self.PAID
         elif self.amount_paid > 0:
             self.status = self.PARTIAL
@@ -44,6 +47,47 @@ class Invoice(models.Model):
     @property
     def outstanding_balance(self):
         return (self.total_amount or 0) - (self.amount_paid or 0)
+
+    @property
+    def available_credit(self):
+        used = sum((application.amount for application in self.credit_uses.all()), Decimal("0"))
+        return max((self.amount_paid or 0) - (self.total_amount or 0) - used, Decimal("0"))
+
+
+class InvoiceAdjustment(models.Model):
+    DEBIT = "debit"
+    CREDIT = "credit"
+    KIND_CHOICES = [(DEBIT, "Debit"), (CREDIT, "Credit")]
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="adjustments")
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    previous_total = models.DecimalField(max_digits=14, decimal_places=2)
+    new_total = models.DecimalField(max_digits=14, decimal_places=2)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    notes = models.TextField(blank=True, default="")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="invoice_adjustments_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+
+class CreditApplication(models.Model):
+    """Records the use of excess payment on one invoice against another."""
+
+    source_invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name="credit_uses")
+    target_invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name="credit_applications")
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="credit_application_amount_positive"),
+        ]
 
 
 class Sale(models.Model):
@@ -90,7 +134,7 @@ class Payment(models.Model):
 
     invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name="payments")
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name="payments")
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=timezone.localdate)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     method = models.CharField(max_length=20, choices=METHOD_CHOICES, default=CASH)
     notes = models.TextField(blank=True, default="")

@@ -39,6 +39,7 @@ function NewSalePage() {
 
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => api.listInvoices() });
   const createSaleMutation = useMutation({
     mutationFn: (payload: Parameters<typeof api.createSale>[0]) => api.createSale(payload),
     onSuccess: () => {
@@ -62,6 +63,14 @@ function NewSalePage() {
     setLines((prev) => prev.map((line, idx) => (idx === index ? { ...line, ...patch } : line)));
 
   const hasInvalidLine = lines.some((line) => !line.productId || line.qty < 1);
+  const availableCredit = useMemo(
+    () => invoices
+      .filter((invoice) => invoice.customerId === customerId && invoice.status === "Credit")
+      .reduce((sum, invoice) => sum + invoice.availableCredit, 0),
+    [customerId, invoices],
+  );
+  const creditApplied = Math.min(total, availableCredit);
+  const amountToPay = Math.max(total - creditApplied, 0);
 
   return (
     <AppShell
@@ -175,7 +184,9 @@ function NewSalePage() {
             </div>
             <div className="rounded-lg bg-muted p-4">
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(total)}</span></div>
+              {creditApplied > 0 && <div className="mt-2 flex justify-between text-sm"><span className="text-muted-foreground">Customer credit applied</span><span className="text-success">−{formatCurrency(creditApplied)}</span></div>}
               <div className="mt-3 flex justify-between border-t pt-3"><span className="font-semibold">Total</span><span className="text-lg font-bold text-primary">{formatCurrency(total)}</span></div>
+              {creditApplied > 0 && <div className="mt-2 flex justify-between font-medium"><span>{paymentType === "Cash" ? "Amount to pay" : "Balance due"}</span><span>{formatCurrency(amountToPay)}</span></div>}
             </div>
             <Button type="submit" className="w-full" disabled={!customerId || total === 0 || hasInvalidLine || createSaleMutation.isPending}>
               Record Sale & Generate Invoice

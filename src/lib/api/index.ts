@@ -1,7 +1,7 @@
 // Real API client — talks to Django REST Framework backend.
 // Configure VITE_API_BASE_URL in .env (default: http://127.0.0.1:8000/api).
 
-import type { Customer, Product, Sale, SaleItem, Invoice, Payment, InvoiceStatus, PaymentType, PaymentMethod, CustomerType } from "@/lib/types";
+import type { Customer, Product, Sale, SaleItem, Invoice, InvoiceStatus, Payment, PaymentType, PaymentMethod, CustomerType } from "@/lib/types";
 
 const API_BASE =
   (
@@ -308,6 +308,17 @@ function mapInvoice(i: any): Invoice {
     status: (cap(i.status ?? "unpaid") as InvoiceStatus) || "Unpaid",
     saleId: i.sale_id != null ? String(i.sale_id) : undefined,
     paymentType: pt ? ((cap(pt) as PaymentType) || undefined) : undefined,
+    adjustments: (i.adjustments ?? []).map((a: any) => ({
+      id: String(a.id),
+      kind: cap(a.kind ?? "credit") as "Debit" | "Credit",
+      previousTotal: Number(a.previous_total ?? 0),
+      newTotal: Number(a.new_total ?? 0),
+      amount: Number(a.amount ?? 0),
+      notes: a.notes || undefined,
+      createdAt: a.created_at ?? "",
+    })),
+    creditApplied: Number(i.credit_applied ?? 0),
+    availableCredit: Number(i.available_credit ?? 0),
   };
 }
 
@@ -469,6 +480,7 @@ export const api = {
       paymentType: PaymentType;
       invoiceDate?: string;
       dueDate?: string;
+      adjustmentNote?: string;
       items: { productId: string; quantity: number; unitPrice: number }[];
     },
   ): Promise<Sale> =>
@@ -481,6 +493,7 @@ export const api = {
           date: data.invoiceDate,
           invoice_date: data.invoiceDate,
           due_date: data.dueDate,
+          adjustment_note: data.adjustmentNote ?? "",
           items: data.items.map((i) => ({
             product: i.productId,
             quantity: i.quantity,
@@ -505,6 +518,19 @@ export const api = {
   },
   getInvoice: async (id: string): Promise<Invoice> =>
     mapInvoice(await request(`/invoices/${id}/`)),
+
+  // Global search across customers, orders, invoices
+  searchGlobal: async (q: string, limit = 10): Promise<{ customers: Customer[]; orders: ApiOrder[]; invoices: Invoice[] }> => {
+    const qs = new URLSearchParams();
+    qs.set("q", q);
+    qs.set("limit", String(limit));
+    const raw: any = await request(`/search/?${qs.toString()}`);
+    return {
+      customers: (raw.customers || []).map(mapCustomer),
+      orders: (raw.orders || []).map(mapOrder),
+      invoices: (raw.invoices || []).map(mapInvoice),
+    };
+  },
 
   // Payments — /api/payments/
   listPayments: async (params?: { from?: string; to?: string }): Promise<Payment[]> =>

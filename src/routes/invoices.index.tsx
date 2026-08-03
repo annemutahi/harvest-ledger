@@ -60,6 +60,7 @@ function InvoicesPage() {
                 <SelectItem value="Partially Paid">Partially Paid</SelectItem>
                 <SelectItem value="Unpaid">Unpaid</SelectItem>
                 <SelectItem value="Overdue">Overdue</SelectItem>
+                <SelectItem value="Credit">Credit</SelectItem>
               </SelectContent>
             </Select>
           </div>

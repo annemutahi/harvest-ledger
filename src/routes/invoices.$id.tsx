@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/status-badge";
 import { ArrowLeft, Printer, Pencil, Plus, Trash2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
-import type { SaleItem } from "@/lib/types";
+import type { InvoiceAdjustment, SaleItem } from "@/lib/types";
 
 export const Route = createFileRoute("/invoices/$id")({
   head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id} — Peaceful Acres ` }] }),
@@ -58,6 +59,7 @@ function InvoiceDetail() {
 
   const [editing, setEditing] = useState(false);
   const [lines, setLines] = useState<EditableLine[]>([]);
+  const [adjustmentNote, setAdjustmentNote] = useState("");
 
   const startEdit = () => {
     setLines(
@@ -68,12 +70,14 @@ function InvoiceDetail() {
         unitPrice: Number(it.unitPrice),
       })),
     );
+    setAdjustmentNote("");
     setEditing(true);
   };
 
   const cancelEdit = () => {
     setEditing(false);
     setLines([]);
+    setAdjustmentNote("");
   };
 
   const addLine = () => {
@@ -119,6 +123,7 @@ function InvoiceDetail() {
         paymentType: invoice.paymentType ?? "Credit",
         invoiceDate: invoice.invoiceDate,
         dueDate: invoice.dueDate,
+        adjustmentNote,
         items: lines.map((l) => ({
           productId: l.productId,
           quantity: l.quantity,
@@ -133,6 +138,7 @@ function InvoiceDetail() {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["products"] });
       setEditing(false);
+      setAdjustmentNote("");
       if (Math.abs(delta) < 0.005) {
         toast.success("Invoice updated");
       } else if (delta > 0) {
@@ -158,6 +164,7 @@ function InvoiceDetail() {
 
   const pays = payments.filter((p: any) => p.invoiceId === invoice.id);
   const canEdit = !!invoice.saleId;
+  const isCredit = invoice.outstandingBalance < 0;
 
   return (
     <AppShell
@@ -212,9 +219,32 @@ function InvoiceDetail() {
                 </Table>
                 <div className="ml-auto mt-6 max-w-sm space-y-2">
                   <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total</span><span>{formatCurrency(invoice.totalAmount)}</span></div>
+                  {invoice.creditApplied > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Credit applied</span><span className="text-success">−{formatCurrency(invoice.creditApplied)}</span></div>}
                   <div className="flex justify-between text-sm"><span className="text-muted-foreground">Paid</span><span className="text-success">{formatCurrency(invoice.amountPaid)}</span></div>
-                  <div className="flex justify-between border-t pt-2 text-base font-semibold"><span>Balance Due</span><span className="text-earth">{formatCurrency(invoice.outstandingBalance)}</span></div>
+                  <div className="flex justify-between border-t pt-2 text-base font-semibold">
+                    <span>{isCredit ? "Overdraft" : "Balance Due"}</span>
+                    <span className={isCredit ? "text-destructive" : "text-earth"}>{formatCurrency(Math.abs(invoice.outstandingBalance))}</span>
+                  </div>
                 </div>
+                {invoice.adjustments.length > 0 && (
+                  <div className="mt-6 border-t pt-4">
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Invoice changes</p>
+                    <div className="mt-3 space-y-3">
+                      {invoice.adjustments.map((adjustment: InvoiceAdjustment) => (
+                        <div key={adjustment.id} className="rounded-lg border p-3 text-sm">
+                          <div className="flex justify-between gap-3 font-medium">
+                            <span>{adjustment.kind} note</span>
+                            <span>{formatCurrency(adjustment.amount)}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {formatCurrency(adjustment.previousTotal)} → {formatCurrency(adjustment.newTotal)} · {formatDate(adjustment.createdAt)}
+                          </p>
+                          {adjustment.notes && <p className="mt-2 text-muted-foreground">{adjustment.notes}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div className="mt-6 space-y-4">
@@ -303,6 +333,17 @@ function InvoiceDetail() {
                     </span>
                     <span>{formatCurrency(Math.abs(diff))}</span>
                   </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium" htmlFor="adjustment-note">Reason for this invoice change</label>
+                  <Textarea
+                    id="adjustment-note"
+                    value={adjustmentNote}
+                    onChange={(e) => setAdjustmentNote(e.target.value)}
+                    placeholder="Optional note shown with the debit or credit adjustment."
+                    rows={3}
+                  />
                 </div>
 
                 <div className="flex justify-end gap-2 border-t pt-4">

@@ -1,8 +1,8 @@
 import { type ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
-import { Bell, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Bell } from "lucide-react";
+import GlobalSearch from "./global-search";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
@@ -34,8 +34,7 @@ export function AppShell({ title, description, actions, children }: AppShellProp
           <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur md:px-6">
             <SidebarTrigger className="shrink-0" />
             <div className="relative hidden flex-1 max-w-md md:block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search customers, invoices…" className="pl-9" />
+              <GlobalSearch />
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Button variant="ghost" size="icon" aria-label="Notifications">

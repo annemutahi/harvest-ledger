@@ -49,7 +49,7 @@ function PaymentDocumentPage() {
         <header className="flex items-start justify-between border-b pb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Peaceful Acres Farm Limited</h1>
-            <p className="text-sm text-muted-foreground">Limuru Road, Kiambu</p>
+            <p className="text-sm text-muted-foreground">Kiambu</p>
             <p className="text-sm text-muted-foreground">accounts@peacefulacres.farm</p>
           </div>
           <div className="text-right">

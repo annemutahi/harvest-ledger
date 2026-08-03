@@ -8,6 +8,7 @@ export function StatusBadge({ status }: { status: InvoiceStatus }) {
     "Partially Paid": "bg-warning/20 text-warning-foreground border-warning/40",
     Unpaid: "bg-muted text-muted-foreground border-border",
     Overdue: "bg-destructive/15 text-destructive border-destructive/30",
+    Credit: "bg-primary/10 text-primary border-primary/30",
   };
   return <Badge variant="outline" className={cn("font-medium", map[status])}>{status}</Badge>;
 }

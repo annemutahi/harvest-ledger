@@ -24,7 +24,9 @@ class SaleViewSet(viewsets.ModelViewSet):
 
 
 class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Invoice.objects.select_related("customer").prefetch_related("sale__items")
+    queryset = Invoice.objects.select_related("customer").prefetch_related(
+        "sale__items", "adjustments", "credit_uses", "credit_applications",
+    )
     serializer_class = InvoiceSerializer
     permission_classes = [ReadOnlyForFarmhands]
     filterset_fields = ["customer", "status"]

@@ -35,7 +35,17 @@ export interface SaleItem {
 }
 
 export type PaymentType = "Cash" | "Credit";
-export type InvoiceStatus = "Paid" | "Partially Paid" | "Unpaid" | "Overdue";
+export type InvoiceStatus = "Paid" | "Partially Paid" | "Unpaid" | "Overdue" | "Credit";
+
+export interface InvoiceAdjustment {
+  id: string;
+  kind: "Debit" | "Credit";
+  previousTotal: number;
+  newTotal: number;
+  amount: number;
+  notes?: string;
+  createdAt: string;
+}
 
 export interface Sale {
   id: string;
@@ -64,6 +74,9 @@ export interface Invoice {
   status: InvoiceStatus;
   saleId?: string;
   paymentType?: PaymentType;
+  adjustments: InvoiceAdjustment[];
+  creditApplied: number;
+  availableCredit: number;
 }
 
 export type PaymentMethod = "Cash" | "Bank Transfer" | "Mobile Money" | "Cheque";
