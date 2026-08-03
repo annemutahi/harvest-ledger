@@ -387,6 +387,25 @@ export const api = {
     }
   },
 
+  requestPasswordReset: async (email: string): Promise<{ detail: string }> =>
+    request<{ detail: string }>("/auth/password-reset/", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+      skipRefresh: true,
+    }),
+
+  confirmPasswordReset: async (
+    uid: string,
+    token: string,
+    password: string,
+  ): Promise<{ detail: string }> =>
+    request<{ detail: string }>("/auth/password-reset/confirm/", {
+      method: "POST",
+      body: JSON.stringify({ uid, token, password }),
+      skipRefresh: true,
+    }),
+
+
   // Customers — /api/customers/
   listCustomers: async (): Promise<Customer[]> =>
     unwrap<any>(await request("/customers/")).map(mapCustomer),

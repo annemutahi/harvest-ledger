@@ -93,13 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     const path = window.location.pathname;
+    const publicPaths = ["/login", "/forgot-password", "/reset-password"];
 
-    if (!user && path !== "/login") {
+    if (!user && !publicPaths.includes(path)) {
       router.navigate({ to: "/login", replace: true });
     } else if (user && path === "/login") {
       router.navigate({ to: "/", replace: true });
     }
   }, [user, loading, router]);
+
 
   const value: AuthState = useMemo(
     () => ({
