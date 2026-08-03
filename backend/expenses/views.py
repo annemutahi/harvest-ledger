@@ -64,8 +64,10 @@ class CasualWageViewSet(viewsets.ModelViewSet):
         return apply_date_range(super().get_queryset(), self.request, "date")
 
     def get_permissions(self):
-        # Farmhands may list + create. Only managers may update/delete.
-        if self.action in ("list", "retrieve", "create", "mark_paid", "summary"):
+        # Farmhands may list + create (must be logged in). Only managers may update/delete.
+        if self.action == "create":
+            return [permissions.IsAuthenticated()]
+        if self.action in ("list", "retrieve", "mark_paid", "summary"):
             return [ReadOnlyForFarmhands()]
         return [IsManagerOrReadOnly()]
 
