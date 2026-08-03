@@ -66,7 +66,7 @@ class CasualWageViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         # Farmhands may list + create. Only managers may update/delete.
         if self.action in ("list", "retrieve", "create", "mark_paid", "summary"):
-            return [ReadOnlyForFarmhands()] if self.action != "create" else []
+            return [ReadOnlyForFarmhands()]
         return [IsManagerOrReadOnly()]
 
     def perform_create(self, serializer):
