@@ -62,7 +62,14 @@ function NewSalePage() {
   const update = (index: number, patch: Partial<Line>) =>
     setLines((prev) => prev.map((line, idx) => (idx === index ? { ...line, ...patch } : line)));
 
-  const hasInvalidLine = lines.some((line) => !line.productId || line.qty < 1);
+  const hasInvalidLine = lines.some((line) => {
+    const product = products.find((p) => p.id === line.productId);
+    return (
+      !line.productId ||
+      line.qty < 1 ||
+      (product ? line.qty > product.availableQuantity : false)
+    );
+  });
   const availableCredit = useMemo(
     () => invoices
       .filter((invoice) => invoice.customerId === customerId && invoice.status === "Credit")
@@ -117,6 +124,8 @@ function NewSalePage() {
               <TableBody>
                 {lines.map((line, index) => {
                   const product = products.find((p) => p.id === line.productId);
+                  const available = product?.availableQuantity ?? 0;
+                  const hasStockError = product && available <= 0;
                   return (
                     <TableRow key={index}>
                       <TableCell>
@@ -124,13 +133,27 @@ function NewSalePage() {
                           <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                           <SelectContent>
                             {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                              <SelectItem
+                                key={product.id}
+                                value={product.id}
+                                disabled={product.availableQuantity <= 0}
+                              >
+                                {product.name}
+                                {product.availableQuantity <= 0 ? " — Out of stock" : ""}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Input type="number" min={1} value={line.qty} onChange={(e) => update(index, { qty: Number(e.target.value) })} />
+                        <Input
+                          type="number"
+                          min={1}
+                          max={available > 0 ? available : undefined}
+                          value={line.qty}
+                          onChange={(e) => update(index, { qty: Number(e.target.value) })}
+                          className={hasStockError ? "border-destructive" : ""}
+                        />
                       </TableCell>
                       <TableCell className="text-right">{product ? formatCurrency(product.unitPrice) : "—"}</TableCell>
                       <TableCell className="text-right font-medium">{product ? formatCurrency(product.unitPrice * line.qty) : "—"}</TableCell>

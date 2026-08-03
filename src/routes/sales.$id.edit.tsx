@@ -133,7 +133,14 @@ function EditSalePage() {
   const update = (index: number, patch: Partial<Line>) =>
     setLines((prev) => prev.map((line, idx) => (idx === index ? { ...line, ...patch } : line)));
 
-  const hasInvalidLine = lines.some((line) => !line.productId || line.qty < 1);
+  const hasInvalidLine = lines.some((line) => {
+    const product = products.find((p) => p.id === line.productId);
+    return (
+      !line.productId ||
+      line.qty < 1 ||
+      (product ? line.qty > product.availableQuantity : false)
+    );
+  });
 
   if (authLoading) {
     return (
@@ -287,8 +294,9 @@ function EditSalePage() {
                           </SelectTrigger>
                           <SelectContent>
                             {products.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
+                              <SelectItem key={p.id} value={p.id} disabled={p.availableQuantity <= 0}>
                                 {p.name}
+                                {p.availableQuantity <= 0 ? " — Out of stock" : ""}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -298,6 +306,7 @@ function EditSalePage() {
                         <Input
                           type="number"
                           min={1}
+                          max={products.find((p) => p.id === line.productId)?.availableQuantity ?? undefined}
                           value={line.qty}
                           onChange={(e) => update(index, { qty: Number(e.target.value) })}
                         />

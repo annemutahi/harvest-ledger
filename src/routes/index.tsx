@@ -188,7 +188,7 @@ function LandingPage() {
     : 0;
   const monthlyProfit = totalMonthSales - expensesThisMonth.total;
   const paymentsReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const totalCredit = invoices.reduce((sum, invoice) => sum + invoice.outstandingBalance, 0);
+  const totalCredit = invoices.reduce((sum, invoice) => sum + invoice.availableCredit, 0);
   const dueSoon = invoices
     .filter((invoice) => invoice.outstandingBalance > 0)
     .map((invoice) => ({ ...invoice, daysUntilDue: daysUntil(invoice.dueDate) }))

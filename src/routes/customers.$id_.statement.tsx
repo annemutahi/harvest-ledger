@@ -49,6 +49,14 @@ const itemDescription = (invoice: Invoice) =>
     ? invoice.items.map((i) => `${i.productName}x${i.quantity}`).join(", ")
     : "—";
 
+const getInvoiceStatus = (invoice: Invoice) => {
+  if (invoice.status === "Credit") return "Credit";
+  if (invoice.status === "Overdue") return "Overdue";
+  if (invoice.amountPaid >= invoice.totalAmount && invoice.totalAmount > 0) return "Paid";
+  if (invoice.amountPaid > 0) return "Partially Paid";
+  return "Unpaid";
+};
+
 const num = (n: number) => n.toLocaleString("en-KE", { maximumFractionDigits: 0 });
 
 function StatementPage() {
@@ -81,14 +89,14 @@ function StatementPage() {
   const rows = useMemo(
     () =>
       invoices
-        .filter((i) => (unpaidOnly ? i.status !== "Paid" : true))
+        .filter((i) => (unpaidOnly ? getInvoiceStatus(i) !== "Paid" : true))
         .map((invoice) => {
           const paid = (paymentsByInvoice.get(invoice.id) ?? []).slice().sort((a, b) =>
             a.date < b.date ? 1 : -1,
           );
           return {
             invoice,
-            status: invoice.status === "Paid" ? "Paid" : "Not paid",
+            status: getInvoiceStatus(invoice),
             paymentDate: paid[0]?.date ?? "",
             paymentMode: paid.length
               ? Array.from(new Set(paid.map((p) => p.method))).join(", ")

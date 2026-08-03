@@ -103,7 +103,7 @@ function PaymentDocumentPage() {
         </div>
 
         <footer className="mt-10 border-t pt-4 text-center text-xs text-muted-foreground">
-          Thank you for your business. This receipt confirms payment received.
+          Thank you. This receipt confirms payment received.
         </footer>
       </div>
 

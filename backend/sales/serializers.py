@@ -1,3 +1,4 @@
+from collections import defaultdict
 from decimal import Decimal
 
 from django.db import transaction
@@ -109,6 +110,40 @@ class SaleSerializer(serializers.ModelSerializer):
             if i["unit_price"] < 0:
                 raise serializers.ValidationError("Unit price must be >= 0.")
         return items
+
+    def validate(self, attrs):
+        items = attrs.get("items")
+        if items is None:
+            return attrs
+
+        requested_quantities: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
+        restore_quantities: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
+
+        for item in items:
+            product = item.get("product")
+            if product is None:
+                continue
+            requested_quantities[product.id] += Decimal(item["quantity"])
+
+        if self.instance is not None:
+            for old in self.instance.items.all():
+                restore_quantities[old.product_id] += old.quantity
+
+        for item in items:
+            product = item.get("product")
+            if product is None:
+                continue
+            available = (product.available_quantity or Decimal("0")) + restore_quantities.get(product.id, Decimal("0"))
+            if available <= 0:
+                raise serializers.ValidationError({
+                    "items": f"Product {product.name} is out of stock.",
+                })
+            if requested_quantities[product.id] > available:
+                raise serializers.ValidationError({
+                    "items": f"Cannot sell more {product.name} than available ({available}).",
+                })
+
+        return attrs
 
     @transaction.atomic
     def create(self, validated_data):
