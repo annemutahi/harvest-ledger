@@ -225,12 +225,15 @@ class SaleSerializer(serializers.ModelSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     invoice_number = serializers.CharField(source="invoice.invoice_number", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True)
+    idempotency_key = serializers.CharField(
+        max_length=64, required=False, allow_blank=True, allow_null=True, write_only=True,
+    )
 
     class Meta:
         model = Payment
         fields = [
             "id", "invoice", "invoice_number", "customer", "customer_name",
-            "date", "amount", "method", "notes", "created_at",
+            "date", "amount", "method", "notes", "idempotency_key", "created_at",
         ]
         read_only_fields = ["created_at"]
 

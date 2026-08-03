@@ -48,9 +48,16 @@ function CustomerDetail() {
       actions={
         <>
           <Button variant="outline" asChild><Link to="/customers"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
-          <Button variant="outline"><FileDown className="mr-2 h-4 w-4" />Statement</Button>
+          {customer.type === "Corporate" && (
+            <Button variant="outline" asChild>
+              <Link to="/customers/$id/statement" params={{ id: customer.id }}>
+                <FileDown className="mr-2 h-4 w-4" />Statement
+              </Link>
+            </Button>
+          )}
         </>
       }
+
     >
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
