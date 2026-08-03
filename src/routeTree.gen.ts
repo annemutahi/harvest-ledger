@@ -30,7 +30,7 @@ import { Route as CustomersIdRouteImport } from './routes/customers.$id'
 import { Route as SalesIdEditRouteImport } from './routes/sales.$id.edit'
 import { Route as PaymentsIdDocumentRouteImport } from './routes/payments.$id.document'
 import { Route as OrdersIdDocumentRouteImport } from './routes/orders.$id.document'
-import { Route as CustomersIdStatementRouteImport } from './routes/customers.$id.statement'
+import { Route as CustomersIdStatementRouteImport } from './routes/customers.$id_.statement'
 import { Route as ApiPublicOrdersWebhookRouteImport } from './routes/api/public/orders.webhook'
 
 const TransactionsRoute = TransactionsRouteImport.update({
@@ -139,9 +139,9 @@ const OrdersIdDocumentRoute = OrdersIdDocumentRouteImport.update({
   getParentRoute: () => OrdersIdRoute,
 } as any)
 const CustomersIdStatementRoute = CustomersIdStatementRouteImport.update({
-  id: '/statement',
-  path: '/statement',
-  getParentRoute: () => CustomersIdRoute,
+  id: '/customers/$id_/statement',
+  path: '/customers/$id/statement',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicOrdersWebhookRoute = ApiPublicOrdersWebhookRouteImport.update({
   id: '/api/public/orders/webhook',
@@ -156,7 +156,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/stock': typeof StockRoute
   '/transactions': typeof TransactionsRoute
-  '/customers/$id': typeof CustomersIdRouteWithChildren
+  '/customers/$id': typeof CustomersIdRoute
   '/expenses/casuals': typeof ExpensesCasualsRoute
   '/expenses/purchases': typeof ExpensesPurchasesRoute
   '/invoices/$id': typeof InvoicesIdRoute
@@ -181,7 +181,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/stock': typeof StockRoute
   '/transactions': typeof TransactionsRoute
-  '/customers/$id': typeof CustomersIdRouteWithChildren
+  '/customers/$id': typeof CustomersIdRoute
   '/expenses/casuals': typeof ExpensesCasualsRoute
   '/expenses/purchases': typeof ExpensesPurchasesRoute
   '/invoices/$id': typeof InvoicesIdRoute
@@ -207,7 +207,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/stock': typeof StockRoute
   '/transactions': typeof TransactionsRoute
-  '/customers/$id': typeof CustomersIdRouteWithChildren
+  '/customers/$id': typeof CustomersIdRoute
   '/expenses/casuals': typeof ExpensesCasualsRoute
   '/expenses/purchases': typeof ExpensesPurchasesRoute
   '/invoices/$id': typeof InvoicesIdRoute
@@ -219,7 +219,7 @@ export interface FileRoutesById {
   '/invoices/': typeof InvoicesIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
-  '/customers/$id/statement': typeof CustomersIdStatementRoute
+  '/customers/$id_/statement': typeof CustomersIdStatementRoute
   '/orders/$id/document': typeof OrdersIdDocumentRoute
   '/payments/$id/document': typeof PaymentsIdDocumentRoute
   '/sales/$id/edit': typeof SalesIdEditRoute
@@ -296,7 +296,7 @@ export interface FileRouteTypes {
     | '/invoices/'
     | '/orders/'
     | '/products/'
-    | '/customers/$id/statement'
+    | '/customers/$id_/statement'
     | '/orders/$id/document'
     | '/payments/$id/document'
     | '/sales/$id/edit'
@@ -310,7 +310,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   StockRoute: typeof StockRoute
   TransactionsRoute: typeof TransactionsRoute
-  CustomersIdRoute: typeof CustomersIdRouteWithChildren
+  CustomersIdRoute: typeof CustomersIdRoute
   ExpensesCasualsRoute: typeof ExpensesCasualsRoute
   ExpensesPurchasesRoute: typeof ExpensesPurchasesRoute
   InvoicesIdRoute: typeof InvoicesIdRoute
@@ -322,6 +322,7 @@ export interface RootRouteChildren {
   InvoicesIndexRoute: typeof InvoicesIndexRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
+  CustomersIdStatementRoute: typeof CustomersIdStatementRoute
   PaymentsIdDocumentRoute: typeof PaymentsIdDocumentRoute
   SalesIdEditRoute: typeof SalesIdEditRoute
   ApiPublicOrdersWebhookRoute: typeof ApiPublicOrdersWebhookRoute
@@ -476,12 +477,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrdersIdDocumentRouteImport
       parentRoute: typeof OrdersIdRoute
     }
-    '/customers/$id/statement': {
-      id: '/customers/$id/statement'
-      path: '/statement'
+    '/customers/$id_/statement': {
+      id: '/customers/$id_/statement'
+      path: '/customers/$id/statement'
       fullPath: '/customers/$id/statement'
       preLoaderRoute: typeof CustomersIdStatementRouteImport
-      parentRoute: typeof CustomersIdRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/orders/webhook': {
       id: '/api/public/orders/webhook'
@@ -492,18 +493,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface CustomersIdRouteChildren {
-  CustomersIdStatementRoute: typeof CustomersIdStatementRoute
-}
-
-const CustomersIdRouteChildren: CustomersIdRouteChildren = {
-  CustomersIdStatementRoute: CustomersIdStatementRoute,
-}
-
-const CustomersIdRouteWithChildren = CustomersIdRoute._addFileChildren(
-  CustomersIdRouteChildren,
-)
 
 interface OrdersIdRouteChildren {
   OrdersIdDocumentRoute: typeof OrdersIdDocumentRoute
@@ -524,7 +513,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   StockRoute: StockRoute,
   TransactionsRoute: TransactionsRoute,
-  CustomersIdRoute: CustomersIdRouteWithChildren,
+  CustomersIdRoute: CustomersIdRoute,
   ExpensesCasualsRoute: ExpensesCasualsRoute,
   ExpensesPurchasesRoute: ExpensesPurchasesRoute,
   InvoicesIdRoute: InvoicesIdRoute,
@@ -536,6 +525,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoicesIndexRoute: InvoicesIndexRoute,
   OrdersIndexRoute: OrdersIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
+  CustomersIdStatementRoute: CustomersIdStatementRoute,
   PaymentsIdDocumentRoute: PaymentsIdDocumentRoute,
   SalesIdEditRoute: SalesIdEditRoute,
   ApiPublicOrdersWebhookRoute: ApiPublicOrdersWebhookRoute,
@@ -543,13 +533,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
