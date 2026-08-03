@@ -1,18 +1,19 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Printer, FileDown } from "lucide-react";
+import { ArrowLeft, Printer, FileDown, Sheet } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { exportCsv, stampToday } from "@/lib/csv";
 import { COMPANY } from "@/lib/company";
 import type { Customer, Invoice, Payment } from "@/lib/types";
 
-export const Route = createFileRoute("/customers/$id/statement")({
+export const Route = createFileRoute("/customers/$id_/statement")({
   head: () => ({
     meta: [
       { title: "Customer Statement — Peaceful Acres Farm" },
@@ -45,8 +46,10 @@ export const Route = createFileRoute("/customers/$id/statement")({
 
 const itemDescription = (invoice: Invoice) =>
   invoice.items?.length
-    ? invoice.items.map((i) => `${i.productName} x ${i.quantity}`).join(", ")
+    ? invoice.items.map((i) => `${i.productName}x${i.quantity}`).join(", ")
     : "—";
+
+const num = (n: number) => n.toLocaleString("en-KE", { maximumFractionDigits: 0 });
 
 function StatementPage() {
   const { customer } = Route.useLoaderData() as { customer: Customer };
@@ -85,6 +88,7 @@ function StatementPage() {
           );
           return {
             invoice,
+            status: invoice.status === "Paid" ? "Paid" : "Not paid",
             paymentDate: paid[0]?.date ?? "",
             paymentMode: paid.length
               ? Array.from(new Set(paid.map((p) => p.method))).join(", ")
@@ -98,40 +102,67 @@ function StatementPage() {
   const totalPaid = rows.reduce((s, r) => s + r.invoice.amountPaid, 0);
   const totalOutstanding = totalInvoiced - totalPaid;
 
+  const asAtLabel = `AS AT ${formatDate(to || new Date().toISOString()).toUpperCase()}`;
   const periodLabel =
     from || to
       ? `${from ? formatDate(from) : "Beginning"} — ${to ? formatDate(to) : "Date"}`
       : "All time";
 
-  const handleExport = () => {
-    exportCsv(
-      `statement-${customer.name.replace(/\s+/g, "-").toLowerCase()}-${stampToday()}.csv`,
-      [
-        "Invoice No",
-        "Date Issued",
-        "Item Description",
-        "KRA ETIMS No.",
-        "Invoice Amount",
-        "Status",
-        "Payment Date",
-        "Payment Mode",
-      ],
-      rows.map((r) => [
-        r.invoice.invoiceNumber,
-        r.invoice.invoiceDate,
-        itemDescription(r.invoice),
-        "",
-        r.invoice.totalAmount,
-        r.invoice.status,
-        r.paymentDate,
-        r.paymentMode,
-      ]),
-      [
-        ["Total Invoiced", totalInvoiced],
-        ["Total Paid", totalPaid],
-        ["Total Outstanding", totalOutstanding],
-      ],
-    );
+  const slug = customer.name.replace(/\s+/g, "-").toLowerCase();
+
+  const tableRows = rows.map((r) => [
+    r.invoice.invoiceDate,
+    r.invoice.invoiceNumber,
+    itemDescription(r.invoice),
+    "",
+    r.invoice.totalAmount,
+    r.status,
+    r.paymentDate,
+    r.paymentMode,
+  ]);
+
+  const headers = [
+    "DATE",
+    "INVOICE NO",
+    "ITEM DESCRIPTION",
+    "KRA ETIMS NO.",
+    "INVOICE AMOUNT (KSHS)",
+    "STATUS",
+    "PAYMENT DATE",
+    "PAYMENT MODE",
+  ];
+
+  const handleExportCsv = () => {
+    exportCsv(`statement-${slug}-${stampToday()}.csv`, headers, tableRows, [
+      ["", "", "TOTAL", "", totalInvoiced],
+      ["", "", "TOTAL PAID", "", totalPaid],
+      ["", "", "TOTAL OUTSTANDING", "", totalOutstanding],
+    ]);
+  };
+
+  const handleExportExcel = () => {
+    const aoa: (string | number)[][] = [
+      [COMPANY.name.toUpperCase()],
+      [COMPANY.location.toUpperCase()],
+      [COMPANY.email],
+      [`STATEMENT — ${(customer.company || customer.name).toUpperCase()}`],
+      [asAtLabel],
+      [],
+      headers,
+      ...tableRows,
+      [],
+      ["", "", "TOTAL", "", totalInvoiced],
+      ["", "", "TOTAL PAID", "", totalPaid],
+      ["", "", "TOTAL OUTSTANDING", "", totalOutstanding],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [
+      { wch: 12 }, { wch: 12 }, { wch: 28 }, { wch: 22 },
+      { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 16 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Statement");
+    XLSX.writeFile(wb, `statement-${slug}-${stampToday()}.xlsx`);
   };
 
   return (
@@ -155,13 +186,14 @@ function StatementPage() {
               <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9" />
             </div>
             <label className="flex h-9 items-center gap-2 text-sm">
-              <Checkbox
-                checked={unpaidOnly}
-                onCheckedChange={(v) => setUnpaidOnly(v === true)}
-              />
+              <Checkbox checked={unpaidOnly} onCheckedChange={(v) => setUnpaidOnly(v === true)} />
               Unpaid only
             </label>
-            <Button variant="outline" size="sm" onClick={handleExport}>
+            <Button variant="outline" size="sm" onClick={handleExportExcel}>
+              <Sheet className="mr-2 h-4 w-4" />
+              Export Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportCsv}>
               <FileDown className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
@@ -175,46 +207,32 @@ function StatementPage() {
 
       {/* Statement document */}
       <div className="mx-auto max-w-5xl bg-background p-8 shadow-sm print:max-w-none print:p-0 print:shadow-none">
-        <header className="flex items-start justify-between border-b pb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{COMPANY.name}</h1>
+        <header className="flex items-center gap-6 border-b pb-6">
+          <img src="/assets/favicon.png" alt={`${COMPANY.name} logo`} className="h-20 w-20 rounded-full" />
+          <div className="flex-1 text-center">
+            <h1 className="text-lg font-bold uppercase tracking-tight">{COMPANY.name}</h1>
             <p className="text-sm text-muted-foreground">{COMPANY.location}</p>
             <p className="text-sm text-muted-foreground">{COMPANY.email}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Customer Statement
+            <p className="mt-2 text-sm font-semibold uppercase">
+              Statement — {customer.company || customer.name}
             </p>
-            <p className="mt-1 text-lg font-semibold">{customer.company || customer.name}</p>
+            <p className="text-sm font-semibold uppercase">{asAtLabel}</p>
             <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
-            <p className="text-xs text-muted-foreground">Issued: {formatDate(new Date().toISOString())}</p>
           </div>
+          <div className="h-20 w-20" aria-hidden />
         </header>
 
-        <section className="grid grid-cols-2 gap-6 py-6 text-sm">
-          <div>
-            <p className="text-xs font-semibold uppercase text-muted-foreground">Statement for</p>
-            <p className="mt-1 font-medium">{customer.name}</p>
-            {customer.contactPerson && <p className="text-muted-foreground">{customer.contactPerson}</p>}
-            {customer.phone && <p className="text-muted-foreground">{customer.phone}</p>}
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">Total Outstanding</p>
-            <p className="mt-1 text-xl font-semibold">{formatCurrency(totalOutstanding)}</p>
-          </div>
-        </section>
-
-        <table className="w-full border-t text-sm">
+        <table className="mt-6 w-full border border-foreground/40 text-sm">
           <thead>
-            <tr className="border-b">
-              <th className="py-2 pr-2 text-left font-semibold">Invoice No</th>
-              <th className="py-2 pr-2 text-left font-semibold">Date Issued</th>
-              <th className="py-2 pr-2 text-left font-semibold">Item Description</th>
-              <th className="py-2 pr-2 text-left font-semibold">KRA ETIMS No.</th>
-              <th className="py-2 pr-2 text-right font-semibold">Invoice Amount</th>
-              <th className="py-2 pr-2 text-left font-semibold">Status</th>
-              <th className="py-2 pr-2 text-left font-semibold">Payment Date</th>
-              <th className="py-2 text-left font-semibold">Payment Mode</th>
+            <tr className="border-b border-foreground/40">
+              <th className="border-r border-foreground/40 px-2 py-2 text-left font-bold">DATE</th>
+              <th className="border-r border-foreground/40 px-2 py-2 text-right font-bold">INVOICE NO</th>
+              <th className="border-r border-foreground/40 px-2 py-2 text-left font-bold">ITEM DESCRIPTION</th>
+              <th className="border-r border-foreground/40 px-2 py-2 text-center font-bold">KRA ETIMS NO.</th>
+              <th className="border-r border-foreground/40 px-2 py-2 text-right font-bold">INVOICE AMOUNT (KSHS)</th>
+              <th className="border-r border-foreground/40 px-2 py-2 text-left font-bold">STATUS</th>
+              <th className="border-r border-foreground/40 px-2 py-2 text-left font-bold">PAYMENT DATE</th>
+              <th className="px-2 py-2 text-left font-bold">PAYMENT MODE</th>
             </tr>
           </thead>
           <tbody>
@@ -231,32 +249,32 @@ function StatementPage() {
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.invoice.id} className="border-b align-top">
-                <td className="py-2 pr-2 font-medium">{r.invoice.invoiceNumber}</td>
-                <td className="py-2 pr-2">{formatDate(r.invoice.invoiceDate)}</td>
-                <td className="py-2 pr-2">{itemDescription(r.invoice)}</td>
-                <td className="py-2 pr-2 text-muted-foreground">&nbsp;</td>
-                <td className="py-2 pr-2 text-right">{formatCurrency(r.invoice.totalAmount)}</td>
-                <td className="py-2 pr-2">{r.invoice.status}</td>
-                <td className="py-2 pr-2">{r.paymentDate ? formatDate(r.paymentDate) : "—"}</td>
-                <td className="py-2">{r.paymentMode || "—"}</td>
+              <tr key={r.invoice.id} className="border-b border-foreground/20">
+                <td className="border-r border-foreground/40 px-2 py-1 text-right">{formatDate(r.invoice.invoiceDate)}</td>
+                <td className="border-r border-foreground/40 px-2 py-1 text-right">{r.invoice.invoiceNumber}</td>
+                <td className="border-r border-foreground/40 px-2 py-1">{itemDescription(r.invoice)}</td>
+                <td className="border-r border-foreground/40 px-2 py-1">&nbsp;</td>
+                <td className="border-r border-foreground/40 px-2 py-1 text-right">{num(r.invoice.totalAmount)}</td>
+                <td className="border-r border-foreground/40 px-2 py-1">{r.status}</td>
+                <td className="border-r border-foreground/40 px-2 py-1">{r.paymentDate ? formatDate(r.paymentDate) : ""}</td>
+                <td className="px-2 py-1">{r.paymentMode}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-b">
-              <td colSpan={4} className="py-2 pr-2 text-right font-medium">Total Invoiced</td>
-              <td className="py-2 pr-2 text-right font-medium">{formatCurrency(totalInvoiced)}</td>
-              <td colSpan={3} />
-            </tr>
-            <tr className="border-b">
-              <td colSpan={4} className="py-2 pr-2 text-right font-medium">Total Paid</td>
-              <td className="py-2 pr-2 text-right font-medium">{formatCurrency(totalPaid)}</td>
+            <tr className="border-t border-foreground/40">
+              <td colSpan={4} className="border-r border-foreground/40 px-2 py-2 text-center font-bold">TOTAL</td>
+              <td className="border-r border-foreground/40 px-2 py-2 text-right font-bold">{num(totalInvoiced)}</td>
               <td colSpan={3} />
             </tr>
             <tr>
-              <td colSpan={4} className="py-3 pr-2 text-right font-semibold">Total Outstanding</td>
-              <td className="py-3 pr-2 text-right font-semibold">{formatCurrency(totalOutstanding)}</td>
+              <td colSpan={4} className="border-r border-foreground/40 px-2 py-2 text-center font-medium">TOTAL PAID</td>
+              <td className="border-r border-foreground/40 px-2 py-2 text-right font-medium">{num(totalPaid)}</td>
+              <td colSpan={3} />
+            </tr>
+            <tr>
+              <td colSpan={4} className="border-r border-foreground/40 px-2 py-2 text-center font-bold">TOTAL OUTSTANDING</td>
+              <td className="border-r border-foreground/40 px-2 py-2 text-right font-bold">{num(totalOutstanding)}</td>
               <td colSpan={3} />
             </tr>
           </tfoot>

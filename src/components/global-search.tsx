@@ -61,7 +61,7 @@ export default function GlobalSearch() {
                 {results.customers.length ? (
                   results.customers.map((c) => (
                     <div key={c.id} className="py-1">
-                      <Link to={`/customers/${c.id}`} className="text-sm hover:underline">{c.name}</Link>
+                      <Link to="/customers/$id" params={{ id: c.id }} className="text-sm hover:underline">{c.name}</Link>
                       <div className="text-xs text-muted-foreground">{c.company || c.phone}</div>
                     </div>
                   ))
@@ -75,7 +75,7 @@ export default function GlobalSearch() {
                 {results.orders.length ? (
                   results.orders.map((o) => (
                     <div key={o.id} className="py-1">
-                      <Link to={`/orders/${o.id}`} className="text-sm hover:underline">{o.reference}</Link>
+                      <Link to="/orders/$id" params={{ id: o.id }} className="text-sm hover:underline">{o.reference}</Link>
                       <div className="text-xs text-muted-foreground">{o.customerName}</div>
                     </div>
                   ))
@@ -89,7 +89,7 @@ export default function GlobalSearch() {
                 {results.invoices.length ? (
                   results.invoices.map((i) => (
                     <div key={i.id} className="py-1">
-                      <Link to={`/invoices/${i.id}`} className="text-sm hover:underline">{i.invoiceNumber}</Link>
+                      <Link to="/invoices/$id" params={{ id: i.id }} className="text-sm hover:underline">{i.invoiceNumber}</Link>
                       <div className="text-xs text-muted-foreground">{i.customerName}</div>
                     </div>
                   ))
