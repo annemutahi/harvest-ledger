@@ -145,7 +145,9 @@ REST_FRAMEWORK = {
         "user": "240/min",
         "login": "10/min",
         "webhook": "120/min",
+        "password_reset": "5/min",
     },
+
     "DEFAULT_PAGINATION_CLASS": "farm_erp.pagination.DefaultPagination",
     "PAGE_SIZE": 50,
 }
