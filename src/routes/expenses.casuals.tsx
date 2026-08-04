@@ -460,10 +460,12 @@ function EditLogDialog({
     onError: (e: any) => toast.error(e?.message ?? "Failed to update entry"),
   });
 
+  const logDateError = validate(z.object({ date: businessDateSchema }), { date }).date;
+
   const submit = () => {
     if (!entry) return;
     if (!area.trim()) return toast.error("Work area is required");
-    if (!date) return toast.error("Date is required");
+    if (logDateError) return toast.error(logDateError);
     updateLog.mutate({ date, task: area.trim(), notes: notes.trim() });
   };
 
@@ -626,9 +628,12 @@ function NewLogDialog({
     onError: (e: any) => toast.error(e?.message ?? "Failed to log work"),
   });
 
+  const logDateError = validate(z.object({ date: businessDateSchema }), { date }).date;
+
   const submit = () => {
     if (!selected) return toast.error("Choose a worker");
     if (!area.trim()) return toast.error("Work area is required");
+    if (logDateError) return toast.error(logDateError);
     if (selected.dailyRate <= 0) return toast.error("Worker has no daily rate set");
 
     createLog.mutate({
