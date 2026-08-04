@@ -1,5 +1,13 @@
 from rest_framework import serializers
 
+from farm_erp.validators import (
+    normalize_email,
+    normalize_phone,
+    validate_amount,
+    validate_business_date,
+    validate_quantity,
+)
+
 from .models import CasualWage, CasualWorker, Purchase, Supplier
 
 
@@ -8,6 +16,12 @@ class SupplierSerializer(serializers.ModelSerializer):
         model = Supplier
         fields = ["id", "name", "contact_person", "phone", "email", "notes", "created_at"]
         read_only_fields = ["created_at"]
+
+    def validate_phone(self, value):
+        return normalize_phone(value, field=None)
+
+    def validate_email(self, value):
+        return normalize_email(value, field=None)
 
 
 class PurchaseSerializer(serializers.ModelSerializer):
@@ -23,10 +37,12 @@ class PurchaseSerializer(serializers.ModelSerializer):
         read_only_fields = ["total", "recorded_by", "created_at"]
 
     def validate(self, attrs):
-        if attrs.get("quantity", 0) <= 0:
-            raise serializers.ValidationError({"quantity": "must be > 0"})
-        if attrs.get("unit_cost", 0) < 0:
-            raise serializers.ValidationError({"unit_cost": "must be >= 0"})
+        if "quantity" in attrs:
+            attrs["quantity"] = validate_quantity(attrs["quantity"])
+        if "unit_cost" in attrs:
+            attrs["unit_cost"] = validate_amount(attrs["unit_cost"], field="unit_cost")
+        if attrs.get("date"):
+            validate_business_date(attrs["date"], field="date")
         supplier = attrs.get("supplier")
         if supplier and not attrs.get("supplier_name"):
             attrs["supplier_name"] = supplier.name
@@ -38,6 +54,12 @@ class CasualWorkerSerializer(serializers.ModelSerializer):
         model = CasualWorker
         fields = ["id", "name", "phone", "daily_rate", "active", "created_at"]
         read_only_fields = ["created_at"]
+
+    def validate_phone(self, value):
+        return normalize_phone(value, field=None)
+
+    def validate_daily_rate(self, value):
+        return validate_amount(value, field=None)
 
 
 class CasualWageSerializer(serializers.ModelSerializer):
@@ -53,10 +75,12 @@ class CasualWageSerializer(serializers.ModelSerializer):
         read_only_fields = ["total", "paid_at", "recorded_by", "created_at"]
 
     def validate(self, attrs):
-        if attrs.get("days_worked", 0) <= 0:
-            raise serializers.ValidationError({"days_worked": "must be > 0"})
-        if attrs.get("rate_per_day", 0) < 0:
-            raise serializers.ValidationError({"rate_per_day": "must be >= 0"})
+        if "days_worked" in attrs:
+            attrs["days_worked"] = validate_quantity(attrs["days_worked"], field="days_worked")
+        if "rate_per_day" in attrs:
+            attrs["rate_per_day"] = validate_amount(attrs["rate_per_day"], field="rate_per_day")
+        if attrs.get("date"):
+            validate_business_date(attrs["date"], field="date")
         worker = attrs.get("worker")
         if worker and not attrs.get("worker_name"):
             attrs["worker_name"] = worker.name
