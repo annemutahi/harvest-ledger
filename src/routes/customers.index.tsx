@@ -17,12 +17,31 @@ import { api, ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import type { CustomerType } from "@/lib/types";
 import { useTableView } from "@/hooks/use-table-view";
+import { FieldError } from "@/components/field-error";
+import {
+  amountSchema,
+  nameSchema,
+  normalizePhone,
+  optionalEmailSchema,
+  optionalPhoneSchema,
+  validate,
+  hasErrors,
+  type FieldErrors,
+} from "@/lib/validation";
+import { z } from "zod";
 import { SortableHead, TablePagination } from "@/components/table-controls";
 
 
 export const Route = createFileRoute("/customers/")({
   head: () => ({ meta: [{ title: "Customers — Peaceful Acres" }] }),
   component: CustomersPage,
+});
+
+const customerSchema = z.object({
+  name: nameSchema,
+  phone: optionalPhoneSchema,
+  email: optionalEmailSchema,
+  creditLimit: amountSchema,
 });
 
 function CustomersPage() {
@@ -46,13 +65,17 @@ function CustomersPage() {
     creditLimit: 0,
   });
 
+  const [errors, setErrors] = useState<FieldErrors>({});
+
   const createMutation = useMutation({
-    mutationFn: () => api.createCustomer(form),
+    mutationFn: () =>
+      api.createCustomer({ ...form, phone: normalizePhone(form.phone) ?? "" }),
     onSuccess: () => {
       toast.success("Customer created");
       qc.invalidateQueries({ queryKey: ["customers"] });
       setOpen(false);
       setForm({ name: "", type: "Individual", company: "", contactPerson: "", phone: "", email: "", creditLimit: 0 });
+      setErrors({});
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed to create customer"),
   });
@@ -85,9 +108,16 @@ function CustomersPage() {
           <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Add Customer</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>New Customer</DialogTitle></DialogHeader>
-            <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
+            <form className="grid gap-4" onSubmit={(e) => {
+              e.preventDefault();
+              const found = validate(customerSchema, form);
+              setErrors(found);
+              if (hasErrors(found)) return;
+              createMutation.mutate();
+            }}>
               <div className="grid gap-2"><Label>Customer Name</Label>
-                <Input required placeholder="e.g. Sunset Café" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <Input required placeholder="e.g. Sunset Café" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} aria-invalid={!!errors.name} />
+                <FieldError message={errors.name} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2"><Label>Type</Label>
@@ -105,14 +135,17 @@ function CustomersPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2"><Label>Phone</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                  <Input inputMode="tel" placeholder="0712 345 678" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} aria-invalid={!!errors.phone} />
+                  <FieldError message={errors.phone} />
                 </div>
                 <div className="grid gap-2"><Label>Email</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  <Input type="email" placeholder="name@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} aria-invalid={!!errors.email} />
+                  <FieldError message={errors.email} />
                 </div>
               </div>
               <div className="grid gap-2"><Label>Credit Limit (KES)</Label>
-                <Input type="number" placeholder="50000" value={form.creditLimit || ""} onChange={(e) => setForm({ ...form, creditLimit: Number(e.target.value) || 0 })} />
+                <Input type="number" min={0} step="0.01" placeholder="50000" value={form.creditLimit || ""} onChange={(e) => setForm({ ...form, creditLimit: Number(e.target.value) || 0 })} aria-invalid={!!errors.creditLimit} />
+                <FieldError message={errors.creditLimit} />
               </div>
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancel</Button>

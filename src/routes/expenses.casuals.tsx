@@ -22,6 +22,17 @@ import { StatCard } from "@/components/stat-card";
 import { PaidBadge } from "@/components/status-badge";
 import { Plus, HardHat, Users, Wallet, Trash2, Check, Download, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
+import { FieldError } from "@/components/field-error";
+import {
+  amountSchema,
+  businessDateSchema,
+  normalizePhone,
+  optionalPhoneSchema,
+  validate,
+  hasErrors,
+  type FieldErrors,
+} from "@/lib/validation";
+import { z } from "zod";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { exportCsv, stampToday } from "@/lib/csv";
 import { api, type ApiCasualWage, type ApiCasualWorker } from "@/lib/api";
@@ -449,10 +460,12 @@ function EditLogDialog({
     onError: (e: any) => toast.error(e?.message ?? "Failed to update entry"),
   });
 
+  const logDateError = validate(z.object({ date: businessDateSchema }), { date }).date;
+
   const submit = () => {
     if (!entry) return;
     if (!area.trim()) return toast.error("Work area is required");
-    if (!date) return toast.error("Date is required");
+    if (logDateError) return toast.error(logDateError);
     updateLog.mutate({ date, task: area.trim(), notes: notes.trim() });
   };
 
@@ -468,7 +481,14 @@ function EditLogDialog({
             </div>
             <div className="grid gap-1.5">
               <Label>Date *</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <Input
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                aria-invalid={!!logDateError}
+              />
+              <FieldError message={logDateError} />
             </div>
             <div className="grid gap-1.5">
               <Label>Work area / assignment *</Label>
@@ -509,7 +529,8 @@ function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
   const [phone, setPhone] = useState("");
   const [rate, setRate] = useState("");
 
-  const reset = () => { setName(""); setPhone(""); setRate(""); };
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const reset = () => { setName(""); setPhone(""); setRate(""); setErrors({}); };
 
   const createWorker = useMutation({
     mutationFn: (payload: Parameters<typeof api.createCasualWorker>[0]) => api.createCasualWorker(payload),
@@ -537,11 +558,13 @@ function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Phone number</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <Input inputMode="tel" placeholder="0712 345 678" value={phone} onChange={(e) => setPhone(e.target.value)} aria-invalid={!!errors.phone} />
+              <FieldError message={errors.phone} />
             </div>
             <div className="grid gap-1.5">
               <Label>Daily rate *</Label>
-              <Input type="number" min="0" step="any" value={rate} onChange={(e) => setRate(e.target.value)} />
+              <Input type="number" min="0" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} aria-invalid={!!errors.dailyRate} />
+              <FieldError message={errors.dailyRate} />
             </div>
           </div>
         </div>
@@ -550,10 +573,16 @@ function NewWorkerDialog({ onCreated }: { onCreated: () => void }) {
           <Button
             disabled={createWorker.isPending}
             onClick={() => {
+              const found = validate(
+                z.object({ phone: optionalPhoneSchema, dailyRate: amountSchema }),
+                { phone, dailyRate: Number(rate) || 0 },
+              );
+              setErrors(found);
               if (!name.trim()) return toast.error("Name is required");
+              if (hasErrors(found)) return;
               createWorker.mutate({
                 name: name.trim(),
-                phone: phone.trim() || undefined,
+                phone: normalizePhone(phone) ?? undefined,
                 dailyRate: Number(rate) || 0,
               });
             }}
@@ -599,9 +628,12 @@ function NewLogDialog({
     onError: (e: any) => toast.error(e?.message ?? "Failed to log work"),
   });
 
+  const logDateError = validate(z.object({ date: businessDateSchema }), { date }).date;
+
   const submit = () => {
     if (!selected) return toast.error("Choose a worker");
     if (!area.trim()) return toast.error("Work area is required");
+    if (logDateError) return toast.error(logDateError);
     if (selected.dailyRate <= 0) return toast.error("Worker has no daily rate set");
 
     createLog.mutate({
@@ -643,7 +675,14 @@ function NewLogDialog({
             </div>
             <div className="grid gap-1.5">
               <Label>Date *</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <Input
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                aria-invalid={!!logDateError}
+              />
+              <FieldError message={logDateError} />
             </div>
           </div>
 

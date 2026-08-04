@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { FieldError } from "@/components/field-error";
+import { positiveAmountSchema, validate } from "@/lib/validation";
+import { z } from "zod";
 import { api, ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 
@@ -64,6 +67,11 @@ function RecordPaymentPage() {
 
   const inv = invoices.find((i) => i.id === invoiceId);
   const remaining = inv ? Math.max(inv.outstandingBalance - amount, 0) : 0;
+  const amountError =
+    validate(z.object({ amount: positiveAmountSchema }), { amount }).amount ??
+    (inv && amount > inv.outstandingBalance
+      ? "Payment cannot exceed the outstanding balance."
+      : undefined);
 
   return (
     <AppShell
@@ -75,7 +83,11 @@ function RecordPaymentPage() {
         className="grid gap-4 lg:grid-cols-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!customerId || !invoiceId || amount <= 0) return;
+          if (!customerId || !invoiceId) return;
+          if (amountError) return toast.error(amountError);
+          if (inv && amount > inv.outstandingBalance) {
+            return toast.error("Payment cannot exceed the outstanding balance.");
+          }
           if (createPaymentMutation.isPending || createPaymentMutation.isSuccess) return;
           if (!idempotencyKeyRef.current) {
             idempotencyKeyRef.current =
@@ -122,7 +134,7 @@ function RecordPaymentPage() {
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2"><Label>Amount (KES)</Label><Input type="number" min={0} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
+              <div className="grid gap-2"><Label>Amount (KES)</Label><Input type="number" min={0} step="0.01" max={inv?.outstandingBalance} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} aria-invalid={!!amountError} /><FieldError message={amountError} /></div>
               <div className="grid gap-2">
                 <Label>Payment Method</Label>
                 <Select value={method} onValueChange={(v) => setMethod(v as typeof method)}>
@@ -140,7 +152,7 @@ function RecordPaymentPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={!inv || amount <= 0 || createPaymentMutation.isPending || createPaymentMutation.isSuccess}
+              disabled={!inv || !!amountError || createPaymentMutation.isPending || createPaymentMutation.isSuccess}
             >
               {createPaymentMutation.isPending ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recording payment…</>
