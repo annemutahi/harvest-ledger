@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from farm_erp.validators import normalize_email, normalize_phone, validate_amount
+
 from .models import Customer
 
 
@@ -21,9 +23,14 @@ class CustomerSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Name is required.")
         return value
 
+    def validate_phone(self, value):
+        return normalize_phone(value)
+
+    def validate_email(self, value):
+        return normalize_email(value)
+
     def validate_credit_limit(self, value):
         if value is None:
             return 0
-        if value < 0:
-            raise serializers.ValidationError("Credit limit cannot be negative.")
-        return value
+        return validate_amount(value, field="credit_limit")
+
