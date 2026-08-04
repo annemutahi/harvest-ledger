@@ -24,13 +24,13 @@ class CustomerSerializer(serializers.ModelSerializer):
         return value
 
     def validate_phone(self, value):
-        return normalize_phone(value)
+        return normalize_phone(value, field=None)
 
     def validate_email(self, value):
-        return normalize_email(value)
+        return normalize_email(value, field=None)
 
     def validate_credit_limit(self, value):
         if value is None:
             return 0
-        return validate_amount(value, field="credit_limit")
+        return validate_amount(value, field=None)
 
