@@ -4,3 +4,12 @@ __pycache__/
 .env
 db.sqlite3
 staticfiles/
+sales/migrations/
+accounts/migrations/
+audit/migrations/
+customers/migrations/
+expenses/migrations/
+orders/migrations/
+products/migrations/
+reports/migrations/
+stock/migrations/
