@@ -20,6 +20,12 @@ EARLIEST_BUSINESS_YEAR = 2020
 _STRIP = re.compile(r"[\s\-()]")
 
 
+def _err(field: str | None, message: str) -> serializers.ValidationError:
+    """Field-level validators want a bare message; object-level want a dict."""
+    return serializers.ValidationError({field: message} if field else message)
+
+
+
 def normalize_phone(raw: str | None, *, required: bool = False, field: str = "phone") -> str:
     """Normalise a Kenyan phone number to E.164 (+2547XXXXXXXX).
 
@@ -29,7 +35,7 @@ def normalize_phone(raw: str | None, *, required: bool = False, field: str = "ph
     value = _STRIP.sub("", raw or "")
     if not value:
         if required:
-            raise serializers.ValidationError({field: "Phone number is required."})
+            raise _err(field, "Phone number is required.")
         return ""
 
     if re.fullmatch(r"\+(?!254)[1-9]\d{7,14}", value):
@@ -44,44 +50,42 @@ def normalize_phone(raw: str | None, *, required: bool = False, field: str = "ph
     if re.fullmatch(r"[17]\d{8}", digits) or re.fullmatch(r"[2-6]\d{7,8}", digits):
         return f"+254{digits}"
 
-    raise serializers.ValidationError(
-        {field: "Enter a valid phone number, e.g. 0712 345 678."},
-    )
+    raise _err(field, "Enter a valid phone number, e.g. 0712 345 678.")
 
 
 def normalize_email(raw: str | None, *, required: bool = False, field: str = "email") -> str:
     value = (raw or "").strip().lower()
     if not value:
         if required:
-            raise serializers.ValidationError({field: "Email is required."})
+            raise _err(field, "Email is required.")
         return ""
     if len(value) > 255:
-        raise serializers.ValidationError({field: "Email must be under 255 characters."})
+        raise _err(field, "Email must be under 255 characters.")
     try:
         django_validate_email(value)
     except DjangoValidationError as exc:  # pragma: no cover - message is static
-        raise serializers.ValidationError({field: "Enter a valid email address."}) from exc
+        raise _err(field, "Enter a valid email address.") from exc
     return value
 
 
 def validate_amount(value, *, field: str = "amount", positive: bool = False) -> Decimal:
     """Validate a money amount: finite, >= 0 (or > 0), max 2 decimal places."""
     if value is None:
-        raise serializers.ValidationError({field: "Enter a valid amount."})
+        raise _err(field, "Enter a valid amount.")
     try:
         amount = Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError) as exc:
-        raise serializers.ValidationError({field: "Enter a valid amount."}) from exc
+        raise _err(field, "Enter a valid amount.") from exc
     if not amount.is_finite():
-        raise serializers.ValidationError({field: "Enter a valid amount."})
+        raise _err(field, "Enter a valid amount.")
     if positive and amount <= 0:
-        raise serializers.ValidationError({field: "Amount must be greater than 0."})
+        raise _err(field, "Amount must be greater than 0.")
     if amount < 0:
-        raise serializers.ValidationError({field: "Amount cannot be negative."})
+        raise _err(field, "Amount cannot be negative.")
     if amount > MAX_AMOUNT:
-        raise serializers.ValidationError({field: "Amount is too large."})
+        raise _err(field, "Amount is too large.")
     if -amount.as_tuple().exponent > 2:
-        raise serializers.ValidationError({field: "Use at most 2 decimal places."})
+        raise _err(field, "Use at most 2 decimal places.")
     return amount
 
 
@@ -89,11 +93,11 @@ def validate_quantity(value, *, field: str = "quantity") -> Decimal:
     try:
         quantity = Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError) as exc:
-        raise serializers.ValidationError({field: "Enter a valid quantity."}) from exc
+        raise _err(field, "Enter a valid quantity.") from exc
     if not quantity.is_finite() or quantity <= 0:
-        raise serializers.ValidationError({field: "Quantity must be greater than 0."})
+        raise _err(field, "Quantity must be greater than 0.")
     if quantity > Decimal("1000000"):
-        raise serializers.ValidationError({field: "Quantity is too large."})
+        raise _err(field, "Quantity is too large.")
     return quantity
 
 
@@ -108,12 +112,12 @@ def validate_business_date(
     if value is None:
         return None
     if not isinstance(value, date):
-        raise serializers.ValidationError({field: "Enter a valid date."})
+        raise _err(field, "Enter a valid date.")
     if value.year < EARLIEST_BUSINESS_YEAR:
-        raise serializers.ValidationError({field: "Date is too far in the past."})
+        raise _err(field, "Date is too far in the past.")
     today = date.today()
     if not allow_future and value > today:
-        raise serializers.ValidationError({field: "Date cannot be in the future."})
+        raise _err(field, "Date cannot be in the future.")
     if allow_future and max_future_days and value > today + timedelta(days=max_future_days):
-        raise serializers.ValidationError({field: "Date is too far in the future."})
+        raise _err(field, "Date is too far in the future.")
     return value
