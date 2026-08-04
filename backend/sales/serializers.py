@@ -5,6 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from farm_erp.validators import validate_amount, validate_business_date, validate_quantity
 from products.models import Product
 
 from .models import CreditApplication, Invoice, InvoiceAdjustment, Payment, Sale, SaleItem
@@ -105,11 +106,18 @@ class SaleSerializer(serializers.ModelSerializer):
         if not items:
             raise serializers.ValidationError("At least one item is required.")
         for i in items:
-            if i["quantity"] <= 0:
-                raise serializers.ValidationError("Quantity must be > 0.")
-            if i["unit_price"] < 0:
-                raise serializers.ValidationError("Unit price must be >= 0.")
+            i["quantity"] = validate_quantity(i["quantity"], field="quantity")
+            i["unit_price"] = validate_amount(i["unit_price"], field="unit_price")
         return items
+
+    def validate_date(self, value):
+        return validate_business_date(value, field=None)
+
+    def validate_invoice_date(self, value):
+        return validate_business_date(value, field=None)
+
+    def validate_due_date(self, value):
+        return validate_business_date(value, field=None, allow_future=True, max_future_days=365)
 
     def validate(self, attrs):
         items = attrs.get("items")
@@ -273,9 +281,10 @@ class PaymentSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_at"]
 
     def validate_amount(self, value):
-        if value is None or value <= 0:
-            raise serializers.ValidationError("Amount must be > 0.")
-        return value
+        return validate_amount(value, field=None, positive=True)
+
+    def validate_date(self, value):
+        return validate_business_date(value, field=None)
 
     def validate(self, attrs):
         """Keep a payment tied to its invoice and prevent overpayments."""
