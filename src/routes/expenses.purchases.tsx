@@ -20,6 +20,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/stat-card";
 import { Plus, ShoppingBag, Truck, Trash2, Receipt } from "lucide-react";
 import { toast } from "sonner";
+import { FieldError } from "@/components/field-error";
+import {
+  businessDateSchema,
+  normalizePhone,
+  optionalEmailSchema,
+  optionalPhoneSchema,
+  positiveAmountSchema,
+  quantitySchema,
+  validate,
+  hasErrors,
+  type FieldErrors,
+} from "@/lib/validation";
+import { z } from "zod";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { api } from "@/lib/api";
 import { notifyExpensesChanged, type Purchase, type Supplier } from "@/lib/expenses-store";
@@ -265,7 +278,8 @@ function NewSupplierDialog({ onCreated }: { onCreated: () => void }) {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
 
-  const reset = () => { setName(""); setContact(""); setPhone(""); setEmail(""); setNotes(""); };
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const reset = () => { setName(""); setContact(""); setPhone(""); setEmail(""); setNotes(""); setErrors({}); };
 
   const createSupplier = useMutation({
     mutationFn: (payload: Parameters<typeof api.createSupplier>[0]) => api.createSupplier(payload),
@@ -297,12 +311,14 @@ function NewSupplierDialog({ onCreated }: { onCreated: () => void }) {
             </div>
             <div className="grid gap-1.5">
               <Label>Phone</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <Input inputMode="tel" placeholder="0712 345 678" value={phone} onChange={(e) => setPhone(e.target.value)} aria-invalid={!!errors.phone} />
+              <FieldError message={errors.phone} />
             </div>
           </div>
           <div className="grid gap-1.5">
             <Label>Email</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com" aria-invalid={!!errors.email} />
+            <FieldError message={errors.email} />
           </div>
           <div className="grid gap-1.5">
             <Label>Notes</Label>
@@ -314,11 +330,17 @@ function NewSupplierDialog({ onCreated }: { onCreated: () => void }) {
           <Button
             disabled={createSupplier.isPending}
             onClick={() => {
+              const found = validate(
+                z.object({ phone: optionalPhoneSchema, email: optionalEmailSchema }),
+                { phone, email },
+              );
+              setErrors(found);
               if (!name.trim()) return toast.error("Name is required");
+              if (hasErrors(found)) return;
               createSupplier.mutate({
                 name: name.trim(),
                 contactPerson: contactPerson.trim() || undefined,
-                phone: phone.trim() || undefined,
+                phone: normalizePhone(phone) ?? undefined,
                 email: email.trim() || undefined,
                 notes: notes.trim() || undefined,
               });
@@ -350,6 +372,7 @@ function NewPurchaseDialog({
   const [paymentMethod, setPaymentMethod] = useState<string>(PAYMENT_METHODS[0]);
   const [notes, setNotes] = useState("");
 
+  const [purchaseErrors, setPurchaseErrors] = useState<FieldErrors>({});
   const qty = Number(quantity) || 0;
   const cost = Number(unitCost) || 0;
   const total = qty * cost;
@@ -374,9 +397,13 @@ function NewPurchaseDialog({
   });
 
   const submit = () => {
+    const found = validate(
+      z.object({ date: businessDateSchema, quantity: quantitySchema, unitCost: positiveAmountSchema }),
+      { date, quantity: qty, unitCost: cost },
+    );
+    setPurchaseErrors(found);
     if (!item.trim()) return toast.error("Item description is required");
-    if (qty <= 0) return toast.error("Quantity must be greater than 0");
-    if (cost <= 0) return toast.error("Unit cost must be greater than 0");
+    if (hasErrors(found)) return;
     const supplier = suppliers.find((s) => s.id === supplierId);
     const supplierName = supplier?.name ?? supplierNameFallback.trim();
     if (!supplierName) return toast.error("Choose a supplier or enter a name");
@@ -429,7 +456,8 @@ function NewPurchaseDialog({
             </div>
             <div className="grid gap-1.5">
               <Label>Date</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <Input type="date" max={new Date().toISOString().slice(0, 10)} value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!!purchaseErrors.date} />
+              <FieldError message={purchaseErrors.date} />
             </div>
           </div>
 
@@ -462,7 +490,8 @@ function NewPurchaseDialog({
           <div className="grid gap-3 md:grid-cols-4">
             <div className="grid gap-1.5">
               <Label>Quantity</Label>
-              <Input type="number" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+              <Input type="number" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} aria-invalid={!!purchaseErrors.quantity} />
+              <FieldError message={purchaseErrors.quantity} />
             </div>
             <div className="grid gap-1.5">
               <Label>Unit</Label>
@@ -470,7 +499,8 @@ function NewPurchaseDialog({
             </div>
             <div className="grid gap-1.5">
               <Label>Unit cost</Label>
-              <Input type="number" min="0" step="any" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
+              <Input type="number" min="0" step="0.01" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} aria-invalid={!!purchaseErrors.unitCost} />
+              <FieldError message={purchaseErrors.unitCost} />
             </div>
             <div className="grid gap-1.5">
               <Label>Total</Label>
