@@ -58,9 +58,10 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "id", "invoice_number", "customer", "customer_name",
             "issue_date", "due_date", "total_amount", "amount_paid",
             "outstanding_balance", "status", "items", "sale_id",
-            "payment_type", "adjustments", "credit_applied", "available_credit", "created_at",
+            "payment_type", "adjustments", "credit_applied", "available_credit",
+            "etims_number", "created_at",
         ]
-        read_only_fields = fields
+        read_only_fields = [f for f in fields if f != "etims_number"]
 
     def get_sale_id(self, obj):
         sale = getattr(obj, "sale", None)
