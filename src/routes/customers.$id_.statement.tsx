@@ -122,7 +122,7 @@ function StatementPage() {
     r.invoice.invoiceDate,
     r.invoice.invoiceNumber,
     itemDescription(r.invoice),
-    "",
+    r.invoice.etimsNumber || "",
     r.invoice.totalAmount,
     r.status,
     r.paymentDate,
@@ -261,7 +261,7 @@ function StatementPage() {
                 <td className="border-r border-foreground/40 px-2 py-1 text-right">{formatDate(r.invoice.invoiceDate)}</td>
                 <td className="border-r border-foreground/40 px-2 py-1 text-right">{r.invoice.invoiceNumber}</td>
                 <td className="border-r border-foreground/40 px-2 py-1">{itemDescription(r.invoice)}</td>
-                <td className="border-r border-foreground/40 px-2 py-1">&nbsp;</td>
+                <td className="border-r border-foreground/40 px-2 py-1 text-center">{r.invoice.etimsNumber || "\u00A0"}</td>
                 <td className="border-r border-foreground/40 px-2 py-1 text-right">{num(r.invoice.totalAmount)}</td>
                 <td className="border-r border-foreground/40 px-2 py-1">{r.status}</td>
                 <td className="border-r border-foreground/40 px-2 py-1">{r.paymentDate ? formatDate(r.paymentDate) : ""}</td>
@@ -289,8 +289,8 @@ function StatementPage() {
         </table>
 
         <p className="mt-6 border-t pt-4 text-xs text-muted-foreground">
-          KRA ETIMS numbers are left blank for manual completion. Please settle outstanding
-          balances to {COMPANY.name} — {COMPANY.phone}.
+          KRA ETIMS numbers are pulled from each invoice; blanks are pending entry. Please settle
+          outstanding balances to {COMPANY.name} — {COMPANY.phone}.
         </p>
       </div>
     </div>

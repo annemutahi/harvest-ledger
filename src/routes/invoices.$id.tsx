@@ -214,6 +214,30 @@ function InvoiceDetail() {
               </div>
             </div>
 
+            <div className="mt-6 rounded-lg border p-4">
+              <p className="text-xs font-medium uppercase text-muted-foreground">KRA eTIMS No.</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
+                <Input
+                  value={etimsValue}
+                  onChange={(e) => setEtims(e.target.value)}
+                  placeholder="Enter eTIMS number once available"
+                  className="max-w-xs"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={saveEtims.isPending || etimsValue.trim() === (invoice.etimsNumber ?? "")}
+                  onClick={() => saveEtims.mutate()}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saveEtims.isPending ? "Saving…" : "Save"}
+                </Button>
+              </div>
+              <p className="mt-2 hidden text-sm font-medium print:block">
+                {invoice.etimsNumber || "—"}
+              </p>
+            </div>
+
             {!editing ? (
               <>
                 <Table className="mt-6">
