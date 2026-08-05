@@ -60,6 +60,18 @@ function InvoiceDetail() {
   const [editing, setEditing] = useState(false);
   const [lines, setLines] = useState<EditableLine[]>([]);
   const [adjustmentNote, setAdjustmentNote] = useState("");
+  const [etims, setEtims] = useState<string | null>(null);
+  const etimsValue = etims ?? invoice?.etimsNumber ?? "";
+
+  const saveEtims = useMutation({
+    mutationFn: () => api.updateInvoiceEtims(invoice.id, etimsValue.trim()),
+    onSuccess: () => {
+      setEtims(null);
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("KRA eTIMS number saved.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not save eTIMS number"),
+  });
 
   const startEdit = () => {
     setLines(
