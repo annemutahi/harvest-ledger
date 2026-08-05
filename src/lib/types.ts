@@ -77,6 +77,7 @@ export interface Invoice {
   adjustments: InvoiceAdjustment[];
   creditApplied: number;
   availableCredit: number;
+  etimsNumber: string;
 }
 
 export type PaymentMethod = "Cash" | "Bank Transfer" | "Mobile Money" | "Cheque";
