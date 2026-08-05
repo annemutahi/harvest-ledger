@@ -319,6 +319,7 @@ function mapInvoice(i: any): Invoice {
     })),
     creditApplied: Number(i.credit_applied ?? 0),
     availableCredit: Number(i.available_credit ?? 0),
+    etimsNumber: i.etims_number ?? "",
   };
 }
 
@@ -537,6 +538,13 @@ export const api = {
   },
   getInvoice: async (id: string): Promise<Invoice> =>
     mapInvoice(await request(`/invoices/${id}/`)),
+  updateInvoiceEtims: async (id: string, etimsNumber: string): Promise<Invoice> =>
+    mapInvoice(
+      await request(`/invoices/${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ etims_number: etimsNumber }),
+      }),
+    ),
 
   // Global search across customers, orders, invoices
   searchGlobal: async (q: string, limit = 10): Promise<{ customers: Customer[]; orders: ApiOrder[]; invoices: Invoice[] }> => {

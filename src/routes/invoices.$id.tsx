@@ -60,6 +60,18 @@ function InvoiceDetail() {
   const [editing, setEditing] = useState(false);
   const [lines, setLines] = useState<EditableLine[]>([]);
   const [adjustmentNote, setAdjustmentNote] = useState("");
+  const [etims, setEtims] = useState<string | null>(null);
+  const etimsValue = etims ?? invoice?.etimsNumber ?? "";
+
+  const saveEtims = useMutation({
+    mutationFn: () => api.updateInvoiceEtims(invoice.id, etimsValue.trim()),
+    onSuccess: () => {
+      setEtims(null);
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("KRA eTIMS number saved.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not save eTIMS number"),
+  });
 
   const startEdit = () => {
     setLines(
@@ -200,6 +212,30 @@ function InvoiceDetail() {
                 <p className="text-sm text-muted-foreground">Limuru Road, Kiambu</p>
                 <p className="text-sm text-muted-foreground">accounts@peacefulacres.farm</p>
               </div>
+            </div>
+
+            <div className="mt-6 rounded-lg border p-4">
+              <p className="text-xs font-medium uppercase text-muted-foreground">KRA eTIMS No.</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
+                <Input
+                  value={etimsValue}
+                  onChange={(e) => setEtims(e.target.value)}
+                  placeholder="Enter eTIMS number once available"
+                  className="max-w-xs"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={saveEtims.isPending || etimsValue.trim() === (invoice.etimsNumber ?? "")}
+                  onClick={() => saveEtims.mutate()}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saveEtims.isPending ? "Saving…" : "Save"}
+                </Button>
+              </div>
+              <p className="mt-2 hidden text-sm font-medium print:block">
+                {invoice.etimsNumber || "—"}
+              </p>
             </div>
 
             {!editing ? (

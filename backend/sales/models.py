@@ -26,6 +26,8 @@ class Invoice(models.Model):
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     amount_paid = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=UNPAID)
+    # KRA eTIMS invoice number, entered manually by staff until eTIMS is integrated.
+    etims_number = models.CharField(max_length=64, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

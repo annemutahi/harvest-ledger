@@ -1,5 +1,5 @@
 from django.db import IntegrityError
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.response import Response
 
 
@@ -27,7 +27,7 @@ class SaleViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
 
-class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
+class InvoiceViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Invoice.objects.select_related("customer").prefetch_related(
         "sale__items", "adjustments", "credit_uses", "credit_applications",
     )
