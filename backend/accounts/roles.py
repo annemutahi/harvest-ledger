@@ -57,7 +57,7 @@ ROLE_MATRIX: dict[str, dict[str, list[str]]] = {
         "invoices": [VIEW],
         "payments": [VIEW, ADD],
         "stock": [VIEW, ADD],
-        "expenses": _VIEW_ONLY,
+        "expenses": [VIEW, ADD],
         "orders": [VIEW, CHANGE],
         "reports": _VIEW_ONLY,
         "audit": [],
