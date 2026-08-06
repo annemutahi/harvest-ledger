@@ -85,7 +85,7 @@ class PaymentApiTests(APITestCase):
         self.invoice.amount_paid = Decimal("125.00")
         self.invoice.recompute_status()
         self.invoice.save(update_fields=["amount_paid", "status"])
-        product = Product.objects.create(name="Credit product", unit_price=Decimal("100.00"))
+        product = Product.objects.create(name="Credit product", unit_price=Decimal("100.00"), available_quantity=Decimal("10.00"))
 
         response = self.client.post(reverse("api:sales-list"), {
             "customer": self.customer.id,
