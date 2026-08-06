@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,9 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
-import { canManageProducts } from "@/lib/permissions";
+import { ROLE_LABELS, can, canManageProducts, roleOf } from "@/lib/permissions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { AppRole } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { Bell, Camera, KeyRound, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, Camera, KeyRound, ShieldCheck, UserRound, Users } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Profile Settings - Peaceful Acres" }] }),
@@ -63,6 +65,8 @@ function initials(name: string) {
 function SettingsPage() {
   const { user } = useAuth();
   const isManager = canManageProducts(user);
+  const canManageUsers = can(user, "users", "change");
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [name, setName] = useState(user?.username ?? "{username}");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -82,6 +86,29 @@ function SettingsPage() {
     queryFn: () => api.listAuditLogs(auditFilter),
     enabled: isManager,
     staleTime: 15_000,
+  });
+
+  const usersQuery = useQuery({
+    queryKey: ["team-users"],
+    queryFn: () => api.listUsers(),
+    enabled: canManageUsers,
+  });
+
+  const matrixQuery = useQuery({
+    queryKey: ["role-matrix"],
+    queryFn: () => api.roleMatrix(),
+    enabled: canManageUsers,
+    staleTime: 5 * 60_000,
+  });
+
+  const roleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: number | string; role: AppRole }) =>
+      api.setUserRole(id, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-users"] });
+      toast.success("Role updated.");
+    },
+    onError: () => toast.error("Could not update that role."),
   });
 
   const handlePhotoChange = (file?: File) => {
@@ -128,6 +155,12 @@ function SettingsPage() {
             <Bell className="mr-2 h-4 w-4" />
             Notifications
           </TabsTrigger>
+          {canManageUsers && (
+            <TabsTrigger value="roles">
+              <Users className="mr-2 h-4 w-4" />
+              Roles
+            </TabsTrigger>
+          )}
           {isManager && (
             <TabsTrigger value="audit">
               <ShieldCheck className="mr-2 h-4 w-4" />
@@ -182,7 +215,11 @@ function SettingsPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="role">Role</Label>
-                  <Input id="role" value="Administrator" disabled />
+                  <Input
+                    id="role"
+                    value={ROLE_LABELS[roleOf(user) ?? "viewer"] ?? "—"}
+                    disabled
+                  />
                 </div>
               </div>
 
@@ -260,6 +297,110 @@ function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {canManageUsers && (
+          <TabsContent value="roles">
+            <Card>
+              <CardHeader>
+                <CardTitle>Team roles &amp; module rights</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="w-56">Role</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {usersQuery.isLoading && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                            Loading team…
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {usersQuery.data?.map((member) => (
+                        <TableRow key={member.id}>
+                          <TableCell className="font-medium">{member.username}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {member.email || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={roleOf(member) ?? "viewer"}
+                              onValueChange={(value) =>
+                                roleMutation.mutate({ id: member.id, role: value as AppRole })
+                              }
+                              disabled={roleMutation.isPending}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(matrixQuery.data?.roles ?? []).map((role) => (
+                                  <SelectItem key={role.value} value={role.value}>
+                                    {role.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {matrixQuery.data && (
+                  <div className="overflow-x-auto rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Module</TableHead>
+                          {matrixQuery.data.roles.map((role) => (
+                            <TableHead key={role.value}>{role.label}</TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {matrixQuery.data.modules.map((module) => (
+                          <TableRow key={module}>
+                            <TableCell className="text-xs font-medium capitalize">{module}</TableCell>
+                            {matrixQuery.data!.roles.map((role) => {
+                              const actions = matrixQuery.data!.matrix[role.value]?.[module] ?? [];
+                              return (
+                                <TableCell key={role.value} className="text-xs">
+                                  {actions.length === 0 ? (
+                                    <span className="text-muted-foreground">No access</span>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-1">
+                                      {actions.map((action) => (
+                                        <Badge key={action} variant="outline" className="capitalize">
+                                          {action}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Rights are enforced on the server for every module; changing a role takes effect
+                  the next time that user loads the app.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {isManager && (
           <TabsContent value="audit">
