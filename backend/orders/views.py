@@ -8,7 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import decorators, response, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from accounts.permissions import is_manager
+from accounts.permissions import module_permission
+from accounts.roles import has_perm
 from farm_erp.date_filter import apply_date_range
 
 from .models import Order, OrderItem
@@ -20,7 +21,7 @@ log = logging.getLogger(__name__)
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.prefetch_related("items")
     serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [module_permission("orders")]
     filterset_fields = ["status", "channel"]
     search_fields = ["reference", "customer_name", "customer_phone", "customer_email"]
     ordering_fields = ["placed_at", "total"]
@@ -33,7 +34,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @decorators.action(detail=True, methods=["patch"])
     def status(self, request, pk=None):
-        if not is_manager(request.user):
+        if not has_perm(request.user, "orders", "change"):
             return response.Response({"detail": "forbidden"},
                                      status=status.HTTP_403_FORBIDDEN)
         order = self.get_object()

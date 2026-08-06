@@ -2,7 +2,8 @@ from django.db.models import Q, Sum
 from django.utils import timezone
 from rest_framework import decorators, permissions, response, status, viewsets
 
-from accounts.permissions import IsManagerOrReadOnly, ReadOnlyForFarmhands, is_manager
+from accounts.permissions import module_permission
+from accounts.roles import has_perm
 from farm_erp.date_filter import apply_date_range
 
 from .models import CasualWage, CasualWorker, Purchase, Supplier
@@ -13,14 +14,14 @@ from .serializers import (CasualWageSerializer, CasualWorkerSerializer,
 class SupplierViewSet(viewsets.ModelViewSet):
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
-    permission_classes = [IsManagerOrReadOnly]
+    permission_classes = [module_permission("expenses")]
     search_fields = ["name", "phone", "email"]
 
 
 class PurchaseViewSet(viewsets.ModelViewSet):
     queryset = Purchase.objects.select_related("supplier")
     serializer_class = PurchaseSerializer
-    permission_classes = [ReadOnlyForFarmhands]
+    permission_classes = [module_permission("expenses")]
     filterset_fields = ["supplier", "category", "payment_method"]
     search_fields = ["item", "supplier_name", "notes"]
     ordering_fields = ["date", "total"]
@@ -49,7 +50,7 @@ class PurchaseViewSet(viewsets.ModelViewSet):
 class CasualWorkerViewSet(viewsets.ModelViewSet):
     queryset = CasualWorker.objects.all()
     serializer_class = CasualWorkerSerializer
-    permission_classes = [IsManagerOrReadOnly]
+    permission_classes = [module_permission("expenses")]
     search_fields = ["name", "phone"]
 
 
@@ -65,18 +66,14 @@ class CasualWageViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         # Farmhands may list + create (must be logged in). Only managers may update/delete.
-        if self.action == "create":
-            return [permissions.IsAuthenticated()]
-        if self.action in ("list", "retrieve", "mark_paid", "summary"):
-            return [ReadOnlyForFarmhands()]
-        return [IsManagerOrReadOnly()]
+        return [module_permission("expenses")()]
 
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)
 
     @decorators.action(detail=True, methods=["post"], url_path="mark-paid")
     def mark_paid(self, request, pk=None):
-        if not is_manager(request.user):
+        if not has_perm(request.user, "expenses", "change"):
             return response.Response({"detail": "forbidden"}, status=status.HTTP_403_FORBIDDEN)
         wage = self.get_object()
         wage.paid = True
