@@ -1,25 +1,26 @@
 from rest_framework import permissions
 
-from accounts.permissions import is_manager
+from accounts.roles import has_perm
 
 
 class CanEditSales(permissions.BasePermission):
-    """Read for any authenticated user. Create/update/delete for managers only.
+    """Read for anyone with sales view rights. Create for roles with `add`.
 
-    Farmhands may create Cash sales at the till but never edit or delete
-    historical sales.
+    Editing/deleting historical sales requires the `change`/`delete` right
+    (Admin and Manager by default).
     """
 
     def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
+        user = request.user
+        if not (user and user.is_authenticated):
             return False
         if request.method in permissions.SAFE_METHODS:
-            return True
+            return has_perm(user, "sales", "view")
         if request.method == "POST":
-            return True  # farmhands may record new sales
-        return is_manager(request.user)
+            return has_perm(user, "sales", "add")
+        if request.method == "DELETE":
+            return has_perm(user, "sales", "delete")
+        return has_perm(user, "sales", "change")
 
     def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return is_manager(request.user)
+        return self.has_permission(request, view)
