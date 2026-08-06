@@ -95,7 +95,7 @@ class PaymentApiTests(APITestCase):
             "items": [{"product": product.id, "quantity": "1.00", "unit_price": "100.00"}],
         }, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         target = Invoice.objects.exclude(id=self.invoice.id).get()
         self.assertEqual(target.amount_paid, Decimal("25.00"))
         self.assertEqual(target.outstanding_balance, Decimal("75.00"))
