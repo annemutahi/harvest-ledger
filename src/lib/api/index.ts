@@ -39,6 +39,16 @@ export type AuthUser = {
   is_staff?: boolean;
   is_superuser?: boolean;
   can_edit_sales?: boolean;
+  role?: AppRole | null;
+  permissions?: Record<string, string[]>;
+};
+
+export type AppRole = "admin" | "manager" | "sales" | "storekeeper" | "viewer";
+
+export type RoleMatrixResponse = {
+  modules: string[];
+  roles: { value: AppRole; label: string }[];
+  matrix: Record<string, Record<string, string[]>>;
 };
 
 type LoginResponse = {
@@ -865,6 +875,14 @@ export const api = {
     const q = qs.toString();
     return unwrap<any>(await request(`/audit/logs/${q ? `?${q}` : ""}`)).map(mapAuditLog);
   },
+
+  listUsers: async (): Promise<AuthUser[]> =>
+    unwrap<AuthUser>(await request("/auth/users/")),
+
+  setUserRole: async (id: number | string, role: AppRole): Promise<AuthUser> =>
+    request(`/auth/users/${id}/`, { method: "PATCH", body: JSON.stringify({ role }) }),
+
+  roleMatrix: async (): Promise<RoleMatrixResponse> => request("/auth/roles/"),
 };
 
 export type ApiAuditLog = {

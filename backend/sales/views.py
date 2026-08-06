@@ -3,7 +3,7 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.response import Response
 
 
-from accounts.permissions import ReadOnlyForFarmhands
+from accounts.permissions import module_permission
 from farm_erp.date_filter import apply_date_range
 
 from .models import Invoice, Payment, Sale
@@ -32,7 +32,7 @@ class InvoiceViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
         "sale__items", "adjustments", "credit_uses", "credit_applications",
     )
     serializer_class = InvoiceSerializer
-    permission_classes = [ReadOnlyForFarmhands]
+    permission_classes = [module_permission("invoices")]
     filterset_fields = ["customer", "status"]
     search_fields = ["invoice_number", "customer__name"]
     ordering_fields = ["issue_date", "due_date", "total_amount"]
@@ -44,7 +44,7 @@ class InvoiceViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.select_related("invoice", "customer")
     serializer_class = PaymentSerializer
-    permission_classes = [ReadOnlyForFarmhands]
+    permission_classes = [module_permission("payments")]
     filterset_fields = ["customer", "invoice", "method"]
     ordering_fields = ["date", "amount"]
 

@@ -1,13 +1,28 @@
 """Shared role-based permission classes.
 
-Managers = Django `is_staff` or `is_superuser`.
-Farmhands = any other authenticated user.
+Roles (see `accounts.roles`): Admin, Manager, Sales, Storekeeper, Viewer.
+Each role maps to per-module actions (view/add/change/delete/approve).
+Legacy helpers (`is_manager`, `IsManager`, ...) are kept so existing call
+sites keep working; they now resolve through the role matrix.
 """
 from rest_framework import permissions
 
+from .roles import ADMIN, MANAGER, has_perm, role_for
+
+METHOD_ACTION = {
+    "GET": "view",
+    "HEAD": "view",
+    "OPTIONS": "view",
+    "POST": "add",
+    "PUT": "change",
+    "PATCH": "change",
+    "DELETE": "delete",
+}
+
 
 def is_manager(user) -> bool:
-    return bool(user and user.is_authenticated and (user.is_staff or user.is_superuser))
+    """True for Admin/Manager roles (previously: is_staff or is_superuser)."""
+    return role_for(user) in (ADMIN, MANAGER)
 
 
 class IsManager(permissions.BasePermission):
@@ -31,3 +46,27 @@ class ReadOnlyForFarmhands(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         return is_manager(request.user)
+
+
+class ModulePermission(permissions.BasePermission):
+    """Generic per-module permission driven by the role matrix.
+
+    Usage: `permission_classes = [module_permission("products")]`
+    """
+
+    module = ""
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        action = METHOD_ACTION.get(request.method, "change")
+        return has_perm(user, self.module, action)
+
+
+def module_permission(module: str, name: str | None = None):
+    return type(
+        name or f"CanAccess{module.title()}",
+        (ModulePermission,),
+        {"module": module},
+    )

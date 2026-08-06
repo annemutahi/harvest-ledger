@@ -2,7 +2,8 @@ from django.db import transaction
 from django.db.models import F
 from rest_framework import decorators, response, status, viewsets
 
-from accounts.permissions import is_manager
+from accounts.permissions import module_permission
+from accounts.roles import has_perm
 from farm_erp.date_filter import apply_date_range
 from products.models import Product
 
@@ -16,6 +17,7 @@ class StockEntryViewSet(viewsets.ModelViewSet):
     """
     queryset = StockEntry.objects.select_related("matched_product")
     serializer_class = StockEntrySerializer
+    permission_classes = [module_permission("stock")]
     filterset_fields = ["status", "matched_product"]
 
     def get_queryset(self):
@@ -26,7 +28,7 @@ class StockEntryViewSet(viewsets.ModelViewSet):
 
     @decorators.action(detail=True, methods=["patch"])
     def approve(self, request, pk=None):
-        if not is_manager(request.user):
+        if not has_perm(request.user, "stock", "approve"):
             return response.Response({"detail": "forbidden"}, status=status.HTTP_403_FORBIDDEN)
         entry = self.get_object()
         product_id = request.data.get("product_id") or (
@@ -49,7 +51,7 @@ class StockEntryViewSet(viewsets.ModelViewSet):
 
     @decorators.action(detail=True, methods=["patch"])
     def reject(self, request, pk=None):
-        if not is_manager(request.user):
+        if not has_perm(request.user, "stock", "approve"):
             return response.Response({"detail": "forbidden"}, status=status.HTTP_403_FORBIDDEN)
         entry = self.get_object()
         entry.status = StockEntry.REJECTED
