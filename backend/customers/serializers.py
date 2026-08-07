@@ -34,3 +34,19 @@ class CustomerSerializer(serializers.ModelSerializer):
             return 0
         return validate_amount(value, field=None)
 
+    def validate(self, attrs):
+        """Block duplicate customers on phone/email (case-insensitive)."""
+        instance = self.instance
+        for field, label in (("phone", "phone number"), ("email", "email address")):
+            value = attrs.get(field, getattr(instance, field, "") if instance else "")
+            if not value:
+                continue
+            qs = Customer.objects.filter(**{f"{field}__iexact": value})
+            if instance is not None:
+                qs = qs.exclude(pk=instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {field: f"Another customer already uses this {label}."}
+                )
+        return attrs
+
