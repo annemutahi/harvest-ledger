@@ -38,7 +38,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
-    password = serializers.CharField(min_length=10, write_only=True)
+    password = serializers.CharField(min_length=12, write_only=True)
 
 
 def _reset_link(uid: str, token: str) -> str:

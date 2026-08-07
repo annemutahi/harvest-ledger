@@ -108,10 +108,15 @@ PASSWORD_HASHERS = [
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-     "OPTIONS": {"min_length": 10}},
+     "OPTIONS": {"min_length": 12}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "accounts.security.ComplexityValidator"},
+    {"NAME": "accounts.security.BreachedPasswordValidator"},
 ]
+
+# Check new passwords against Have I Been Pwned (k-anonymity, no password sent).
+PASSWORD_BREACH_CHECK = env.bool("PASSWORD_BREACH_CHECK", default=True)
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Africa/Nairobi"
