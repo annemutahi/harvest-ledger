@@ -28,11 +28,22 @@ class Invoice(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=UNPAID)
     # KRA eTIMS invoice number, entered manually by staff until eTIMS is integrated.
     etims_number = models.CharField(max_length=64, blank=True, default="")
+    voided_at = models.DateTimeField(null=True, blank=True)
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="invoices_voided",
+    )
+    void_reason = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-issue_date", "-id"]
+
+    @property
+    def is_voided(self) -> bool:
+        return self.voided_at is not None
+
 
     def recompute_status(self):
         if self.available_credit > 0:
@@ -147,7 +158,18 @@ class Payment(models.Model):
     idempotency_key = models.CharField(
         max_length=64, null=True, blank=True, unique=True, db_index=True,
     )
+    voided_at = models.DateTimeField(null=True, blank=True)
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="payments_voided",
+    )
+    void_reason = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-date", "-id"]
+
+    @property
+    def is_voided(self) -> bool:
+        return self.voided_at is not None
+
