@@ -47,6 +47,14 @@ export interface InvoiceAdjustment {
   createdAt: string;
 }
 
+export interface CreditUse {
+  id: string;
+  amount: number;
+  targetInvoiceId: string;
+  targetInvoiceNumber: string;
+  createdAt: string;
+}
+
 export interface Sale {
   id: string;
   invoiceId?: string;
@@ -77,6 +85,7 @@ export interface Invoice {
   adjustments: InvoiceAdjustment[];
   creditApplied: number;
   availableCredit: number;
+  creditUses: CreditUse[];
   etimsNumber: string;
 }
 
