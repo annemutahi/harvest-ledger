@@ -29,7 +29,7 @@ class SaleViewSet(viewsets.ModelViewSet):
 
 class InvoiceViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Invoice.objects.select_related("customer").prefetch_related(
-        "sale__items", "adjustments", "credit_uses", "credit_applications",
+        "sale__items", "adjustments", "credit_uses__target_invoice", "credit_applications",
     )
     serializer_class = InvoiceSerializer
     permission_classes = [module_permission("invoices")]
