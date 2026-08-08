@@ -94,20 +94,31 @@ function StatementPage() {
           const paid = (paymentsByInvoice.get(invoice.id) ?? []).slice().sort((a, b) =>
             a.date < b.date ? 1 : -1,
           );
+          const cashSettled =
+            paid.length === 0 &&
+            invoice.paymentType === "Cash" &&
+            invoice.amountPaid > 0;
+          const creditUses = invoice.creditUses ?? [];
+          const creditUsed = creditUses.reduce((s, u) => s + u.amount, 0);
           return {
             invoice,
             status: getInvoiceStatus(invoice),
-            paymentDate: paid[0]?.date ?? "",
+            creditUses,
+            // Credit spent on other invoices is no longer money held for the customer.
+            effectivePaid: invoice.amountPaid - creditUsed,
+            paymentDate: paid[0]?.date ?? (cashSettled ? invoice.invoiceDate : ""),
             paymentMode: paid.length
               ? Array.from(new Set(paid.map((p) => p.method))).join(", ")
-              : "",
+              : cashSettled
+                ? "Cash"
+                : "",
           };
         }),
     [invoices, unpaidOnly, paymentsByInvoice],
   );
 
   const totalInvoiced = rows.reduce((s, r) => s + r.invoice.totalAmount, 0);
-  const totalPaid = rows.reduce((s, r) => s + r.invoice.amountPaid, 0);
+  const totalPaid = rows.reduce((s, r) => s + r.effectivePaid, 0);
   const totalOutstanding = totalInvoiced - totalPaid;
 
   const asAtLabel = `AS AT ${formatDate(to || new Date().toISOString()).toUpperCase()}`;
