@@ -130,8 +130,9 @@ function ReceivablesPage() {
     });
   }, [rows, q, bucketFilter]);
 
-  const view = useTableView(filtered, {
-    initialSort: { key: "total", dir: "desc" },
+  const view = useTableView<CustomerRow>({
+    data: filtered,
+    defaultSort: { key: "total", dir: "desc" },
     accessors: {
       customerName: (r) => r.customerName.toLowerCase(),
       total: (r) => r.total,
@@ -142,8 +143,9 @@ function ReceivablesPage() {
       "61-90": (r) => r.buckets["61-90"],
       "90+": (r) => r.buckets["90+"],
     },
-    pageSize: 25,
+    defaultPageSize: 25,
   });
+
 
   const exportRows = () =>
     filtered
