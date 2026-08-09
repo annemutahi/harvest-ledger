@@ -312,19 +312,19 @@ function ReceivablesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <SortableHead sortKey="customerName" view={view}>Customer</SortableHead>
+                        <SortableHead sortKey="customerName" ctrl={view}>Customer</SortableHead>
                         {BUCKETS.map((b) => (
-                          <SortableHead key={b} sortKey={b} view={view} className="text-right">
+                          <SortableHead key={b} sortKey={b} ctrl={view} align="right">
                             {b === "Current" ? "Current" : b}
                           </SortableHead>
                         ))}
-                        <SortableHead sortKey="total" view={view} className="text-right">Total</SortableHead>
-                        <SortableHead sortKey="oldestDays" view={view} className="text-right">Oldest</SortableHead>
+                        <SortableHead sortKey="total" ctrl={view} className="text-right">Total</SortableHead>
+                        <SortableHead sortKey="oldestDays" ctrl={view} className="text-right">Oldest</SortableHead>
                         <TableHead className="w-10" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {view.rows.map((r) => {
+                      {view.paged.map((r) => {
                         const key = r.customerId || r.customerName;
                         const isOpen = expanded === key;
                         return (
@@ -412,7 +412,7 @@ function ReceivablesPage() {
                     </TableBody>
                   </Table>
                 </div>
-                <TablePagination view={view} />
+                <TablePagination ctrl={view} />
               </>
             )}
           </CardContent>
