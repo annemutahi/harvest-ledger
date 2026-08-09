@@ -318,8 +318,8 @@ function ReceivablesPage() {
                             {b === "Current" ? "Current" : b}
                           </SortableHead>
                         ))}
-                        <SortableHead sortKey="total" ctrl={view} className="text-right">Total</SortableHead>
-                        <SortableHead sortKey="oldestDays" ctrl={view} className="text-right">Oldest</SortableHead>
+                        <SortableHead sortKey="total" ctrl={view} align="right">Total</SortableHead>
+                        <SortableHead sortKey="oldestDays" ctrl={view} align="right">Oldest</SortableHead>
                         <TableHead className="w-10" />
                       </TableRow>
                     </TableHeader>
