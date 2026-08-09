@@ -24,6 +24,7 @@ const navItems = [
   { title: "Orders", url: "/orders", icon: ClipboardList },
   { title: "Transactions", url: "/transactions", icon: CreditCard },
   { title: "Invoices", url: "/invoices", icon: FileText },
+  { title: "Receivables", url: "/receivables", icon: Wallet },
 ];
 
 const expenseItems = [
