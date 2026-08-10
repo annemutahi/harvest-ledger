@@ -16,5 +16,6 @@ urlpatterns = [
     path("token/blacklist/", TokenBlacklistView.as_view(), name="token-blacklist"),
     path("password-reset/", password_reset_request, name="password-reset"),
     path("password-reset/confirm/", password_reset_confirm, name="password-reset-confirm"),
+    path("change-password/", change_password, name="change-password"),
     path("", include(router.urls)),
 ]
