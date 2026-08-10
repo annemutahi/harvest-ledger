@@ -7,6 +7,32 @@ from .roles import ROLE_CHOICES, has_perm, permissions_for, role_for
 User = get_user_model()
 
 
+class RoleField(serializers.Field):
+    """Serializer field that reads the user's role via `role_for(user)` and
+    accepts a role choice string on input.
+    """
+
+    def __init__(self, choices=None, **kwargs):
+        # allow passing ROLE_CHOICES directly
+        self._choices = [c[0] for c in choices] if choices is not None else None
+        # don't override source; we'll control attribute access via get_attribute
+        super().__init__(**kwargs)
+
+    def get_attribute(self, instance):
+        # During serialization, return the entire user instance so
+        # `to_representation` receives the user object.
+        return instance
+
+    def to_representation(self, obj):
+        # obj will be the User instance because source='*'
+        return role_for(obj)
+
+    def to_internal_value(self, data):
+        if self._choices is not None and data not in self._choices:
+            raise serializers.ValidationError("Invalid role")
+        return data
+
+
 class UserSerializer(serializers.ModelSerializer):
     can_edit_sales = serializers.SerializerMethodField()
     role = serializers.SerializerMethodField()
@@ -38,7 +64,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserRoleWriteSerializer(UserSerializer):
     """Admin-facing serializer that allows changing a user's role."""
 
-    role = serializers.ChoiceField(choices=[c[0] for c in ROLE_CHOICES])
+    role = RoleField(choices=ROLE_CHOICES)
 
     def update(self, instance, validated_data):
         role = validated_data.get("role")

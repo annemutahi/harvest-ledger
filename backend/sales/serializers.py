@@ -72,10 +72,20 @@ class InvoiceSerializer(serializers.ModelSerializer):
         return sale.payment_type if sale else None
 
     def get_credit_applied(self, obj):
-        return sum((application.amount for application in obj.credit_applications.all()), Decimal("0"))
+        credit = sum((application.amount for application in obj.credit_applications.all()), Decimal("0"))
+        return credit if credit > 0 else None
 
     def get_available_credit(self, obj):
-        return obj.available_credit
+        credit = obj.available_credit
+        return credit if credit > 0 else None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get("credit_applied") in (None, 0, "0", "0.00"):
+            data.pop("credit_applied", None)
+        if data.get("available_credit") in (None, 0, "0", "0.00"):
+            data.pop("available_credit", None)
+        return data
 
 
     def get_items(self, obj):
@@ -199,6 +209,17 @@ class SaleSerializer(serializers.ModelSerializer):
         sale = Sale.objects.create(
             invoice=invoice, total=total, **validated_data,
         )
+        # If this sale was paid in cash, record a Payment with the sale date
+        # so statements and API responses show payment mode and date.
+        if sale.payment_type == Sale.CASH:
+            Payment.objects.create(
+                invoice=invoice,
+                customer=customer,
+                date=sale.date,
+                amount=total,
+                method=Payment.CASH,
+                recorded_by=getattr(sale, "created_by", None),
+            )
         for i in items:
             product = i["product"]
             SaleItem.objects.create(

@@ -6,7 +6,6 @@ from .roles import ROLE_CHOICES, SALES
 
 class UserRole(models.Model):
     """One role per user. Drives the per-module permission matrix."""
-
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

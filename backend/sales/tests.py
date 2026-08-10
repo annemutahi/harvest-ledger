@@ -9,6 +9,7 @@ from rest_framework.test import APITestCase
 from customers.models import Customer
 from products.models import Product
 from sales.models import CreditApplication, Invoice, InvoiceAdjustment, Payment, Sale, SaleItem
+from sales.serializers import InvoiceSerializer
 
 
 class PaymentApiTests(APITestCase):
@@ -103,3 +104,28 @@ class PaymentApiTests(APITestCase):
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, Invoice.PAID)
         self.assertEqual(self.invoice.available_credit, Decimal("0"))
+
+    def test_cash_sale_creates_payment_with_sale_date(self):
+        product = Product.objects.create(name="Cash product", unit_price=Decimal("50.00"), available_quantity=Decimal("10.00"))
+        response = self.client.post(reverse("api:sales-list"), {
+            "customer": self.customer.id,
+            "payment_type": "cash",
+            "date": str(timezone.localdate()),
+            "due_date": str(timezone.localdate()),
+            "items": [{"product": product.id, "quantity": "1.00", "unit_price": "50.00"}],
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        sale_id = response.data["id"]
+        sale = Sale.objects.get(id=sale_id)
+        self.assertEqual(Payment.objects.count(), 1)
+        payment = Payment.objects.first()
+        self.assertEqual(payment.method, Payment.CASH)
+        self.assertEqual(payment.date, sale.date)
+        self.assertEqual(payment.amount, Decimal("50.00"))
+
+    def test_invoice_serialization_hides_zero_credit_fields(self):
+        response = self.client.get(reverse("api:invoices-detail", args=[self.invoice.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("credit_applied", response.data)
+        self.assertNotIn("available_credit", response.data)
