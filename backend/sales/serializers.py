@@ -51,6 +51,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
     adjustments = InvoiceAdjustmentSerializer(many=True, read_only=True)
     credit_applied = serializers.SerializerMethodField()
     available_credit = serializers.SerializerMethodField()
+    credit_uses = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -59,6 +60,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "issue_date", "due_date", "total_amount", "amount_paid",
             "outstanding_balance", "status", "items", "sale_id",
             "payment_type", "adjustments", "credit_applied", "available_credit",
+            "credit_uses",
             "etims_number", "created_at",
         ]
         read_only_fields = [f for f in fields if f != "etims_number"]
@@ -86,6 +88,18 @@ class InvoiceSerializer(serializers.ModelSerializer):
         if data.get("available_credit") in (None, 0, "0", "0.00"):
             data.pop("available_credit", None)
         return data
+
+    def get_credit_uses(self, obj):
+        return [
+            {
+                "id": use.id,
+                "amount": use.amount,
+                "target_invoice": use.target_invoice_id,
+                "target_invoice_number": use.target_invoice.invoice_number,
+                "created_at": use.created_at,
+            }
+            for use in obj.credit_uses.all()
+        ]
 
 
     def get_items(self, obj):

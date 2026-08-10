@@ -20,3 +20,7 @@ class UserRole(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} — {self.role}"
+
+
+# Imported so Django registers the login-lockout model with this app.
+from .security import LoginAttempt  # noqa: E402,F401

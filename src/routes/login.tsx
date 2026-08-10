@@ -73,9 +73,15 @@ function LoginPage() {
                   await login(username, password);
                   navigate({ to: "/", replace: true });
                 } catch (err: any) {
-                  setError(err?.message?.includes("400") || err?.message?.includes("401")
-                    ? "Invalid username or password."
-                    : "Could not reach the server. Is the backend running?");
+                  const msg = String(err?.message ?? "");
+                  setError(
+                    msg.includes("423") || /locked/i.test(msg)
+                      ? "Too many failed sign-in attempts. This account is locked for 15 minutes — try again later or reset your password."
+                      : msg.includes("400") || msg.includes("401")
+                        ? "Invalid username or password. After 3 failed attempts the account is locked for 15 minutes."
+                        : "Could not reach the server. Is the backend running?",
+                  );
+
                 } finally {
                   setSubmitting(false);
                 }

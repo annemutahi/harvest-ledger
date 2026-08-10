@@ -18,6 +18,11 @@ class ProductSerializer(serializers.ModelSerializer):
         value = (value or "").strip()
         if not value:
             raise serializers.ValidationError("Name is required.")
+        qs = Product.objects.filter(name__iexact=value)
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("A product with this name already exists.")
         return value
 
     def validate_unit_price(self, value):

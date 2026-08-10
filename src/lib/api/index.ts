@@ -329,6 +329,13 @@ function mapInvoice(i: any): Invoice {
     })),
     creditApplied: Number(i.credit_applied ?? 0),
     availableCredit: Number(i.available_credit ?? 0),
+    creditUses: (i.credit_uses ?? []).map((u: any) => ({
+      id: String(u.id),
+      amount: Number(u.amount ?? 0),
+      targetInvoiceId: String(u.target_invoice ?? ""),
+      targetInvoiceNumber: u.target_invoice_number ?? "",
+      createdAt: u.created_at ?? "",
+    })),
     etimsNumber: i.etims_number ?? "",
   };
 }
