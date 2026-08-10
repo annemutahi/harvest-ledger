@@ -121,6 +121,22 @@ function SettingsPage() {
     toast.success("Profile settings saved locally.");
   };
 
+  const passwordMutation = useMutation({
+    mutationFn: () => api.changePassword(currentPassword, newPassword),
+    onSuccess: () => {
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password updated. Use it the next time you sign in.");
+    },
+    onError: (error: unknown) =>
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not update your password.",
+      ),
+  });
+
   const changePassword = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error("Fill in all password fields.");
@@ -130,10 +146,11 @@ function SettingsPage() {
       toast.error("New password and confirmation do not match.");
       return;
     }
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    toast.success("Password change ready to send to the backend.");
+    if (newPassword.length < 12) {
+      toast.error("New password must be at least 12 characters.");
+      return;
+    }
+    passwordMutation.mutate();
   };
 
   return (
@@ -266,7 +283,9 @@ function SettingsPage() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                 />
               </div>
-              <Button onClick={changePassword}>Update Password</Button>
+              <Button onClick={changePassword} disabled={passwordMutation.isPending}>
+                {passwordMutation.isPending ? "Updating…" : "Update Password"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

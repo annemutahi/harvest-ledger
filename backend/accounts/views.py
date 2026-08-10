@@ -91,3 +91,45 @@ class UserViewSet(
         if self.request.method in ("PUT", "PATCH"):
             return UserRoleWriteSerializer
         return UserSerializer
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def change_password(request):
+    """Let a signed-in user change their own password."""
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    current = str(request.data.get("current_password") or "")
+    new_password = str(request.data.get("new_password") or "")
+
+    if not current or not new_password:
+        return Response(
+            {"detail": "Current and new password are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user = request.user
+    if not user.check_password(current):
+        return Response(
+            {"current_password": ["That is not your current password."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if current == new_password:
+        return Response(
+            {"new_password": ["Choose a password different from the current one."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        validate_password(new_password, user)
+    except DjangoValidationError as exc:
+        return Response(
+            {"new_password": list(exc.messages)}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    clear_failures(user.get_username())
+    return Response({"detail": "Password updated."}, status=status.HTTP_200_OK)
