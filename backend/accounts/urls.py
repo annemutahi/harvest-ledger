@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenBlacklistView, TokenRefreshView
 
 from .password_reset import password_reset_confirm, password_reset_request
-from .views import LoginView, UserViewSet, me, role_matrix
+from .views import LoginView, UserViewSet, change_password, me, role_matrix
 
 router = DefaultRouter()
 router.register("users", UserViewSet, basename="user")
