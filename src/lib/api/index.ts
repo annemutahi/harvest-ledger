@@ -423,6 +423,18 @@ export const api = {
       skipRefresh: true,
     }),
 
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ detail: string }> =>
+    request<{ detail: string }>("/auth/change-password/", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    }),
+
 
   // Customers — /api/customers/
   listCustomers: async (): Promise<Customer[]> =>
