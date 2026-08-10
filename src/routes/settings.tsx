@@ -283,7 +283,9 @@ function SettingsPage() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                 />
               </div>
-              <Button onClick={changePassword}>Update Password</Button>
+              <Button onClick={changePassword} disabled={passwordMutation.isPending}>
+                {passwordMutation.isPending ? "Updating…" : "Update Password"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
