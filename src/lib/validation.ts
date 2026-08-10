@@ -84,8 +84,16 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function isValidDate(value: string): boolean {
   if (!ISO_DATE.test(value)) return false;
-  const d = new Date(`${value}T00:00:00`);
-  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+  const [y, m, day] = value.split("-").map(Number);
+  // Compare against local calendar parts: using toISOString() here would shift
+  // the date by the UTC offset (e.g. UTC+3) and reject valid dates.
+  const d = new Date(y, m - 1, day);
+  return (
+    !Number.isNaN(d.getTime()) &&
+    d.getFullYear() === y &&
+    d.getMonth() === m - 1 &&
+    d.getDate() === day
+  );
 }
 
 export const dateSchema = z.string().refine(isValidDate, "Enter a valid date (YYYY-MM-DD)");
