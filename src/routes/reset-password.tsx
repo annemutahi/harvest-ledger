@@ -7,6 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { PasswordInput } from "@/components/password-input";
+import { PasswordStrength, isStrongPassword } from "@/components/password-strength";
+import { FieldError } from "@/components/field-error";
+
 
 type Search = { uid?: string; token?: string };
 
