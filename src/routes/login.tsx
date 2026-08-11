@@ -9,7 +9,7 @@ import { Sprout, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Sign in — Peaceful Acres Farm Limited" }] }),
+  head: () => ({ meta: [{ title: "Sign in" }] }),
   component: LoginPage,
 });
 
@@ -76,7 +76,7 @@ function LoginPage() {
                   const msg = String(err?.message ?? "");
                   setError(
                     msg.includes("423") || /locked/i.test(msg)
-                      ? "Too many failed sign-in attempts. This account is locked for 15 minutes — try again later or reset your password."
+                      ? "Too many failed sign-in attempts. This account is locked for 15 minutes - try again later or reset your password."
                       : msg.includes("400") || msg.includes("401")
                         ? "Invalid username or password. After 3 failed attempts the account is locked for 15 minutes."
                         : "Could not reach the server. Is the backend running?",

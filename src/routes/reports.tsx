@@ -46,7 +46,7 @@ import { useTableView } from "@/hooks/use-table-view";
 import { SortableHead, TablePagination } from "@/components/table-controls";
 
 export const Route = createFileRoute("/reports")({
-  head: () => ({ meta: [{ title: "Reports — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Reports" }] }),
   component: ReportsPage,
 });
 
@@ -293,7 +293,6 @@ function ReportsPage() {
   return (
     <AppShell
       title="Reports & Analytics"
-      description={`Business insights for ${period.label}`}
       actions={
         <Button variant="outline" onClick={handlePrint}>
           <Printer className="mr-2 h-4 w-4" /> Print
@@ -303,30 +302,26 @@ function ReportsPage() {
 
       <div className="print-document">
         <Card className="print:hidden">
-          <CardHeader><CardTitle className="text-base">Filters</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-              <div className="grid gap-2">
-                <Label>Month</Label>
+          <CardContent className="py-3">
+            <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <div className="grid gap-1">
+                <Label className="text-xs text-muted-foreground">Month</Label>
                 <Select value={String(month)} onValueChange={(v) => setMonth(v === "all" ? "all" : Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Whole year</SelectItem>
                     {MONTHS.map((m, i) => (<SelectItem key={m} value={String(i)}>{m}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
-                <Label>Year</Label>
+              <div className="grid gap-1">
+                <Label className="text-xs text-muted-foreground">Year</Label>
                 <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {yearOptions.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {formatDate(period.from)} <ArrowRight className="inline h-3 w-3" /> {formatDate(period.to)}
               </div>
             </div>
           </CardContent>
@@ -525,7 +520,7 @@ function ExpensesReport({ data, period }: { data: {
         <StatCard label="Categories" value={String(data.categories.length)} icon={BarChart3} tone="primary" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* <div className="grid gap-6 lg:grid-cols-2">
         <ChartCard title="Expenses Trend">
           {data.trend.length === 0 ? <EmptyState label="No expenses" /> : (
             <ResponsiveContainer width="100%" height="100%">
@@ -554,9 +549,9 @@ function ExpensesReport({ data, period }: { data: {
             </ResponsiveContainer>
           )}
         </ChartCard>
-      </div>
+      </div> */}
 
-      <Card>
+      {/* <Card>
         <TableCardHeader
           title="Top Expense Categories"
           onExport={() => exportSheet("expenses-by-category", "By Category", data.categories.map((c) => ({ Category: c.name, Amount: c.value, Percent: data.total ? +((c.value / data.total) * 100).toFixed(2) : 0 })), period)}
@@ -573,7 +568,7 @@ function ExpensesReport({ data, period }: { data: {
             </Table>
           )}
         </CardContent>
-      </Card>
+      </Card> */}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

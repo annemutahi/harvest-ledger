@@ -16,7 +16,7 @@ import { notifyOrdersChanged } from "@/lib/orders-store";
 import { formatCurrency } from "@/lib/format";
 
 export const Route = createFileRoute("/orders/new")({
-  head: () => ({ meta: [{ title: "New Order — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "New Order" }] }),
   component: NewOrderPage,
 });
 

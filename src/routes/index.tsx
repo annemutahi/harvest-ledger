@@ -16,7 +16,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Dashboard - Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Dashboard" }] }),
   component: LandingPage,
 });
 

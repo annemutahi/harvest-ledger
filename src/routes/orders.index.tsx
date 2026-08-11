@@ -16,7 +16,7 @@ import { SortableHead, TablePagination } from "@/components/table-controls";
 
 
 export const Route = createFileRoute("/orders/")({
-  head: () => ({ meta: [{ title: "Orders — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Orders" }] }),
   component: OrdersPage,
 });
 

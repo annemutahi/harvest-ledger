@@ -23,7 +23,7 @@ import { formatCurrency } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
 export const Route = createFileRoute("/stock")({
-  head: () => ({ meta: [{ title: "Stock — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Stock" }] }),
   component: StockPage,
 });
 
@@ -137,7 +137,7 @@ function StockPage() {
   const loading = productsLoading || entriesLoading;
 
   return (
-    <AppShell title="Stock" description="Record daily produce from the farm.">
+    <AppShell title="Stock">
       <Card>
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

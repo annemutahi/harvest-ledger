@@ -22,7 +22,7 @@ import { formatDate } from "@/lib/format";
 import { Bell, Camera, KeyRound, ShieldCheck, UserRound, Users } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Profile Settings - Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Profile Settings" }] }),
   component: SettingsPage,
 });
 

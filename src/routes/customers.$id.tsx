@@ -13,7 +13,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import type { Customer } from "@/lib/types";
 
 export const Route = createFileRoute("/customers/$id")({
-  head: ({ params }) => ({ meta: [{ title: `Customer ${params.id} — Peaceful Acres` }] }),
+  head: ({ params }) => ({ meta: [{ title: `Customer ${params.id}` }] }),
   loader: async ({ params }) => {
     try {
       const customer = await api.getCustomer(params.id);

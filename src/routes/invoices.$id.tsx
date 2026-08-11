@@ -14,9 +14,10 @@ import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { InvoiceAdjustment, SaleItem } from "@/lib/types";
+import { COMPANY } from "@/lib/company";
 
 export const Route = createFileRoute("/invoices/$id")({
-  head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id} — Peaceful Acres ` }] }),
+  head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id}` }] }),
   loader: async ({ params }) => {
     try {
       const invoice = await api.getInvoice(params.id);
@@ -205,12 +206,15 @@ function InvoiceDetail() {
               <div>
                 <p className="text-xs font-medium uppercase text-muted-foreground">Billed to</p>
                 <p className="mt-1 font-semibold">{invoice.customerName}</p>
+                {/* <p className="mt-1 font-semibold">{invoice.customerPhone}</p>
+                <p className="text-sm text-muted-foreground">{invoice.customerEmail}</p> */}
               </div>
               <div className="sm:text-right">
                 <p className="text-xs font-medium uppercase text-muted-foreground">From</p>
-                <p className="mt-1 font-semibold">Peaceful Acres Farm Limited</p>
-                <p className="text-sm text-muted-foreground">Limuru Road, Kiambu</p>
-                <p className="text-sm text-muted-foreground">accounts@peacefulacres.farm</p>
+                <p className="mt-1 font-semibold">{COMPANY.name}</p>
+                <p className="text-sm text-muted-foreground">{COMPANY.email}</p>
+                <p className="text-sm text-muted-foreground">{COMPANY.phone}</p>
+                <p className="text-sm text-muted-foreground">{COMPANY.location}</p>
               </div>
             </div>
 
@@ -407,7 +411,7 @@ function InvoiceDetail() {
                 </div>
               </div>
             ))}
-            <Button asChild className="w-full" variant="outline"><Link to="/payments/new">Record Payment</Link></Button>
+            <Button asChild className="w-full print:hidden" variant="outline"><Link to="/payments/new">Record Payment</Link></Button>
           </CardContent>
         </Card>
       </div>

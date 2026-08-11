@@ -16,7 +16,7 @@ import type { CreditUse, Customer, Invoice, Payment } from "@/lib/types";
 export const Route = createFileRoute("/customers/$id_/statement")({
   head: () => ({
     meta: [
-      { title: "Customer Statement — Peaceful Acres Farm" },
+      { title: "Customer Statement" },
       {
         name: "description",
         content:
@@ -129,7 +129,7 @@ function StatementPage() {
   const asAtLabel = `AS AT ${formatDate(to || new Date().toISOString()).toUpperCase()}`;
   const periodLabel =
     from || to
-      ? `${from ? formatDate(from) : "Beginning"} — ${to ? formatDate(to) : "Date"}`
+      ? `${from ? formatDate(from) : "Beginning"} - ${to ? formatDate(to) : "Date"}`
       : "All time";
 
   const slug = customer.name.replace(/\s+/g, "-").toLowerCase();
@@ -215,7 +215,7 @@ function StatementPage() {
               <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9" />
             </div>
             <label className="flex h-9 items-center gap-2 text-sm">
-              <Checkbox checked={unpaidOnly} onCheckedChange={(v) => setUnpaidOnly(v === true)} />
+              <Checkbox checked={unpaidOnly} onCheckedChange={(v) => setUnpaidOnly(v === false)} />
               Unpaid only
             </label>
             <Button variant="outline" size="sm" onClick={handleExportExcel}>
@@ -242,8 +242,9 @@ function StatementPage() {
             <h1 className="text-lg font-bold uppercase tracking-tight">{COMPANY.name}</h1>
             <p className="text-sm text-muted-foreground">{COMPANY.location}</p>
             <p className="text-sm text-muted-foreground">{COMPANY.email}</p>
+            <p className="text-sm text-muted-foreground">{COMPANY.phone}</p>
             <p className="mt-2 text-sm font-semibold uppercase">
-              Statement — {customer.company || customer.name}
+              Statement - {customer.company || customer.name}
             </p>
             <p className="text-sm font-semibold uppercase">{asAtLabel}</p>
             <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -320,8 +321,7 @@ function StatementPage() {
         </table>
 
         <p className="mt-6 border-t pt-4 text-xs text-muted-foreground">
-          KRA ETIMS numbers are pulled from each invoice; blanks are pending entry. Please settle
-          outstanding balances to {COMPANY.name} — {COMPANY.phone}.
+          Please settle outstanding balances to {COMPANY.name} - {COMPANY.phone}.
         </p>
       </div>
     </div>

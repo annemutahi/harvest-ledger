@@ -15,7 +15,7 @@ import { useTableView } from "@/hooks/use-table-view";
 import { SortableHead, TablePagination } from "@/components/table-controls";
 
 export const Route = createFileRoute("/invoices/")({
-  head: () => ({ meta: [{ title: "Invoices — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Invoices" }] }),
   component: InvoicesPage,
 });
 
@@ -44,7 +44,7 @@ function InvoicesPage() {
   });
 
   return (
-    <AppShell title="Invoices" description="Track invoice payment status and outstanding balances.">
+    <AppShell title="Invoices">
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 sm:flex-row">

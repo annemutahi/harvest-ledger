@@ -40,7 +40,7 @@ import { useAuth } from "@/lib/auth-context";
 import { canEditSales } from "@/lib/permissions";
 
 export const Route = createFileRoute("/sales/$id/edit")({
-  head: () => ({ meta: [{ title: "Edit Sale — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Edit Sale" }] }),
   component: EditSalePage,
 });
 

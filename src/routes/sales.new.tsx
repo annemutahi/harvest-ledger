@@ -14,7 +14,7 @@ import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 
 export const Route = createFileRoute("/sales/new")({
-  head: () => ({ meta: [{ title: "New Sale — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "New Sale" }] }),
   component: NewSalePage,
 });
 

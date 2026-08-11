@@ -19,7 +19,7 @@ import { SortableHead, TablePagination } from "@/components/table-controls";
 
 
 export const Route = createFileRoute("/transactions")({
-  head: () => ({ meta: [{ title: "Transactions - Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Transactions" }] }),
   component: TransactionsPage,
 });
 
@@ -73,7 +73,6 @@ function TransactionsPage() {
   return (
     <AppShell
       title="Transactions"
-      description="Sales and payments in one operational workspace."
       actions={
         <div className="flex flex-wrap gap-2">
           <Button asChild>

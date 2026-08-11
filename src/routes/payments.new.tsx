@@ -17,7 +17,7 @@ import { api, ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 
 export const Route = createFileRoute("/payments/new")({
-  head: () => ({ meta: [{ title: "Record Payment — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Record Payment" }] }),
   component: RecordPaymentPage,
 });
 
@@ -76,7 +76,6 @@ function RecordPaymentPage() {
   return (
     <AppShell
       title="Record Payment"
-      description="Apply a payment against a customer invoice."
       actions={<Button variant="outline" asChild><Link to="/transactions"><ArrowLeft className="mr-2 h-4 w-4" />Cancel</Link></Button>}
     >
       <form

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, ReceiptText } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { COMPANY } from "@/lib/company";
 
 export const Route = createFileRoute("/payments/$id/document")({
   head: ({ params }) => ({
@@ -48,9 +49,10 @@ function PaymentDocumentPage() {
       <div className="mx-auto max-w-3xl bg-background p-8 shadow-sm print:max-w-none print:shadow-none print:p-0">
         <header className="flex items-start justify-between border-b pb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Peaceful Acres Farm Limited</h1>
-            <p className="text-sm text-muted-foreground">Kiambu</p>
-            <p className="text-sm text-muted-foreground">accounts@peacefulacres.farm</p>
+            <h1 className="text-2xl font-bold tracking-tight">{COMPANY.name}</h1>
+            <p className="text-sm text-muted-foreground">{COMPANY.email}</p>
+            <p className="text-sm text-muted-foreground">{COMPANY.phone}</p>
+            <p className="text-sm text-muted-foreground">{COMPANY.location}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

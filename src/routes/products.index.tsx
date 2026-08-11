@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
 export const Route = createFileRoute("/products/")({
-  head: () => ({ meta: [{ title: "Products — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Products" }] }),
   component: ProductsPage,
 });
 
@@ -122,7 +122,7 @@ function ProductsPage() {
   }
 
   return (
-    <AppShell title="Products" description="Manage inventory and pricing.">
+    <AppShell title="Products">
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -209,27 +209,6 @@ function ProductsPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* <Card className="mt-4">
-        <CardHeader>
-          <CardTitle className="text-base">Inventory by Category</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {summary.byCategory.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No products to summarize.</p>
-          ) : (
-            summary.byCategory.map((c) => (
-              <SummaryBar
-                key={c.category}
-                label={c.category}
-                sublabel={`${c.quantity} units · ${c.items} item${c.items === 1 ? "" : "s"} · ${formatCurrency(c.value)}`}
-                quantity={c.quantity}
-                tone={c.quantity <= 10 ? "destructive" : c.quantity <= 30 ? "warning" : "success"}
-              />
-            ))
-          )}
-        </CardContent>
-      </Card> */}
 
       <Card className="mt-4">
         <CardContent className="p-0">

@@ -33,7 +33,7 @@ import { SortableHead, TablePagination } from "@/components/table-controls";
 
 
 export const Route = createFileRoute("/customers/")({
-  head: () => ({ meta: [{ title: "Customers — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Customers" }] }),
   component: CustomersPage,
 });
 
@@ -102,7 +102,6 @@ function CustomersPage() {
   return (
     <AppShell
       title="Customers"
-      description="Individuals and corporate accounts you sell to."
       actions={
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Add Customer</Button></DialogTrigger>

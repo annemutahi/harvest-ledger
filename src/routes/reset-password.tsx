@@ -17,12 +17,12 @@ export const Route = createFileRoute("/reset-password")({
   }),
   head: () => ({
     meta: [
-      { title: "Choose a new password — Peaceful Acres Farm" },
+      { title: "Choose a new password" },
       {
         name: "description",
         content: "Set a new password for your Peaceful Acres Farm Limited account.",
       },
-      { property: "og:title", content: "Choose a new password — Peaceful Acres Farm" },
+      { property: "og:title", content: "Choose a new password" },
       {
         property: "og:description",
         content: "Set a new password for your farm workspace account.",

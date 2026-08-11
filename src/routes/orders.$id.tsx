@@ -13,7 +13,7 @@ import { ORDER_STATUSES, notifyOrdersChanged, type OrderStatus } from "@/lib/ord
 import { formatCurrency, formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/orders/$id")({
-  head: () => ({ meta: [{ title: "Order — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Order" }] }),
   component: OrderDetailPage,
   notFoundComponent: OrderNotFound,
 });

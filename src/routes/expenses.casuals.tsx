@@ -39,7 +39,7 @@ import { api, type ApiCasualWage, type ApiCasualWorker } from "@/lib/api";
 import { notifyExpensesChanged } from "@/lib/expenses-store";
 
 export const Route = createFileRoute("/expenses/casuals")({
-  head: () => ({ meta: [{ title: "Casuals — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Casuals" }] }),
   component: CasualsPage,
 });
 
@@ -119,7 +119,6 @@ function CasualsPage() {
   return (
     <AppShell
       title="Casuals"
-      description="Track workers, log daily work assignments and mark payments."
       actions={
         <div className="flex gap-2">
           <NewWorkerDialog onCreated={invalidate} />
@@ -266,7 +265,7 @@ function CasualsPage() {
                       <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                         {logs.length === 0
                           ? 'No work entries yet. Click "Log work" to record a day.'
-                          : "No entries match the selected date range."}
+                          : "No entries for the selected date range."}
                       </TableCell>
                     </TableRow>
                   )}

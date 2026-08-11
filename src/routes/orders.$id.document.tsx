@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, ReceiptText, FileText } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { COMPANY } from "@/lib/company";
 
 type DocFormat = "invoice" | "receipt";
 
 export const Route = createFileRoute("/orders/$id/document")({
   head: ({ params }) => ({
-    meta: [{ title: `Order ${params.id} — Document` }],
+    meta: [{ title: `Order ${params.id}` }],
   }),
   validateSearch: (s: Record<string, unknown>): { format?: DocFormat } => ({
     format: s.format === "receipt" ? "receipt" : "invoice",
@@ -72,9 +73,9 @@ function OrderDocumentPage() {
       <div className="mx-auto max-w-3xl bg-background p-8 shadow-sm print:max-w-none print:shadow-none print:p-0">
         <header className="flex items-start justify-between border-b pb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Peaceful Acres Farm Limited</h1>
-            <p className="text-sm text-muted-foreground">Limuru Road, Kiambu</p>
-            <p className="text-sm text-muted-foreground">accounts@peacefulacres.farm</p>
+            <h1 className="text-2xl font-bold tracking-tight">{COMPANY.name}</h1>
+            <p className="text-sm text-muted-foreground">{COMPANY.location}</p>
+            <p className="text-sm text-muted-foreground">{COMPANY.email}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

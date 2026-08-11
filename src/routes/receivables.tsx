@@ -22,9 +22,9 @@ import type { Invoice } from "@/lib/types";
 export const Route = createFileRoute("/receivables")({
   head: () => ({
     meta: [
-      { title: "Receivables & Aging — Peaceful Acres" },
+      { title: "Receivables" },
       { name: "description", content: "See who owes what and how overdue each balance is, bucketed by age." },
-      { property: "og:title", content: "Receivables & Aging — Peaceful Acres" },
+      { property: "og:title", content: "Receivables" },
       { property: "og:description", content: "Outstanding customer balances bucketed into current, 1-30, 31-60, 61-90 and 90+ days." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -165,7 +165,7 @@ function ReceivablesPage() {
   const handleCsv = () => {
     const data = exportRows();
     exportCsv(
-      `receivables-aging-${stampToday()}.csv`,
+      `receivables-${stampToday()}.csv`,
       ["Customer", "Current", "1-30 days", "31-60 days", "61-90 days", "90+ days", "Total", "Oldest (days)"],
       data.map((r) => Object.values(r)),
       [["Grand total", totals.buckets.Current, totals.buckets["1-30"], totals.buckets["31-60"], totals.buckets["61-90"], totals.buckets["90+"], totals.total, ""]],
@@ -175,7 +175,7 @@ function ReceivablesPage() {
   const handleExcel = () => {
     const wb = XLSX.utils.book_new();
     const summary = [
-      ["Receivables & Aging"],
+      ["Receivables"],
       ["Generated", new Date().toLocaleString("en-GB")],
       [],
       ["Bucket", "Amount"],
@@ -212,7 +212,7 @@ function ReceivablesPage() {
     b === "Current" ? "text-muted-foreground" : b === "90+" ? "text-destructive font-semibold" : "";
 
   return (
-    <AppShell title="Receivables & Aging" description="Who owes what, and how overdue each balance is.">
+    <AppShell title="Receivables">
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Total outstanding" value={formatCurrency(totals.total)} icon={Wallet} tone="primary" />

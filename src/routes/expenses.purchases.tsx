@@ -40,7 +40,7 @@ import { useTableView } from "@/hooks/use-table-view";
 import { SortableHead, TablePagination } from "@/components/table-controls";
 
 export const Route = createFileRoute("/expenses/purchases")({
-  head: () => ({ meta: [{ title: "Purchases — Peaceful Acres" }] }),
+  head: () => ({ meta: [{ title: "Purchases" }] }),
   component: PurchasesPage,
 });
 
@@ -126,7 +126,6 @@ function PurchasesPage() {
   return (
     <AppShell
       title="Purchases"
-      description="Track supplier purchases and running expenses."
       actions={
         <div className="flex gap-2">
           <NewSupplierDialog onCreated={invalidate} />
