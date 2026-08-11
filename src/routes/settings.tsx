@@ -18,6 +18,10 @@ import { api } from "@/lib/api";
 import { ROLE_LABELS, can, canManageProducts, roleOf } from "@/lib/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AppRole } from "@/lib/api";
+import { PasswordInput } from "@/components/password-input";
+import { PasswordStrength, isStrongPassword } from "@/components/password-strength";
+import { FieldError } from "@/components/field-error";
+
 import { formatDate } from "@/lib/format";
 import { Bell, Camera, KeyRound, ShieldCheck, UserRound, Users } from "lucide-react";
 
