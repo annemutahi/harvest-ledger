@@ -42,7 +42,8 @@ function TransactionsPage() {
       !query ||
       payment.invoiceNumber.toLowerCase().includes(query) ||
       payment.customerName.toLowerCase().includes(query) ||
-      payment.method.toLowerCase().includes(query),
+      payment.method.toLowerCase().includes(query) ||
+      (payment.notes ?? "").toLowerCase().includes(query),
   );
 
   const salesView = useTableView({
