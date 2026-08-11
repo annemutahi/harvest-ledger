@@ -42,7 +42,8 @@ function TransactionsPage() {
       !query ||
       payment.invoiceNumber.toLowerCase().includes(query) ||
       payment.customerName.toLowerCase().includes(query) ||
-      payment.method.toLowerCase().includes(query),
+      payment.method.toLowerCase().includes(query) ||
+      (payment.notes ?? "").toLowerCase().includes(query),
   );
 
   const salesView = useTableView({
@@ -178,6 +179,7 @@ function TransactionsPage() {
                       <SortableHead ctrl={paymentsView} sortKey="customerName">Customer</SortableHead>
                       <SortableHead ctrl={paymentsView} sortKey="invoiceNumber">Invoice</SortableHead>
                       <SortableHead ctrl={paymentsView} sortKey="method">Method</SortableHead>
+                      <TableHead>Notes</TableHead>
                       <SortableHead ctrl={paymentsView} sortKey="amount" align="right">Amount</SortableHead>
                       <TableHead className="w-16 text-right">Actions</TableHead>
                     </TableRow>
@@ -185,7 +187,7 @@ function TransactionsPage() {
                   <TableBody>
                     {paymentsView.total === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No payments match your search.</TableCell>
+                        <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No payments match your search.</TableCell>
                       </TableRow>
                     )}
                     {paymentsView.paged.map((payment) => (
@@ -198,6 +200,9 @@ function TransactionsPage() {
                           </Link>
                         </TableCell>
                         <TableCell>{payment.method}</TableCell>
+                        <TableCell className="max-w-48 truncate text-muted-foreground" title={payment.notes ?? ""}>
+                          {payment.notes || "—"}
+                        </TableCell>
                         <TableCell className="text-right font-semibold text-success">
                           {formatCurrency(payment.amount)}
                         </TableCell>
