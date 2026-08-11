@@ -7,6 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sprout, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { PasswordInput } from "@/components/password-input";
+
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — Peaceful Acres Farm Limited" }] }),
