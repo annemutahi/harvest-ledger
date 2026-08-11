@@ -96,7 +96,7 @@ function LoginPage() {
                   <Label htmlFor="password">Password</Label>
                   <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">Forgot password?</Link>
                 </div>
-                <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <PasswordInput id="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="remember" defaultChecked />
