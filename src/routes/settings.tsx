@@ -18,6 +18,10 @@ import { api } from "@/lib/api";
 import { ROLE_LABELS, can, canManageProducts, roleOf } from "@/lib/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AppRole } from "@/lib/api";
+import { PasswordInput } from "@/components/password-input";
+import { PasswordStrength, isStrongPassword } from "@/components/password-strength";
+import { FieldError } from "@/components/field-error";
+
 import { formatDate } from "@/lib/format";
 import { Bell, Camera, KeyRound, ShieldCheck, UserRound, Users } from "lucide-react";
 
@@ -146,12 +150,13 @@ function SettingsPage() {
       toast.error("New password and confirmation do not match.");
       return;
     }
-    if (newPassword.length < 12) {
-      toast.error("New password must be at least 12 characters.");
+    if (!isStrongPassword(newPassword)) {
+      toast.error("New password does not meet all the requirements below.");
       return;
     }
     passwordMutation.mutate();
   };
+
 
   return (
     <AppShell
@@ -255,9 +260,8 @@ function SettingsPage() {
             <CardContent className="max-w-xl space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="current-password">Current Password</Label>
-                <Input
+                <PasswordInput
                   id="current-password"
-                  type="password"
                   autoComplete="current-password"
                   value={currentPassword}
                   onChange={(event) => setCurrentPassword(event.target.value)}
@@ -265,27 +269,42 @@ function SettingsPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="new-password">New Password</Label>
-                <Input
+                <PasswordInput
                   id="new-password"
-                  type="password"
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(event) => setNewPassword(event.target.value)}
                 />
+                <PasswordStrength password={newPassword} confirm={confirmPassword} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="confirm-password">Confirm New Password</Label>
-                <Input
+                <PasswordInput
                   id="confirm-password"
-                  type="password"
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                 />
+                <FieldError
+                  message={
+                    confirmPassword && confirmPassword !== newPassword
+                      ? "The two passwords don't match."
+                      : undefined
+                  }
+                />
               </div>
-              <Button onClick={changePassword} disabled={passwordMutation.isPending}>
+              <Button
+                onClick={changePassword}
+                disabled={
+                  passwordMutation.isPending ||
+                  !currentPassword ||
+                  !isStrongPassword(newPassword) ||
+                  newPassword !== confirmPassword
+                }
+              >
                 {passwordMutation.isPending ? "Updating…" : "Update Password"}
               </Button>
+
             </CardContent>
           </Card>
         </TabsContent>

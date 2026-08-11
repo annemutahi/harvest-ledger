@@ -7,6 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sprout, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { PasswordInput } from "@/components/password-input";
+
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in" }] }),
@@ -96,7 +98,7 @@ function LoginPage() {
                   <Label htmlFor="password">Password</Label>
                   <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">Forgot password?</Link>
                 </div>
-                <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <PasswordInput id="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="remember" defaultChecked />
