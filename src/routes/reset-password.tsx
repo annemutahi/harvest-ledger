@@ -7,6 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { PasswordInput } from "@/components/password-input";
+import { PasswordStrength, isStrongPassword } from "@/components/password-strength";
+import { FieldError } from "@/components/field-error";
+
 
 type Search = { uid?: string; token?: string };
 
@@ -79,6 +83,10 @@ function ResetPasswordPage() {
                     setError("The two passwords don't match.");
                     return;
                   }
+                  if (!isStrongPassword(password)) {
+                    setError("Your password does not meet all the requirements below.");
+                    return;
+                  }
                   setSubmitting(true);
                   try {
                     await api.confirmPasswordReset(uid!, token!, password);
@@ -106,33 +114,41 @@ function ResetPasswordPage() {
               >
                 <div className="space-y-2">
                   <Label htmlFor="password">New password</Label>
-                  <Input
+                  <PasswordInput
                     id="password"
-                    type="password"
                     autoComplete="new-password"
-                    minLength={10}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                  <PasswordStrength password={password} confirm={confirm} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm">Confirm new password</Label>
-                  <Input
+                  <PasswordInput
                     id="confirm"
-                    type="password"
                     autoComplete="new-password"
-                    minLength={10}
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     required
                   />
+                  <FieldError
+                    message={
+                      confirm && confirm !== password ? "The two passwords don't match." : undefined
+                    }
+                  />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={submitting || !isStrongPassword(password) || password !== confirm}
+                >
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update password"}
                 </Button>
               </form>
+
               <p className="mt-6 text-center text-sm">
                 <Link to="/login" className="font-medium text-primary hover:underline">
                   Back to sign in
