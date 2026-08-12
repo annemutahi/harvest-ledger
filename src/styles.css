@@ -330,6 +330,11 @@
 
   .print-document a { text-decoration: none !important; color: #000 !important; }
 
+  .print-document img {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .print-document table { width: 100%; border-collapse: collapse; }
   .print-document th,
   .print-document td {
