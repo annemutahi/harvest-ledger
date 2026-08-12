@@ -408,6 +408,7 @@ function InvoiceDetail() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{formatCurrency(p.amount)}</p>
                   <p className="text-xs text-muted-foreground">{formatDate(p.date)} · {p.method}</p>
+                  {p.notes && <p className="mt-1 break-words text-xs text-muted-foreground italic">{p.notes}</p>}
                 </div>
               </div>
             ))}
