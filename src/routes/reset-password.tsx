@@ -71,7 +71,7 @@ function ResetPasswordPage() {
             <>
               <h1 className="text-2xl font-bold">Choose a new password</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Use at least 10 characters. Avoid common or numeric-only passwords.
+                Use at least 12 characters. Avoid common or numeric-only passwords.
               </p>
               <form
                 className="mt-6 space-y-4"

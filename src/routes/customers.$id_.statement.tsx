@@ -215,7 +215,7 @@ function StatementPage() {
               <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9" />
             </div>
             <label className="flex h-9 items-center gap-2 text-sm">
-              <Checkbox checked={unpaidOnly} onCheckedChange={(v) => setUnpaidOnly(v === false)} />
+              <Checkbox checked={unpaidOnly} onCheckedChange={(v) => setUnpaidOnly(v === true)} />
               Unpaid only
             </label>
             <Button variant="outline" size="sm" onClick={handleExportExcel}>
