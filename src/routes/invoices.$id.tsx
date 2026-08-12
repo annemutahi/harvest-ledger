@@ -197,10 +197,21 @@ function InvoiceDetail() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-start justify-between gap-4">
-              <CardTitle>Invoice {invoice.invoiceNumber}</CardTitle>
-              <StatusBadge status={invoice.status} />
+              <div>
+                <CardTitle className="text-3xl font-bold tracking-tight">INVOICE</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">{invoice.invoiceNumber}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <StatusBadge status={invoice.status} />
+                <img
+                  src="/assets/favicon.png"
+                  alt={`${COMPANY.name} logo`}
+                  className="h-16 w-16 shrink-0 rounded-full object-contain"
+                />
+              </div>
             </div>
           </CardHeader>
+
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2">
               <div>
