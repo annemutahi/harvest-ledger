@@ -72,10 +72,17 @@ function OrderDocumentPage() {
       {/* Document */}
       <div className="mx-auto max-w-3xl bg-background p-8 shadow-sm print:max-w-none print:shadow-none print:p-0">
         <header className="flex items-start justify-between border-b pb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{COMPANY.name}</h1>
-            <p className="text-sm text-muted-foreground">{COMPANY.location}</p>
-            <p className="text-sm text-muted-foreground">{COMPANY.email}</p>
+          <div className="flex items-start gap-4">
+            <img
+              src="/assets/favicon.png"
+              alt={`${COMPANY.name} logo`}
+              className="h-16 w-16 shrink-0 rounded-full object-contain"
+            />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">{COMPANY.name}</h1>
+              <p className="text-sm text-muted-foreground">{COMPANY.location}</p>
+              <p className="text-sm text-muted-foreground">{COMPANY.email}</p>
+            </div>
           </div>
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
