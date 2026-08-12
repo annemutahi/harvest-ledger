@@ -71,24 +71,24 @@ function OrderDocumentPage() {
 
       {/* Document */}
       <div className="mx-auto max-w-3xl bg-background p-8 shadow-sm print:max-w-none print:shadow-none print:p-0">
-        <header className="flex items-start justify-between border-b pb-6">
-          <div className="flex items-start gap-4">
-            <img
-              src="/assets/favicon.png"
-              alt={`${COMPANY.name} logo`}
-              className="h-16 w-16 shrink-0 rounded-full object-contain"
-            />
+        <header className="border-b pb-6">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">{COMPANY.name}</h1>
+              <h1 className="text-4xl font-bold uppercase tracking-tight">
+                {isReceipt ? "Receipt" : "Invoice"}
+              </h1>
+              <p className="mt-3 font-semibold">{COMPANY.name}</p>
               <p className="text-sm text-muted-foreground">{COMPANY.location}</p>
               <p className="text-sm text-muted-foreground">{COMPANY.email}</p>
             </div>
+            <img
+              src="/assets/favicon.png"
+              alt={`${COMPANY.name} logo`}
+              className="h-20 w-20 shrink-0 rounded-full object-contain"
+            />
           </div>
-          <div className="text-right">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {isReceipt ? "Receipt" : "Invoice"}
-            </p>
-            <p className="mt-1 text-lg font-semibold">{order.reference}</p>
+          <div className="mt-4 text-right">
+            <p className="text-lg font-semibold">{order.reference}</p>
             <p className="text-xs text-muted-foreground">
               {isReceipt ? "Issued" : "Placed"}: {formatDate(order.placedAt)}
             </p>
@@ -99,6 +99,7 @@ function OrderDocumentPage() {
             )}
           </div>
         </header>
+
 
         <section className="grid grid-cols-2 gap-6 py-6 text-sm">
           <div>
