@@ -47,33 +47,30 @@ function PaymentDocumentPage() {
 
       {/* Document */}
       <div className="mx-auto max-w-3xl bg-background p-8 shadow-sm print:max-w-none print:shadow-none print:p-0">
-        <header className="flex items-start justify-between border-b pb-6">
-          <div className="flex items-start gap-4">
-            <img
-              src="/assets/favicon.png"
-              alt={`${COMPANY.name} logo`}
-              className="h-16 w-16 shrink-0 rounded-full object-contain"
-            />
+        <header className="border-b pb-6">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">{COMPANY.name}</h1>
+              <h1 className="text-4xl font-bold uppercase tracking-tight">Receipt</h1>
+              <p className="mt-3 font-semibold">{COMPANY.name}</p>
               <p className="text-sm text-muted-foreground">{COMPANY.email}</p>
               <p className="text-sm text-muted-foreground">{COMPANY.phone}</p>
               <p className="text-sm text-muted-foreground">{COMPANY.location}</p>
             </div>
+            <img
+              src="/assets/favicon.png"
+              alt={`${COMPANY.name} logo`}
+              className="h-20 w-20 shrink-0 rounded-full object-contain"
+            />
           </div>
-          <div className="text-right">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Payment Receipt
-            </p>
-            <p className="mt-1 text-lg font-semibold">{payment.invoiceNumber}</p>
-            <p className="text-xs text-muted-foreground">
-              Paid: {formatDate(payment.date)}
-            </p>
+          <div className="mt-4 text-right">
+            <p className="text-lg font-semibold">{payment.invoiceNumber}</p>
+            <p className="text-xs text-muted-foreground">Paid: {formatDate(payment.date)}</p>
             <p className="mt-2 inline-block rounded border border-success/40 bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
               PAID
             </p>
           </div>
         </header>
+
 
         <section className="grid grid-cols-2 gap-6 py-6 text-sm">
           <div>
