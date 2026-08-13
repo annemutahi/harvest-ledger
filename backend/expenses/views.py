@@ -22,7 +22,7 @@ class PurchaseViewSet(viewsets.ModelViewSet):
     queryset = Purchase.objects.select_related("supplier")
     serializer_class = PurchaseSerializer
     permission_classes = [module_permission("expenses")]
-    filterset_fields = ["supplier", "category", "payment_method"]
+    filterset_fields = ["supplier", "category", "payment_method", "paid"]
     search_fields = ["item", "supplier_name", "notes"]
     ordering_fields = ["date", "total"]
 
@@ -31,6 +31,17 @@ class PurchaseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)
+
+    @decorators.action(detail=True, methods=["post"], url_path="set-paid")
+    def set_paid(self, request, pk=None):
+        if not has_perm(request.user, "expenses", "change"):
+            return response.Response({"detail": "forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        purchase = self.get_object()
+        paid = bool(request.data.get("paid", True))
+        purchase.paid = paid
+        purchase.paid_at = timezone.now() if paid else None
+        purchase.save(update_fields=["paid", "paid_at"])
+        return response.Response(PurchaseSerializer(purchase).data)
 
     @decorators.action(detail=False, methods=["get"])
     def summary(self, request):
@@ -41,8 +52,13 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             qs = qs.filter(date__gte=d_from)
         if d_to:
             qs = qs.filter(date__lte=d_to)
+        totals = qs.aggregate(
+            total=Sum("total"),
+            unpaid=Sum("total", filter=Q(paid=False)),
+        )
         return response.Response({
-            "total": qs.aggregate(t=Sum("total"))["t"] or 0,
+            "total": totals["total"] or 0,
+            "unpaid": totals["unpaid"] or 0,
             "count": qs.count(),
         })
 

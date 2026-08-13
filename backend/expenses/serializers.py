@@ -32,9 +32,9 @@ class PurchaseSerializer(serializers.ModelSerializer):
         fields = [
             "id", "supplier", "supplier_name", "date", "category", "item",
             "quantity", "unit", "unit_cost", "total", "payment_method",
-            "notes", "recorded_by", "created_at",
+            "paid", "paid_at", "notes", "recorded_by", "created_at",
         ]
-        read_only_fields = ["total", "recorded_by", "created_at"]
+        read_only_fields = ["total", "paid_at", "recorded_by", "created_at"]
 
     def validate(self, attrs):
         if "quantity" in attrs:

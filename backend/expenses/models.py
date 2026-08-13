@@ -30,6 +30,8 @@ class Purchase(models.Model):
     unit_cost = models.DecimalField(max_digits=12, decimal_places=2)
     total = models.DecimalField(max_digits=14, decimal_places=2)
     payment_method = models.CharField(max_length=32, blank=True, default="")
+    paid = models.BooleanField(default=False)
+    paid_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, default="")
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,

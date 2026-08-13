@@ -17,6 +17,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { PaidBadge } from "@/components/status-badge";
 import { StatCard } from "@/components/stat-card";
 import { Plus, ShoppingBag, Truck, Trash2, Receipt } from "lucide-react";
 import { toast } from "sonner";
@@ -74,6 +76,12 @@ function PurchasesPage() {
     onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
   });
 
+  const setPaid = useMutation({
+    mutationFn: ({ id, paid }: { id: string; paid: boolean }) => api.setPurchasePaid(id, paid),
+    onSuccess: (p) => { toast.success(p.paid ? "Marked as paid" : "Marked as unpaid"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to update payment status"),
+  });
+
   const deleteSupplier = useMutation({
     mutationFn: (id: string) => api.deleteSupplier(id),
     onSuccess: () => { toast.success("Supplier removed"); invalidate(); },
@@ -108,9 +116,19 @@ function PurchasesPage() {
       quantity: (p: Purchase) => Number(p.quantity),
       unitCost: (p: Purchase) => Number(p.unitCost),
       total: (p: Purchase) => Number(p.total),
+      paid: (p: Purchase) => (p.paid ? 1 : 0),
     },
     defaultSort: { key: "date", dir: "desc" },
   });
+
+  const supplierOutstanding = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of purchases) {
+      if (p.paid || !p.supplierId) continue;
+      m.set(p.supplierId, (m.get(p.supplierId) ?? 0) + Number(p.total || 0));
+    }
+    return m;
+  }, [purchases]);
 
   const suppliersView = useTableView({
     data: suppliers,
@@ -175,6 +193,7 @@ function PurchasesPage() {
                     <SortableHead ctrl={purchasesView} sortKey="quantity" align="right">Qty</SortableHead>
                     <SortableHead ctrl={purchasesView} sortKey="unitCost" align="right">Unit cost</SortableHead>
                     <SortableHead ctrl={purchasesView} sortKey="total" align="right">Total</SortableHead>
+                    <SortableHead ctrl={purchasesView} sortKey="paid">Payment</SortableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -191,6 +210,17 @@ function PurchasesPage() {
                       <TableCell className="text-right">{p.quantity} {p.unit ?? ""}</TableCell>
                       <TableCell className="text-right">{formatCurrency(p.unitCost)}</TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrency(p.total)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={p.paid}
+                            disabled={setPaid.isPending}
+                            aria-label={p.paid ? "Mark as unpaid" : "Mark as paid"}
+                            onCheckedChange={(v) => setPaid.mutate({ id: p.id, paid: v })}
+                          />
+                          <PaidBadge paid={p.paid} />
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           size="icon"
@@ -204,7 +234,7 @@ function PurchasesPage() {
                   ))}
                   {purchasesView.total === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
                         No purchases recorded yet. Click “Record purchase” to add one.
                       </TableCell>
                     </TableRow>
@@ -227,6 +257,7 @@ function PurchasesPage() {
                     <SortableHead ctrl={suppliersView} sortKey="contact">Contact</SortableHead>
                     <SortableHead ctrl={suppliersView} sortKey="phone">Phone</SortableHead>
                     <SortableHead ctrl={suppliersView} sortKey="email">Email</SortableHead>
+                    <TableHead className="text-right">Outstanding</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead />
                   </TableRow>
@@ -238,6 +269,15 @@ function PurchasesPage() {
                       <TableCell>{s.contactPerson ?? "—"}</TableCell>
                       <TableCell>{s.phone ?? "—"}</TableCell>
                       <TableCell>{s.email ?? "—"}</TableCell>
+                      <TableCell className="text-right">
+                        {supplierOutstanding.get(s.id) ? (
+                          <span className="font-semibold text-destructive">
+                            {formatCurrency(supplierOutstanding.get(s.id)!)}
+                          </span>
+                        ) : (
+                          <PaidBadge paid />
+                        )}
+                      </TableCell>
                       <TableCell className="max-w-xs truncate">{s.notes ?? "—"}</TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -252,7 +292,7 @@ function PurchasesPage() {
                   ))}
                   {suppliersView.total === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                         No suppliers yet. Add one with “New supplier”.
                       </TableCell>
                     </TableRow>

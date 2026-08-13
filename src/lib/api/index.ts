@@ -674,6 +674,13 @@ export const api = {
         }),
       }),
     ),
+  setPurchasePaid: async (id: string, paid: boolean): Promise<ApiPurchase> =>
+    mapPurchase(
+      await request(`/purchases/${id}/set-paid/`, {
+        method: "POST",
+        body: JSON.stringify({ paid }),
+      }),
+    ),
   deletePurchase: async (id: string): Promise<void> =>
     await request(`/purchases/${id}/`, { method: "DELETE" }),
 
@@ -999,6 +1006,8 @@ export type ApiPurchase = {
   unitCost: number;
   total: number;
   paymentMethod?: string;
+  paid: boolean;
+  paidAt?: string;
   notes?: string;
   recordedBy?: string;
 };
@@ -1052,6 +1061,8 @@ function mapPurchase(p: any): ApiPurchase {
     unitCost: Number(p.unit_cost ?? 0),
     total: Number(p.total ?? 0),
     paymentMethod: p.payment_method || undefined,
+    paid: Boolean(p.paid),
+    paidAt: p.paid_at || undefined,
     notes: p.notes || undefined,
     recordedBy: p.recorded_by ? String(p.recorded_by) : undefined,
   };
