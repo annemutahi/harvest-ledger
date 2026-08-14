@@ -106,6 +106,17 @@ function PurchasesPage() {
     [purchases],
   );
 
+  const totals = useMemo(() => {
+    let total = 0, paid = 0, owing = 0, paidCount = 0, owingCount = 0;
+    for (const p of purchases) {
+      const amt = Number(p.total) || 0;
+      total += amt;
+      if (p.paid) { paid += amt; paidCount++; } else { owing += amt; owingCount++; }
+    }
+    return { total, paid, owing, paidCount, owingCount };
+  }, [purchases]);
+
+
   const purchasesView = useTableView({
     data: purchases,
     accessors: {
