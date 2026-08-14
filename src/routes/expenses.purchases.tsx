@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { PaidBadge } from "@/components/status-badge";
 import { StatCard } from "@/components/stat-card";
-import { Plus, ShoppingBag, Truck, Trash2, Receipt } from "lucide-react";
+import { Plus, ShoppingBag, Truck, Trash2, Receipt, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { FieldError } from "@/components/field-error";
 import {
