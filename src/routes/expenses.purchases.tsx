@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { PaidBadge } from "@/components/status-badge";
 import { StatCard } from "@/components/stat-card";
-import { Plus, ShoppingBag, Truck, Trash2, Receipt } from "lucide-react";
+import { Plus, ShoppingBag, Truck, Trash2, Receipt, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { FieldError } from "@/components/field-error";
 import {
@@ -106,6 +106,17 @@ function PurchasesPage() {
     [purchases],
   );
 
+  const totals = useMemo(() => {
+    let total = 0, paid = 0, owing = 0, paidCount = 0, owingCount = 0;
+    for (const p of purchases) {
+      const amt = Number(p.total) || 0;
+      total += amt;
+      if (p.paid) { paid += amt; paidCount++; } else { owing += amt; owingCount++; }
+    }
+    return { total, paid, owing, paidCount, owingCount };
+  }, [purchases]);
+
+
   const purchasesView = useTableView({
     data: purchases,
     accessors: {
@@ -151,7 +162,28 @@ function PurchasesPage() {
         </div>
       }
     >
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label="Total purchases"
+          value={formatCurrency(totals.total)}
+          icon={ShoppingBag}
+          tone="primary"
+          trend={`${purchases.length} entries • YTD ${formatCurrency(yearTotal)}`}
+        />
+        <StatCard
+          label="Paid"
+          value={formatCurrency(totals.paid)}
+          icon={CheckCircle2}
+          tone="success"
+          trend={`${totals.paidCount} settled`}
+        />
+        <StatCard
+          label="Owing"
+          value={formatCurrency(totals.owing)}
+          icon={AlertCircle}
+          tone="destructive"
+          trend={`${totals.owingCount} unpaid`}
+        />
         <StatCard
           label="This month"
           value={formatCurrency(monthTotal)}
@@ -163,15 +195,15 @@ function PurchasesPage() {
             return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth();
           }).length} entries`}
         />
-        <StatCard label="Year to date" value={formatCurrency(yearTotal)} icon={ShoppingBag} tone="earth" />
         <StatCard
           label="Suppliers"
           value={String(suppliers.length)}
           icon={Truck}
-          tone="primary"
+          tone="earth"
           trend="Active suppliers on file"
         />
       </div>
+
 
       <Tabs defaultValue="purchases" className="mt-6">
         <TabsList>
