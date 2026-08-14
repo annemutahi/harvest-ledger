@@ -113,8 +113,11 @@ function CasualsPage() {
     () => logs.filter((w) => !w.paid).reduce((s, w) => s + w.total, 0),
     [logs],
   );
+  const grandTotal = useMemo(() => logs.reduce((s, w) => s + (Number(w.total) || 0), 0), [logs]);
+  const paidTotal = grandTotal - unpaidTotal;
   const totalDays = logs.length;
   const unpaidCount = logs.filter((w) => !w.paid).length;
+  const paidCount = totalDays - unpaidCount;
 
   return (
     <AppShell
@@ -126,15 +129,28 @@ function CasualsPage() {
         </div>
       }
     >
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
-          label="Total work entries"
-          value={String(totalDays)}
+          label="Total wages"
+          value={formatCurrency(grandTotal)}
           icon={Wallet}
           tone="primary"
+          trend={`${totalDays} work entries`}
+        />
+        <StatCard
+          label="Paid"
+          value={formatCurrency(paidTotal)}
+          icon={CheckCircle2}
+          tone="success"
+          trend={`${paidCount} settled`}
+        />
+        <StatCard
+          label="Owing"
+          value={formatCurrency(unpaidTotal)}
+          icon={HardHat}
+          tone="destructive"
           trend={`${unpaidCount} unpaid`}
         />
-        <StatCard label="Amount due" value={formatCurrency(unpaidTotal)} icon={HardHat} tone="warning" />
         <StatCard
           label="Active workers"
           value={String(workers.filter((w) => w.active).length)}
@@ -143,6 +159,7 @@ function CasualsPage() {
           trend={`${workers.length} total`}
         />
       </div>
+
 
       <Tabs defaultValue="log" className="mt-6">
         <TabsList>
