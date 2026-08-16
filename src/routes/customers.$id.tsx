@@ -34,8 +34,8 @@ export const Route = createFileRoute("/customers/$id")({
 
 function CustomerDetail() {
   const { customer } = Route.useLoaderData() as { customer: Customer };
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => api.listInvoices() });
-  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: () => api.listPayments() });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: async () => (await api.listInvoices()).filter((i) => !i.isVoided) });
+  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: async () => (await api.listPayments()).filter((p) => !p.isVoided) });
   const custInvoices = invoices.filter((i) => i.customerId === customer.id);
   const custPayments = payments.filter((p) => p.customerId === customer.id);
   const totalPurchases = custInvoices.reduce((s, i) => s + i.totalAmount, 0);

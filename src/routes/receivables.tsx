@@ -72,7 +72,7 @@ function ReceivablesPage() {
 
   const { data: invoices, isLoading, error } = useQuery({
     queryKey: ["invoices"],
-    queryFn: () => api.listInvoices(),
+    queryFn: async () => (await api.listInvoices()).filter((i) => !i.isVoided),
   });
 
   const aged = useMemo<AgedInvoice[]>(() => {

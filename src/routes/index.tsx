@@ -61,8 +61,8 @@ function groupMonthlySales(invoices: Array<{ invoiceDate: string; totalAmount: n
 }
 
 function LandingPage() {
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => api.listInvoices() });
-  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: () => api.listPayments() });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: async () => (await api.listInvoices()).filter((i) => !i.isVoided) });
+  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: async () => (await api.listPayments()).filter((p) => !p.isVoided) });
 
   // Server-side MTD aggregates: invoice sales, delivered orders, expenses, profit.
   const { data: summary } = useQuery({

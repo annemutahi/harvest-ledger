@@ -87,9 +87,9 @@ function ReportsPage() {
   const period = useMemo(() => computePeriod(year, month), [year, month]);
 
   const range = { from: period.from, to: period.to };
-  const invoicesQ = useQuery({ queryKey: ["invoices", range], queryFn: () => api.listInvoices(range) });
+  const invoicesQ = useQuery({ queryKey: ["invoices", range], queryFn: async () => (await api.listInvoices(range)).filter((i) => !i.isVoided) });
   const salesQ = useQuery({ queryKey: ["sales", range], queryFn: () => api.listSales(range) });
-  const paymentsQ = useQuery({ queryKey: ["payments", range], queryFn: () => api.listPayments(range) });
+  const paymentsQ = useQuery({ queryKey: ["payments", range], queryFn: async () => (await api.listPayments(range)).filter((p) => !p.isVoided) });
   const customersQ = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
   const productsQ = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
   const purchasesQ = useQuery({ queryKey: ["purchases", range], queryFn: () => api.listPurchases(range) });

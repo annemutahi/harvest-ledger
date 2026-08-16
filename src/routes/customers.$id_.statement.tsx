@@ -73,11 +73,13 @@ function StatementPage() {
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["invoices", customer.id, from, to],
     queryFn: () =>
-      api.listInvoices({ customer: customer.id, from: from || undefined, to: to || undefined }),
+      api.listInvoices({ customer: customer.id, from: from || undefined, to: to || undefined }).then(
+        (rows) => rows.filter((i) => !i.isVoided),
+      ),
   });
   const { data: payments = [] } = useQuery({
     queryKey: ["payments"],
-    queryFn: () => api.listPayments(),
+    queryFn: async () => (await api.listPayments()).filter((p) => !p.isVoided),
   });
 
   const paymentsByInvoice = useMemo(() => {
