@@ -30,7 +30,7 @@ def _range(request):
 @permission_classes([IsAuthenticated])
 def sales_report(request):
     d_from, d_to = _range(request)
-    qs = Sale.objects.filter(date__gte=d_from, date__lte=d_to)
+    qs = Sale.objects.filter(date__gte=d_from, date__lte=d_to, invoice__voided_at__isnull=True)
     trend = list(
         qs.annotate(m=TruncMonth("date"))
         .values("m")
@@ -38,7 +38,7 @@ def sales_report(request):
         .order_by("m")
     )
     receivables = list(
-        Invoice.objects.filter(issue_date__gte=d_from, issue_date__lte=d_to)
+        Invoice.objects.filter(issue_date__gte=d_from, issue_date__lte=d_to, voided_at__isnull=True)
         .annotate(m=TruncMonth("issue_date"))
         .values("m")
         .annotate(outstanding=Sum("total_amount") - Sum("amount_paid"))
@@ -159,7 +159,7 @@ def dashboard_summary(request):
     d_from = request.query_params.get("from") or default_from.isoformat()
     d_to = request.query_params.get("to") or default_to.isoformat()
 
-    invoices_qs = Invoice.objects.filter(issue_date__gte=d_from, issue_date__lte=d_to)
+    invoices_qs = Invoice.objects.filter(issue_date__gte=d_from, issue_date__lte=d_to, voided_at__isnull=True)
     invoice_sales = float(invoices_qs.aggregate(t=Sum("total_amount"))["t"] or 0)
 
     delivered_orders_qs = Order.objects.filter(
@@ -180,8 +180,8 @@ def dashboard_summary(request):
     total_sales = invoice_sales + delivered_orders_total
 
     receivables_outstanding = float(
-        (Invoice.objects.aggregate(t=Sum("total_amount"))["t"] or 0)
-        - (Invoice.objects.aggregate(t=Sum("amount_paid"))["t"] or 0)
+        (Invoice.objects.filter(voided_at__isnull=True).aggregate(t=Sum("total_amount"))["t"] or 0)
+        - (Invoice.objects.filter(voided_at__isnull=True).aggregate(t=Sum("amount_paid"))["t"] or 0)
     )
 
     return Response({

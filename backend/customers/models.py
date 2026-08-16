@@ -28,7 +28,7 @@ class Customer(SoftDeleteModel):
     def outstanding_balance(self) -> float:
         # Sum of unpaid balances across invoices.
         from sales.models import Invoice
-        agg = Invoice.objects.filter(customer=self).aggregate(
+        agg = Invoice.objects.filter(customer=self, voided_at__isnull=True).aggregate(
             total=models.Sum("total_amount"),
             paid=models.Sum("amount_paid"),
         )
