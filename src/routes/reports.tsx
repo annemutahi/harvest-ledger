@@ -385,6 +385,8 @@ function ReportsPage() {
             <TabsTrigger value="inventory"><Boxes className="mr-2 h-4 w-4" />Inventory</TabsTrigger>
             <TabsTrigger value="casuals"><HardHat className="mr-2 h-4 w-4" />Casual Workers</TabsTrigger>
             <TabsTrigger value="customers"><Users className="mr-2 h-4 w-4" />Customers</TabsTrigger>
+            <TabsTrigger value="reconciliation"><Scale className="mr-2 h-4 w-4" />Reconciliation</TabsTrigger>
+
           </TabsList>
 
           {loading ? <LoadingBlock /> : (
