@@ -397,6 +397,8 @@ function ReportsPage() {
               <TabsContent value="inventory"><InventoryReport data={inventory} period={period} /></TabsContent>
               <TabsContent value="casuals"><CasualsReport data={casual} period={period} /></TabsContent>
               <TabsContent value="customers"><CustomersReport data={customerReport} period={period} /></TabsContent>
+              <TabsContent value="reconciliation"><ReconciliationReport data={reconciliation} period={period} /></TabsContent>
+
             </>
           )}
 
