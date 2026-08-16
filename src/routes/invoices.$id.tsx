@@ -9,7 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/status-badge";
-import { ArrowLeft, Printer, Pencil, Plus, Trash2, Save, X } from "lucide-react";
+import { ArrowLeft, Ban, Printer, Pencil, Plus, Trash2, Save, X } from "lucide-react";
+import { VoidDialog } from "@/components/void-dialog";
+import { useAuth } from "@/lib/auth-context";
+import { isManager } from "@/lib/permissions";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -47,6 +50,8 @@ function InvoiceDetail() {
   const loaderData = Route.useLoaderData() as { invoice?: any } | undefined;
   const initialInvoice = loaderData?.invoice;
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const mayVoid = isManager(user);
 
   const { data: invoice = initialInvoice } = useQuery({
     queryKey: ["invoices", initialInvoice?.id],
@@ -72,6 +77,32 @@ function InvoiceDetail() {
       toast.success("KRA eTIMS number saved.");
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not save eTIMS number"),
+  });
+
+  const refreshAfterVoid = () => {
+    qc.invalidateQueries({ queryKey: ["invoices"] });
+    qc.invalidateQueries({ queryKey: ["payments"] });
+    qc.invalidateQueries({ queryKey: ["sales"] });
+    qc.invalidateQueries({ queryKey: ["customers"] });
+    qc.invalidateQueries({ queryKey: ["products"] });
+  };
+
+  const voidInvoice = useMutation({
+    mutationFn: (reason: string) => api.voidInvoice(invoice.id, reason),
+    onSuccess: () => {
+      refreshAfterVoid();
+      toast.success("Invoice voided");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not void this invoice"),
+  });
+
+  const voidPayment = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.voidPayment(id, reason),
+    onSuccess: () => {
+      refreshAfterVoid();
+      toast.success("Payment voided and reversed off the invoice");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not void this payment"),
   });
 
   const startEdit = () => {
@@ -176,7 +207,7 @@ function InvoiceDetail() {
   }
 
   const pays = payments.filter((p: any) => p.invoiceId === invoice.id);
-  const canEdit = !!invoice.saleId;
+  const canEdit = !!invoice.saleId && !invoice.isVoided;
   const isCredit = invoice.outstandingBalance < 0;
 
   return (
@@ -189,6 +220,19 @@ function InvoiceDetail() {
           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
           {!editing && canEdit && (
             <Button onClick={startEdit}><Pencil className="mr-2 h-4 w-4" />Edit items</Button>
+          )}
+          {!editing && mayVoid && !invoice.isVoided && (
+            <VoidDialog
+              title={`Void ${invoice.invoiceNumber}?`}
+              description="The invoice stays on record but is cancelled: it is excluded from statements, receivables and reports, and its stock is returned."
+              pending={voidInvoice.isPending}
+              onConfirm={async (reason) => { await voidInvoice.mutateAsync(reason); }}
+              trigger={
+                <Button variant="outline" className="text-destructive">
+                  <Ban className="mr-2 h-4 w-4" />Void invoice
+                </Button>
+              }
+            />
           )}
         </>
       }
@@ -213,6 +257,18 @@ function InvoiceDetail() {
           </CardHeader>
 
           <CardContent>
+            {invoice.isVoided && (
+              <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+                <p className="text-sm font-semibold text-destructive">VOIDED</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {invoice.voidReason}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Voided {formatDate(invoice.voidedAt ?? "")}
+                  {invoice.voidedByName ? ` by ${invoice.voidedByName}` : ""}
+                </p>
+              </div>
+            )}
             <div className="grid gap-6 sm:grid-cols-2">
               <div>
                 <p className="text-xs font-medium uppercase text-muted-foreground">Billed to</p>
@@ -415,12 +471,35 @@ function InvoiceDetail() {
           <CardContent className="space-y-3">
             {pays.length === 0 && <p className="text-sm text-muted-foreground">No payments yet.</p>}
             {pays.map((p) => (
-              <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
+              <div
+                key={p.id}
+                className={`flex items-start justify-between gap-2 rounded-lg border p-3 ${p.isVoided ? "opacity-60" : ""}`}
+              >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{formatCurrency(p.amount)}</p>
+                  <p className={`text-sm font-medium ${p.isVoided ? "line-through" : ""}`}>
+                    {formatCurrency(p.amount)}
+                  </p>
                   <p className="text-xs text-muted-foreground">{formatDate(p.date)} · {p.method}</p>
                   {p.notes && <p className="mt-1 break-words text-xs text-muted-foreground italic">{p.notes}</p>}
+                  {p.isVoided && (
+                    <p className="mt-1 break-words text-xs text-destructive">
+                      Voided{p.voidedByName ? ` by ${p.voidedByName}` : ""}: {p.voidReason}
+                    </p>
+                  )}
                 </div>
+                {mayVoid && !p.isVoided && (
+                  <VoidDialog
+                    title="Void this payment?"
+                    description="The payment stays on record but is reversed off the invoice balance."
+                    pending={voidPayment.isPending}
+                    onConfirm={async (reason) => { await voidPayment.mutateAsync({ id: p.id, reason }); }}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="print:hidden" title="Void payment">
+                        <Ban className="h-4 w-4 text-destructive" />
+                      </Button>
+                    }
+                  />
+                )}
               </div>
             ))}
             <Button asChild className="w-full print:hidden" variant="outline"><Link to="/payments/new">Record Payment</Link></Button>
