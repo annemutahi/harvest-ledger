@@ -288,7 +288,57 @@ function ReportsPage() {
     return { rows, total: customers.length, active: active.length, inactive: inactive.length, top };
   }, [customersQ.data, salesData.sales]);
 
+  // ---------- Reconciliation ----------
+  const reconciliation = useMemo(() => {
+    const rows: ReconRow[] = [];
+    (paymentsQ.data ?? []).forEach((p) => {
+      if (!inRange(p.date, period.from, period.to)) return;
+      rows.push({
+        id: `pay-${p.id}`,
+        date: p.date.slice(0, 10),
+        name: p.customerName || "Walk-in customer",
+        link: p.invoiceId ? { to: "/invoices/$id", params: { id: p.invoiceId } } : undefined,
+        detail: `Payment ${p.invoiceNumber ? `on ${p.invoiceNumber}` : ""} (${p.method})`.trim(),
+        moneyIn: p.amount,
+        moneyOut: 0,
+      });
+    });
+    (purchasesQ.data ?? []).forEach((p) => {
+      if (!p.paid) return;
+      const d = (p.paidAt || p.date).slice(0, 10);
+      if (!inRange(d, period.from, period.to)) return;
+      rows.push({
+        id: `pur-${p.id}`,
+        date: d,
+        name: p.supplierName || "Supplier",
+        link: { to: "/expenses/purchases" },
+        detail: `Purchase — ${p.item}`,
+        moneyIn: 0,
+        moneyOut: p.total,
+      });
+    });
+    (wagesQ.data ?? []).forEach((w) => {
+      if (!w.paid) return;
+      const d = (w.paidAt || w.date).slice(0, 10);
+      if (!inRange(d, period.from, period.to)) return;
+      rows.push({
+        id: `wage-${w.id}`,
+        date: d,
+        name: w.workerName || "Casual worker",
+        link: { to: "/expenses/casuals" },
+        detail: `Casual wage${w.task ? ` — ${w.task}` : ""}`,
+        moneyIn: 0,
+        moneyOut: w.total,
+      });
+    });
+    rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const moneyIn = rows.reduce((a, r) => a + r.moneyIn, 0);
+    const moneyOut = rows.reduce((a, r) => a + r.moneyOut, 0);
+    return { rows, moneyIn, moneyOut, balance: moneyIn - moneyOut };
+  }, [paymentsQ.data, purchasesQ.data, wagesQ.data, period]);
+
   const handlePrint = () => window.print();
+
 
   return (
     <AppShell
