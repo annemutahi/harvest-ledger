@@ -337,6 +337,10 @@ function mapInvoice(i: any): Invoice {
       createdAt: u.created_at ?? "",
     })),
     etimsNumber: i.etims_number ?? "",
+    isVoided: Boolean(i.is_voided ?? i.voided_at),
+    voidedAt: i.voided_at ?? undefined,
+    voidedByName: i.voided_by_name || undefined,
+    voidReason: i.void_reason || undefined,
   };
 }
 
@@ -355,6 +359,10 @@ function mapPayment(p: any): Payment {
       .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ") as PaymentMethod) || "Cash",
     notes: p.notes ?? undefined,
+    isVoided: Boolean(p.is_voided ?? p.voided_at),
+    voidedAt: p.voided_at ?? undefined,
+    voidedByName: p.voided_by_name || undefined,
+    voidReason: p.void_reason || undefined,
   };
 }
 
@@ -575,6 +583,14 @@ export const api = {
       }),
     ),
 
+  voidInvoice: async (id: string, reason: string): Promise<Invoice> =>
+    mapInvoice(
+      await request(`/invoices/${id}/void/`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }),
+    ),
+
   // Global search across customers, orders, invoices
   searchGlobal: async (q: string, limit = 10): Promise<{ customers: Customer[]; orders: ApiOrder[]; invoices: Invoice[] }> => {
     const qs = new URLSearchParams();
@@ -614,6 +630,14 @@ export const api = {
           notes: data.notes ?? "",
           idempotency_key: data.idempotencyKey ?? null,
         }),
+      }),
+    ),
+
+  voidPayment: async (id: string, reason: string): Promise<Payment> =>
+    mapPayment(
+      await request(`/payments/${id}/void/`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
       }),
     ),
 
