@@ -29,6 +29,7 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowRight,
+  Scale,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +52,16 @@ export const Route = createFileRoute("/reports")({
 });
 
 type Period = { from: string; to: string; label: string };
+
+type ReconRow = {
+  id: string;
+  date: string;
+  name: string;
+  link?: { to: string; params?: Record<string, string> };
+  detail: string;
+  moneyIn: number;
+  moneyOut: number;
+};
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -1056,5 +1067,112 @@ function AllCustomersTable({ rows }: { rows: {
       </Table>
       <TablePagination ctrl={ctrl} label="customers" />
     </>
+  );
+}
+
+
+/* ---------------- Reconciliation ---------------- */
+function ReconciliationReport({ data, period }: {
+  data: { rows: ReconRow[]; moneyIn: number; moneyOut: number; balance: number };
+  period: Period;
+}) {
+  const ctrl = useTableView<ReconRow>({
+    data: data.rows,
+    accessors: {
+      date: (r) => r.date,
+      name: (r) => r.name,
+      detail: (r) => r.detail,
+      moneyIn: (r) => r.moneyIn,
+      moneyOut: (r) => r.moneyOut,
+    },
+    defaultSort: { key: "date", dir: "asc" },
+    defaultPageSize: 50,
+  });
+
+  let running = 0;
+
+  return (
+    <div className="mt-6 space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Money In" value={formatCurrency(data.moneyIn)} icon={TrendingUp} />
+        <StatCard label="Money Out" value={formatCurrency(data.moneyOut)} icon={TrendingDown} />
+        <StatCard label="Net Balance" value={formatCurrency(data.balance)} icon={Scale} />
+        <StatCard label="Transactions" value={String(data.rows.length)} icon={ArrowRight} />
+      </div>
+
+      <Card>
+        <TableCardHeader
+          title={`Reconciliation Statement — ${period.label}`}
+          onExport={() => exportSheet("reconciliation", "Reconciliation", [
+            ...data.rows.map((r) => ({
+              Date: r.date, Name: r.name, Details: r.detail,
+              "Money In": r.moneyIn || "", "Money Out": r.moneyOut || "",
+            })),
+            { Date: "", Name: "TOTALS", Details: "", "Money In": data.moneyIn, "Money Out": data.moneyOut },
+            { Date: "", Name: "BALANCE", Details: "", "Money In": data.balance, "Money Out": "" },
+          ], period)}
+        />
+        <CardContent className="p-0">
+          {data.rows.length === 0 ? (
+            <div className="p-6"><EmptyState label="No settled transactions in this period" /></div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader><TableRow>
+                  <SortableHead ctrl={ctrl} sortKey="date">Date</SortableHead>
+                  <SortableHead ctrl={ctrl} sortKey="name">Name</SortableHead>
+                  <SortableHead ctrl={ctrl} sortKey="detail">Details</SortableHead>
+                  <SortableHead ctrl={ctrl} sortKey="moneyIn" align="right">Money In</SortableHead>
+                  <SortableHead ctrl={ctrl} sortKey="moneyOut" align="right">Money Out</SortableHead>
+                  <TableHead className="text-right">Running Balance</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {ctrl.sorted.map((r) => {
+                    running += r.moneyIn - r.moneyOut;
+                    const bal = running;
+                    if (!ctrl.paged.includes(r)) return null;
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell className="whitespace-nowrap">{formatDate(r.date)}</TableCell>
+                        <TableCell className="font-medium">
+                          {r.link ? (
+                            <Link
+                              to={r.link.to as never}
+                              params={r.link.params as never}
+                              className="text-primary underline-offset-2 hover:underline"
+                            >
+                              {r.name}
+                            </Link>
+                          ) : r.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{r.detail}</TableCell>
+                        <TableCell className="text-right tabular-nums text-emerald-600">
+                          {r.moneyIn ? formatCurrency(r.moneyIn) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-destructive">
+                          {r.moneyOut ? formatCurrency(r.moneyOut) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(bal)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableRow className="border-t-2 font-semibold">
+                    <TableCell colSpan={3}>Totals</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(data.moneyIn)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(data.moneyOut)}</TableCell>
+                    <TableCell />
+                  </TableRow>
+                  <TableRow className="font-semibold">
+                    <TableCell colSpan={5}>Closing balance for {period.label}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(data.balance)}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+              <TablePagination ctrl={ctrl} label="transactions" />
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
