@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
-import { BanknoteArrowUp, Pencil, Plus, Printer, Search, ShoppingCart } from "lucide-react";
+import { Ban, BanknoteArrowUp, Pencil, Plus, Printer, Search, ShoppingCart } from "lucide-react";
+import { toast } from "sonner";
+import { VoidDialog } from "@/components/void-dialog";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
-import { canEditSales } from "@/lib/permissions";
+import { canEditSales, isManager } from "@/lib/permissions";
 import { useTableView } from "@/hooks/use-table-view";
 import { SortableHead, TablePagination } from "@/components/table-controls";
 
@@ -28,6 +30,18 @@ function TransactionsPage() {
   const query = q.toLowerCase();
   const { user } = useAuth();
   const mayEdit = canEditSales(user);
+  const mayVoid = isManager(user);
+  const qc = useQueryClient();
+  const voidPayment = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.voidPayment(id, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["payments"] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      toast.success("Payment voided and reversed off the invoice");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not void this payment"),
+  });
   const { data: sales = [] } = useQuery({ queryKey: ["sales"], queryFn: () => api.listSales() });
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: () => api.listPayments() });
 
@@ -129,7 +143,7 @@ function TransactionsPage() {
                       <SortableHead ctrl={salesView} sortKey="amount" align="right">Amount</SortableHead>
                       <SortableHead ctrl={salesView} sortKey="paymentType">Payment</SortableHead>
                       <SortableHead ctrl={salesView} sortKey="status">Status</SortableHead>
-                      {mayEdit && <TableHead className="w-16 text-right">Actions</TableHead>}
+                      {mayEdit && <TableHead className="w-24 text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -181,7 +195,7 @@ function TransactionsPage() {
                       <SortableHead ctrl={paymentsView} sortKey="method">Method</SortableHead>
                       <TableHead>Notes</TableHead>
                       <SortableHead ctrl={paymentsView} sortKey="amount" align="right">Amount</SortableHead>
-                      <TableHead className="w-16 text-right">Actions</TableHead>
+                      <TableHead className="w-24 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -191,7 +205,7 @@ function TransactionsPage() {
                       </TableRow>
                     )}
                     {paymentsView.paged.map((payment) => (
-                      <TableRow key={payment.id}>
+                      <TableRow key={payment.id} className={payment.isVoided ? "opacity-60" : ""}>
                         <TableCell>{formatDate(payment.date)}</TableCell>
                         <TableCell className="font-medium">{payment.customerName}</TableCell>
                         <TableCell>
@@ -200,10 +214,19 @@ function TransactionsPage() {
                           </Link>
                         </TableCell>
                         <TableCell>{payment.method}</TableCell>
-                        <TableCell className="max-w-48 truncate text-muted-foreground" title={payment.notes ?? ""}>
-                          {payment.notes || "—"}
+                        <TableCell
+                          className="max-w-48 truncate text-muted-foreground"
+                          title={payment.isVoided ? `Voided: ${payment.voidReason ?? ""}` : payment.notes ?? ""}
+                        >
+                          {payment.isVoided ? (
+                            <span className="text-destructive">Voided: {payment.voidReason}</span>
+                          ) : (
+                            payment.notes || "—"
+                          )}
                         </TableCell>
-                        <TableCell className="text-right font-semibold text-success">
+                        <TableCell
+                          className={`text-right font-semibold ${payment.isVoided ? "text-muted-foreground line-through" : "text-success"}`}
+                        >
                           {formatCurrency(payment.amount)}
                         </TableCell>
                         <TableCell className="text-right">
@@ -212,6 +235,21 @@ function TransactionsPage() {
                               <Printer className="h-4 w-4" />
                             </Link>
                           </Button>
+                          {mayVoid && !payment.isVoided && (
+                            <VoidDialog
+                              title="Void this payment?"
+                              description="The payment stays on record but is reversed off the invoice balance."
+                              pending={voidPayment.isPending}
+                              onConfirm={async (reason) => {
+                                await voidPayment.mutateAsync({ id: payment.id, reason });
+                              }}
+                              trigger={
+                                <Button variant="ghost" size="icon" title="Void payment">
+                                  <Ban className="h-4 w-4 text-destructive" />
+                                </Button>
+                              }
+                            />
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

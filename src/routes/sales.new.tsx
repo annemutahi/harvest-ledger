@@ -39,7 +39,7 @@ function NewSalePage() {
 
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => api.listInvoices() });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: async () => (await api.listInvoices()).filter((i) => !i.isVoided) });
   const createSaleMutation = useMutation({
     mutationFn: (payload: Parameters<typeof api.createSale>[0]) => api.createSale(payload),
     onSuccess: () => {

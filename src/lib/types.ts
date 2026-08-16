@@ -87,6 +87,10 @@ export interface Invoice {
   availableCredit: number;
   creditUses: CreditUse[];
   etimsNumber: string;
+  isVoided: boolean;
+  voidedAt?: string;
+  voidedByName?: string;
+  voidReason?: string;
 }
 
 export type PaymentMethod = "Cash" | "Bank Transfer" | "Mobile Money" | "Cheque";
@@ -101,4 +105,8 @@ export interface Payment {
   amount: number;
   method: PaymentMethod;
   notes?: string;
+  isVoided: boolean;
+  voidedAt?: string;
+  voidedByName?: string;
+  voidReason?: string;
 }

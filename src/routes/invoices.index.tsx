@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -97,15 +98,23 @@ function InvoicesPage() {
                   <TableRow><TableCell colSpan={8} className="py-12 text-center text-muted-foreground">No invoices match your filters.</TableCell></TableRow>
                 )}
                 {!isLoading && !error && view.paged.map((i) => (
-                  <TableRow key={i.id}>
-                    <TableCell><Link to="/invoices/$id" params={{ id: i.id }} className="font-medium hover:underline">{i.invoiceNumber}</Link></TableCell>
+                  <TableRow key={i.id} className={i.isVoided ? "opacity-60" : ""}>
+                    <TableCell>
+                      <Link to="/invoices/$id" params={{ id: i.id }} className={`font-medium hover:underline ${i.isVoided ? "line-through" : ""}`}>{i.invoiceNumber}</Link>
+                    </TableCell>
                     <TableCell>{i.customerName}</TableCell>
                     <TableCell>{formatDate(i.invoiceDate)}</TableCell>
                     <TableCell>{formatDate(i.dueDate)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(i.totalAmount)}</TableCell>
                     <TableCell className="text-right text-success">{formatCurrency(i.amountPaid)}</TableCell>
                     <TableCell className="text-right font-semibold text-earth">{formatCurrency(i.outstandingBalance)}</TableCell>
-                    <TableCell><StatusBadge status={i.status} /></TableCell>
+                    <TableCell>
+                      {i.isVoided ? (
+                        <Badge variant="outline" className="border-destructive/40 text-destructive" title={i.voidReason ?? ""}>Voided</Badge>
+                      ) : (
+                        <StatusBadge status={i.status} />
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

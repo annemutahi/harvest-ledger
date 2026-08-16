@@ -52,6 +52,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
     credit_applied = serializers.SerializerMethodField()
     available_credit = serializers.SerializerMethodField()
     credit_uses = serializers.SerializerMethodField()
+    is_voided = serializers.BooleanField(read_only=True)
+    voided_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -62,8 +64,15 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "payment_type", "adjustments", "credit_applied", "available_credit",
             "credit_uses",
             "etims_number", "created_at",
+            "is_voided", "voided_at", "voided_by_name", "void_reason",
         ]
         read_only_fields = [f for f in fields if f != "etims_number"]
+
+    def get_voided_by_name(self, obj):
+        user = obj.voided_by
+        if not user:
+            return ""
+        return (user.get_full_name() or user.get_username()).strip()
 
     def get_sale_id(self, obj):
         sale = getattr(obj, "sale", None)
@@ -307,14 +316,25 @@ class PaymentSerializer(serializers.ModelSerializer):
     idempotency_key = serializers.CharField(
         max_length=64, required=False, allow_blank=True, allow_null=True, write_only=True,
     )
+    is_voided = serializers.BooleanField(read_only=True)
+    voided_by_name = serializers.SerializerMethodField()
+
+    def get_voided_by_name(self, obj):
+        user = obj.voided_by
+        if not user:
+            return ""
+        return (user.get_full_name() or user.get_username()).strip()
 
     class Meta:
         model = Payment
         fields = [
             "id", "invoice", "invoice_number", "customer", "customer_name",
             "date", "amount", "method", "notes", "idempotency_key", "created_at",
+            "is_voided", "voided_at", "voided_by_name", "void_reason",
         ]
-        read_only_fields = ["created_at"]
+        read_only_fields = [
+            "created_at", "is_voided", "voided_at", "voided_by_name", "void_reason",
+        ]
 
     def validate_amount(self, value):
         return validate_amount(value, field=None, positive=True)

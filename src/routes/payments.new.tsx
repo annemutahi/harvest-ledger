@@ -36,7 +36,10 @@ function RecordPaymentPage() {
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices", { customer: customerId }],
-    queryFn: () => api.listInvoices(customerId ? { customer: customerId } : undefined),
+    queryFn: async () =>
+      (await api.listInvoices(customerId ? { customer: customerId } : undefined)).filter(
+        (i) => !i.isVoided,
+      ),
     enabled: !!customerId,
   });
   const createPaymentMutation = useMutation({
