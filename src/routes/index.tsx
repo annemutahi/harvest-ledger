@@ -193,7 +193,7 @@ function LandingPage() {
   const monthlyChange = previousMonth
     ? ((totalMonthSales - previousMonth.sales) / previousMonth.sales) * 100
     : 0;
-  const monthlyProfit = totalMonthSales - expensesThisMonth.total;
+  const monthlyProfit = totalMonthSales - expensesThisMonth.paidTotal;
   const paymentsReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const totalCredit = invoices.reduce((sum, invoice) => sum + invoice.availableCredit, 0);
   const dueSoon = invoices
