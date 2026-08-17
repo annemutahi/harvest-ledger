@@ -177,6 +177,17 @@ def dashboard_summary(request):
     )
     expenses_total = purchases + wages
 
+    # Profit counts only expenses that have actually been paid.
+    purchases_paid = float(
+        Purchase.objects.filter(date__gte=d_from, date__lte=d_to, paid=True)
+        .aggregate(t=Sum("total"))["t"] or 0
+    )
+    wages_paid = float(
+        CasualWage.objects.filter(date__gte=d_from, date__lte=d_to, paid=True)
+        .aggregate(t=Sum("total"))["t"] or 0
+    )
+    expenses_paid_total = purchases_paid + wages_paid
+
     total_sales = invoice_sales + delivered_orders_total
 
     receivables_outstanding = float(
