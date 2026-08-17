@@ -70,7 +70,14 @@ function LandingPage() {
     queryFn: () => api.getDashboardSummary(),
     refetchOnWindowFocus: true,
   });
-  const expensesThisMonth = summary?.expenses ?? { purchases: 0, wages: 0, total: 0 };
+  const expensesThisMonth = summary?.expenses ?? {
+    purchases: 0,
+    wages: 0,
+    total: 0,
+    purchasesPaid: 0,
+    wagesPaid: 0,
+    paidTotal: 0,
+  };
   const deliveredOrdersMTD = summary?.sales.deliveredOrders ?? 0;
 
 
