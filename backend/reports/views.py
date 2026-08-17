@@ -207,8 +207,11 @@ def dashboard_summary(request):
             "purchases": purchases,
             "wages": wages,
             "total": expenses_total,
+            "purchases_paid": purchases_paid,
+            "wages_paid": wages_paid,
+            "paid_total": expenses_paid_total,
         },
-        "profit": total_sales - expenses_total,
+        "profit": total_sales - expenses_paid_total,
         "receivables_outstanding": receivables_outstanding,
         "delivered_orders_count": delivered_orders_qs.count(),
     })
