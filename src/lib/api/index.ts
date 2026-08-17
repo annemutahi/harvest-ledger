@@ -969,7 +969,14 @@ export type DashboardSummary = {
   from: string;
   to: string;
   sales: { invoices: number; deliveredOrders: number; total: number };
-  expenses: { purchases: number; wages: number; total: number };
+  expenses: {
+    purchases: number;
+    wages: number;
+    total: number;
+    purchasesPaid: number;
+    wagesPaid: number;
+    paidTotal: number;
+  };
   profit: number;
   receivablesOutstanding: number;
   deliveredOrdersCount: number;
