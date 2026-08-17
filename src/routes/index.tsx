@@ -70,7 +70,14 @@ function LandingPage() {
     queryFn: () => api.getDashboardSummary(),
     refetchOnWindowFocus: true,
   });
-  const expensesThisMonth = summary?.expenses ?? { purchases: 0, wages: 0, total: 0 };
+  const expensesThisMonth = summary?.expenses ?? {
+    purchases: 0,
+    wages: 0,
+    total: 0,
+    purchasesPaid: 0,
+    wagesPaid: 0,
+    paidTotal: 0,
+  };
   const deliveredOrdersMTD = summary?.sales.deliveredOrders ?? 0;
 
 
@@ -186,7 +193,7 @@ function LandingPage() {
   const monthlyChange = previousMonth
     ? ((totalMonthSales - previousMonth.sales) / previousMonth.sales) * 100
     : 0;
-  const monthlyProfit = totalMonthSales - expensesThisMonth.total;
+  const monthlyProfit = totalMonthSales - expensesThisMonth.paidTotal;
   const paymentsReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const totalCredit = invoices.reduce((sum, invoice) => sum + invoice.availableCredit, 0);
   const dueSoon = invoices
@@ -220,7 +227,7 @@ function LandingPage() {
           value={formatCurrency(monthlyProfit)}
           icon={PiggyBank}
           tone={monthlyProfit >= 0 ? "success" : "destructive"}
-          trend={`Sales ${formatCurrency(totalMonthSales)} − Expenses ${formatCurrency(expensesThisMonth.total)}`}
+          trend={`Sales ${formatCurrency(totalMonthSales)} − Paid expenses ${formatCurrency(expensesThisMonth.paidTotal)}`}
           trendDirection={monthlyProfit >= 0 ? "up" : "down"}
         />
         <StatCard
