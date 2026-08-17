@@ -227,7 +227,7 @@ function LandingPage() {
           value={formatCurrency(monthlyProfit)}
           icon={PiggyBank}
           tone={monthlyProfit >= 0 ? "success" : "destructive"}
-          trend={`Sales ${formatCurrency(totalMonthSales)} − Expenses ${formatCurrency(expensesThisMonth.total)}`}
+          trend={`Sales ${formatCurrency(totalMonthSales)} − Paid expenses ${formatCurrency(expensesThisMonth.paidTotal)}`}
           trendDirection={monthlyProfit >= 0 ? "up" : "down"}
         />
         <StatCard
