@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { api } from "@/lib/api";
 import type { OrderStatus } from "@/lib/orders-store";
 import { formatCurrency, formatDate } from "@/lib/format";
