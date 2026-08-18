@@ -79,6 +79,14 @@ function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const canAddUsers = can(user, "users", "add");
+  const [newUser, setNewUser] = useState<{
+    username: string;
+    email: string;
+    password: string;
+    confirm: string;
+    role: AppRole;
+  }>({ username: "", email: "", password: "", confirm: "", role: "sales" });
   const [auditFilter, setAuditFilter] = useState<{ model: string; action: string; search: string }>({
     model: "",
     action: "",
