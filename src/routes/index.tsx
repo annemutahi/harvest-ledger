@@ -205,6 +205,7 @@ function LandingPage() {
 
   return (
     <AppShell
+      showSearch
       title="Dashboard"
       description=""
       actions={
