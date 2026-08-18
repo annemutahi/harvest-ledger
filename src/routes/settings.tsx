@@ -387,6 +387,90 @@ function SettingsPage() {
                 <CardTitle>Team roles &amp; module rights</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {canAddUsers && (
+                  <div className="space-y-4 rounded-md border p-4">
+                    <div>
+                      <p className="text-sm font-medium">Add a team member</p>
+                      <p className="text-xs text-muted-foreground">
+                        Create the account with an initial password. Ask them to change it from
+                        Settings → Password after their first sign-in.
+                      </p>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="new-username">Username</Label>
+                        <Input
+                          id="new-username"
+                          value={newUser.username}
+                          autoComplete="off"
+                          onChange={(e) => setNewUser((s) => ({ ...s, username: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-user-email">Email (optional)</Label>
+                        <Input
+                          id="new-user-email"
+                          type="email"
+                          value={newUser.email}
+                          autoComplete="off"
+                          onChange={(e) => setNewUser((s) => ({ ...s, email: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-user-password">Initial password</Label>
+                        <PasswordInput
+                          id="new-user-password"
+                          value={newUser.password}
+                          autoComplete="new-password"
+                          onChange={(e) => setNewUser((s) => ({ ...s, password: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-user-confirm">Confirm password</Label>
+                        <PasswordInput
+                          id="new-user-confirm"
+                          value={newUser.confirm}
+                          autoComplete="new-password"
+                          onChange={(e) => setNewUser((s) => ({ ...s, confirm: e.target.value }))}
+                        />
+                        <FieldError
+                          message={
+                            newUser.confirm && newUser.confirm !== newUser.password
+                              ? "Passwords do not match."
+                              : undefined
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Role</Label>
+                        <Select
+                          value={newUser.role}
+                          onValueChange={(value) =>
+                            setNewUser((s) => ({ ...s, role: value as AppRole }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(matrixQuery.data?.roles ?? []).map((role) => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <PasswordStrength password={newUser.password} confirm={newUser.confirm} />
+                    <div className="flex justify-end">
+                      <Button onClick={submitNewUser} disabled={createUserMutation.isPending}>
+                        {createUserMutation.isPending ? "Creating…" : "Create user"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
