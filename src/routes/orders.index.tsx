@@ -72,18 +72,23 @@ function OrdersPage() {
               className="pl-9"
             />
           </div>
-          <Button asChild>
-            <Link to="/orders/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New In-person Order
-            </Link>
-          </Button>
         </div>
       }
     >
-
+      <Card className="mt-4 border-dashed">
+        <CardContent className="flex flex-col items-start gap-1 py-6">
+          <Badge variant="outline" className="mb-1">Coming soon</Badge>
+          <p className="text-sm font-medium">Online store orders</p>
+          <p className="text-sm text-muted-foreground">
+            The online shop is still being built. Once it goes live, customer orders will
+            flow into this module automatically as pending, ready for staff to review and
+            update.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card className="mt-4">
+
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
