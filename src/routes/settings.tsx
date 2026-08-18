@@ -79,6 +79,14 @@ function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const canAddUsers = can(user, "users", "add");
+  const [newUser, setNewUser] = useState<{
+    username: string;
+    email: string;
+    password: string;
+    confirm: string;
+    role: AppRole;
+  }>({ username: "", email: "", password: "", confirm: "", role: "sales" });
   const [auditFilter, setAuditFilter] = useState<{ model: string; action: string; search: string }>({
     model: "",
     action: "",
@@ -156,6 +164,42 @@ function SettingsPage() {
     }
     passwordMutation.mutate();
   };
+
+  const createUserMutation = useMutation({
+    mutationFn: () =>
+      api.createUser({
+        username: newUser.username.trim(),
+        email: newUser.email.trim() || undefined,
+        password: newUser.password,
+        role: newUser.role,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-users"] });
+      setNewUser({ username: "", email: "", password: "", confirm: "", role: "sales" });
+      toast.success("User created. Share the initial password with them securely.");
+    },
+    onError: (error: unknown) =>
+      toast.error(
+        error instanceof Error && error.message ? error.message : "Could not create that user.",
+      ),
+  });
+
+  const submitNewUser = () => {
+    if (!newUser.username.trim() || !newUser.password) {
+      toast.error("Username and initial password are required.");
+      return;
+    }
+    if (newUser.password !== newUser.confirm) {
+      toast.error("Initial password and confirmation do not match.");
+      return;
+    }
+    if (!isStrongPassword(newUser.password)) {
+      toast.error("Initial password does not meet all the requirements.");
+      return;
+    }
+    createUserMutation.mutate();
+  };
+
 
 
   return (
@@ -343,6 +387,90 @@ function SettingsPage() {
                 <CardTitle>Team roles &amp; module rights</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {canAddUsers && (
+                  <div className="space-y-4 rounded-md border p-4">
+                    <div>
+                      <p className="text-sm font-medium">Add a team member</p>
+                      <p className="text-xs text-muted-foreground">
+                        Create the account with an initial password. Ask them to change it from
+                        Settings → Password after their first sign-in.
+                      </p>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="new-username">Username</Label>
+                        <Input
+                          id="new-username"
+                          value={newUser.username}
+                          autoComplete="off"
+                          onChange={(e) => setNewUser((s) => ({ ...s, username: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-user-email">Email (optional)</Label>
+                        <Input
+                          id="new-user-email"
+                          type="email"
+                          value={newUser.email}
+                          autoComplete="off"
+                          onChange={(e) => setNewUser((s) => ({ ...s, email: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-user-password">Initial password</Label>
+                        <PasswordInput
+                          id="new-user-password"
+                          value={newUser.password}
+                          autoComplete="new-password"
+                          onChange={(e) => setNewUser((s) => ({ ...s, password: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-user-confirm">Confirm password</Label>
+                        <PasswordInput
+                          id="new-user-confirm"
+                          value={newUser.confirm}
+                          autoComplete="new-password"
+                          onChange={(e) => setNewUser((s) => ({ ...s, confirm: e.target.value }))}
+                        />
+                        <FieldError
+                          message={
+                            newUser.confirm && newUser.confirm !== newUser.password
+                              ? "Passwords do not match."
+                              : undefined
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Role</Label>
+                        <Select
+                          value={newUser.role}
+                          onValueChange={(value) =>
+                            setNewUser((s) => ({ ...s, role: value as AppRole }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(matrixQuery.data?.roles ?? []).map((role) => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <PasswordStrength password={newUser.password} confirm={newUser.confirm} />
+                    <div className="flex justify-end">
+                      <Button onClick={submitNewUser} disabled={createUserMutation.isPending}>
+                        {createUserMutation.isPending ? "Creating…" : "Create user"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
