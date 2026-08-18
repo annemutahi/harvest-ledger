@@ -12,10 +12,11 @@ interface AppShellProps {
   title: string;
   description?: string;
   actions?: ReactNode;
+  showSearch?: boolean;
   children: ReactNode;
 }
 
-export function AppShell({ title, description, actions, children }: AppShellProps) {
+export function AppShell({ title, description, actions, showSearch = false, children }: AppShellProps) {
   const { user } = useAuth();
   const initials = user?.username
     ? user.username
