@@ -1,12 +1,22 @@
 import { type ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
-import { Bell } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import GlobalSearch from "./global-search";
+import NotificationBell from "./notification-bell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
+
 
 interface AppShellProps {
   title: string;
