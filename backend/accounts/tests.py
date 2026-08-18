@@ -1,5 +1,6 @@
 """Role-based access tests for user management endpoints."""
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from .models import UserRole
@@ -15,6 +16,7 @@ def make_user(username, role):
     return user
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class UserManagementAccessTests(APITestCase):
     def setUp(self):
         self.users = {
