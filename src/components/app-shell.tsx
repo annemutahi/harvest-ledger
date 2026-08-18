@@ -12,10 +12,11 @@ interface AppShellProps {
   title: string;
   description?: string;
   actions?: ReactNode;
+  showSearch?: boolean;
   children: ReactNode;
 }
 
-export function AppShell({ title, description, actions, children }: AppShellProps) {
+export function AppShell({ title, description, actions, showSearch = false, children }: AppShellProps) {
   const { user } = useAuth();
   const initials = user?.username
     ? user.username
@@ -33,10 +34,13 @@ export function AppShell({ title, description, actions, children }: AppShellProp
         <div className="flex flex-1 flex-col min-w-0">
           <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur md:px-6">
             <SidebarTrigger className="shrink-0" />
-            <div className="relative hidden flex-1 max-w-md md:block">
-              <GlobalSearch />
-            </div>
+            {showSearch && (
+              <div className="relative hidden flex-1 max-w-md md:block">
+                <GlobalSearch />
+              </div>
+            )}
             <div className="ml-auto flex items-center gap-2">
+
               <Button variant="ghost" size="icon" aria-label="Notifications">
                 <Bell className="h-4 w-4" />
               </Button>

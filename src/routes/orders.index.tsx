@@ -62,17 +62,8 @@ function OrdersPage() {
       title="Orders"
       description={`${orders.length} total • ${pendingCount} pending`}
       actions={
-        <Button asChild>
-          <Link to="/orders/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New In-person Order
-          </Link>
-        </Button>
-      }
-    >
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-72">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search reference, customer, or status"
@@ -81,8 +72,16 @@ function OrdersPage() {
               className="pl-9"
             />
           </div>
-        </CardContent>
-      </Card>
+          <Button asChild>
+            <Link to="/orders/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New In-person Order
+            </Link>
+          </Button>
+        </div>
+      }
+    >
+
 
       <Card className="mt-4">
         <CardContent className="p-0">
