@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { PaidBadge } from "@/components/status-badge";
 import { StatCard } from "@/components/stat-card";
-import { Plus, ShoppingBag, Truck, Trash2, Receipt, CheckCircle2, AlertCircle } from "lucide-react";
+import { Search, Plus, ShoppingBag, Truck, Trash2, Receipt, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { FieldError } from "@/components/field-error";
 import {
@@ -98,6 +98,9 @@ function PurchasesPage() {
       .reduce((s, p) => s + p.total, 0);
   }, [purchases]);
 
+  const [q, setQ] = useState("");
+  const query = q.trim().toLowerCase();
+
   const yearTotal = useMemo(
     () =>
       purchases
@@ -117,8 +120,26 @@ function PurchasesPage() {
   }, [purchases]);
 
 
+  const filteredPurchases = useMemo(() => {
+    if (!query) return purchases;
+    return purchases.filter((p) =>
+      `${p.supplierName ?? ""} ${p.category ?? ""} ${p.item ?? ""} ${p.notes ?? ""}`
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [purchases, query]);
+
+  const filteredSuppliers = useMemo(() => {
+    if (!query) return suppliers;
+    return suppliers.filter((s) =>
+      `${s.name ?? ""} ${s.contactPerson ?? ""} ${s.phone ?? ""} ${s.email ?? ""}`
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [suppliers, query]);
+
   const purchasesView = useTableView({
-    data: purchases,
+    data: filteredPurchases,
     accessors: {
       date: (p: Purchase) => p.date,
       supplierName: (p: Purchase) => p.supplierName || "",
@@ -142,7 +163,7 @@ function PurchasesPage() {
   }, [purchases]);
 
   const suppliersView = useTableView({
-    data: suppliers,
+    data: filteredSuppliers,
     accessors: {
       name: (s: Supplier) => s.name,
       contact: (s: Supplier) => s.contactPerson || "",
@@ -156,7 +177,11 @@ function PurchasesPage() {
     <AppShell
       title="Purchases"
       actions={
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search supplier, item or category" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
+          </div>
           <NewSupplierDialog onCreated={invalidate} />
           <NewPurchaseDialog suppliers={suppliers} onCreated={invalidate} />
         </div>

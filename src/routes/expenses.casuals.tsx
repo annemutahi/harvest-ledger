@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { StatCard } from "@/components/stat-card";
 import { PaidBadge } from "@/components/status-badge";
-import { Plus, HardHat, Users, Wallet, Trash2, Check, Download, Pencil, X, CheckCircle2 } from "lucide-react";
+import { Search, Plus, HardHat, Users, Wallet, Trash2, Check, Download, Pencil, X, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { FieldError } from "@/components/field-error";
 import {
@@ -101,13 +101,27 @@ function CasualsPage() {
   const [toDate, setToDate] = useState("");
   const [editing, setEditing] = useState<ApiCasualWage | null>(null);
 
+  const [q, setQ] = useState("");
+  const query = q.trim().toLowerCase();
+
   const filteredLogs = useMemo(() => {
     return logs.filter((w) => {
       if (fromDate && w.date < fromDate) return false;
       if (toDate && w.date > toDate) return false;
+      if (query) {
+        const hay = `${w.workerName ?? ""} ${w.task ?? ""} ${w.notes ?? ""}`.toLowerCase();
+        if (!hay.includes(query)) return false;
+      }
       return true;
     });
-  }, [logs, fromDate, toDate]);
+  }, [logs, fromDate, toDate, query]);
+
+  const filteredWorkers = useMemo(() => {
+    if (!query) return workers;
+    return workers.filter((w) =>
+      `${w.name ?? ""} ${w.phone ?? ""}`.toLowerCase().includes(query),
+    );
+  }, [workers, query]);
 
   const unpaidTotal = useMemo(
     () => logs.filter((w) => !w.paid).reduce((s, w) => s + w.total, 0),
@@ -123,7 +137,11 @@ function CasualsPage() {
     <AppShell
       title="Casuals"
       actions={
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search worker, area or notes" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
+          </div>
           <NewWorkerDialog onCreated={invalidate} />
           <NewLogDialog workers={workers} onCreated={invalidate} />
         </div>
@@ -312,7 +330,7 @@ function CasualsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {workers.map((w) => (
+                  {filteredWorkers.map((w) => (
                     <TableRow key={w.id}>
                       <TableCell className="font-medium">{w.name}</TableCell>
                       <TableCell>{w.phone ?? "—"}</TableCell>
