@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .roles import ROLE_CHOICES, has_perm, permissions_for, role_for
+from .roles import ADMIN, MANAGER, ROLE_CHOICES, has_perm, permissions_for, role_for
 
 User = get_user_model()
 

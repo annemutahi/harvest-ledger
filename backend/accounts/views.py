@@ -8,7 +8,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .permissions import module_permission
 from .security import clear_failures, lock_seconds_remaining, register_failure
 from .roles import MODULES, ROLE_CHOICES, ROLE_MATRIX
-from .serializers import LoginSerializer, UserRoleWriteSerializer, UserSerializer
+from .serializers import (
+    LoginSerializer,
+    UserCreateSerializer,
+    UserRoleWriteSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 
@@ -75,6 +80,7 @@ def role_matrix(request):
 
 
 class UserViewSet(
+    mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
@@ -88,6 +94,8 @@ class UserViewSet(
     ordering_fields = ["username"]
 
     def get_serializer_class(self):
+        if self.request.method == "POST":
+            return UserCreateSerializer
         if self.request.method in ("PUT", "PATCH"):
             return UserRoleWriteSerializer
         return UserSerializer
