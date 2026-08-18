@@ -935,6 +935,14 @@ export const api = {
   setUserRole: async (id: number | string, role: AppRole): Promise<AuthUser> =>
     request(`/auth/users/${id}/`, { method: "PATCH", body: JSON.stringify({ role }) }),
 
+  createUser: async (payload: {
+    username: string;
+    email?: string;
+    password: string;
+    role: AppRole;
+  }): Promise<AuthUser> =>
+    request("/auth/users/", { method: "POST", body: JSON.stringify(payload) }),
+
   roleMatrix: async (): Promise<RoleMatrixResponse> => request("/auth/roles/"),
 };
 
