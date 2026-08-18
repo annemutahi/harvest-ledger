@@ -45,28 +45,28 @@ function InvoicesPage() {
   });
 
   return (
-    <AppShell title="Invoices">
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search by invoice # or customer" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
-            </div>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Partially Paid">Partially Paid</SelectItem>
-                <SelectItem value="Unpaid">Unpaid</SelectItem>
-                <SelectItem value="Overdue">Overdue</SelectItem>
-                <SelectItem value="Credit">Credit</SelectItem>
-              </SelectContent>
-            </Select>
+    <AppShell
+      title="Invoices"
+      actions={
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search by invoice # or customer" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
           </div>
-        </CardContent>
-      </Card>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-full sm:w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="Paid">Paid</SelectItem>
+              <SelectItem value="Partially Paid">Partially Paid</SelectItem>
+              <SelectItem value="Unpaid">Unpaid</SelectItem>
+              <SelectItem value="Overdue">Overdue</SelectItem>
+              <SelectItem value="Credit">Credit</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      }
+    >
       <Card className="mt-4">
         <CardContent className="p-0">
           <div className="overflow-x-auto">

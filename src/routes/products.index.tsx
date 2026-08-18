@@ -122,45 +122,45 @@ function ProductsPage() {
   }
 
   return (
-    <AppShell title="Products">
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search by name or category" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
-            </div>
-            <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-              <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Add Product</Button></DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
-                <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
-                  <div className="grid gap-2"><Label>Product Name</Label>
-                    <Input required value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2"><Label>Category</Label>
-                    <Input required value={form.category ?? ""} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2"><Label>Unit Price</Label>
-                      <Input type="number" value={String(form.unitPrice ?? "")} onChange={(e) => setForm({ ...form, unitPrice: Number(e.target.value) || 0 })} />
-                    </div>
-                    <div className="grid gap-2"><Label>Available Quantity</Label>
-                      <Input type="number" value={String(form.availableQuantity ?? "")} onChange={(e) => setForm({ ...form, availableQuantity: Number(e.target.value) || 0 })} />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" type="button" onClick={() => setOpenAdd(false)}>Cancel</Button>
-                    <Button type="submit" disabled={createMutation.isPending}>
-                      {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Product
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+    <AppShell
+      title="Products"
+      actions={
+  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+    <div className="relative w-full sm:w-64">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input placeholder="Search by name or category" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
+    </div>
+    <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+      <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Add Product</Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
+        <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
+          <div className="grid gap-2"><Label>Product Name</Label>
+            <Input required value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
-        </CardContent>
-      </Card>
+          <div className="grid gap-2"><Label>Category</Label>
+            <Input required value={form.category ?? ""} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2"><Label>Unit Price</Label>
+              <Input type="number" value={String(form.unitPrice ?? "")} onChange={(e) => setForm({ ...form, unitPrice: Number(e.target.value) || 0 })} />
+            </div>
+            <div className="grid gap-2"><Label>Available Quantity</Label>
+              <Input type="number" value={String(form.availableQuantity ?? "")} onChange={(e) => setForm({ ...form, availableQuantity: Number(e.target.value) || 0 })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => setOpenAdd(false)}>Cancel</Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Product
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  </div>
+      }
+    >
 
       {/* Inventory summary */}
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
