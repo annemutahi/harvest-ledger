@@ -355,38 +355,29 @@ function ReportsPage() {
     <AppShell
       title="Reports & Analytics"
       actions={
-        <Button variant="outline" onClick={handlePrint}>
-          <Printer className="mr-2 h-4 w-4" /> Print
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Select value={String(month)} onValueChange={(v) => setMonth(v === "all" ? "all" : Number(v))}>
+            <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Whole year</SelectItem>
+              {MONTHS.map((m, i) => (<SelectItem key={m} value={String(i)}>{m}</SelectItem>))}
+            </SelectContent>
+          </Select>
+          <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+            <SelectTrigger className="w-full sm:w-28"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
+        </div>
       }
     >
 
       <div className="print-document">
-        <Card className="print:hidden">
-          <CardContent className="py-3">
-            <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-              <div className="grid gap-1">
-                <Label className="text-xs text-muted-foreground">Month</Label>
-                <Select value={String(month)} onValueChange={(v) => setMonth(v === "all" ? "all" : Number(v))}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Whole year</SelectItem>
-                    {MONTHS.map((m, i) => (<SelectItem key={m} value={String(i)}>{m}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs text-muted-foreground">Year</Label>
-                <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {yearOptions.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
 
         <Tabs defaultValue="sales" className="mt-6">
           <TabsList className="flex flex-wrap print:hidden">
