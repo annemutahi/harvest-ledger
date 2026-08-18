@@ -157,6 +157,42 @@ function SettingsPage() {
     passwordMutation.mutate();
   };
 
+  const createUserMutation = useMutation({
+    mutationFn: () =>
+      api.createUser({
+        username: newUser.username.trim(),
+        email: newUser.email.trim() || undefined,
+        password: newUser.password,
+        role: newUser.role,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-users"] });
+      setNewUser({ username: "", email: "", password: "", confirm: "", role: "sales" });
+      toast.success("User created. Share the initial password with them securely.");
+    },
+    onError: (error: unknown) =>
+      toast.error(
+        error instanceof Error && error.message ? error.message : "Could not create that user.",
+      ),
+  });
+
+  const submitNewUser = () => {
+    if (!newUser.username.trim() || !newUser.password) {
+      toast.error("Username and initial password are required.");
+      return;
+    }
+    if (newUser.password !== newUser.confirm) {
+      toast.error("Initial password and confirmation do not match.");
+      return;
+    }
+    if (!isStrongPassword(newUser.password)) {
+      toast.error("Initial password does not meet all the requirements.");
+      return;
+    }
+    createUserMutation.mutate();
+  };
+
+
 
   return (
     <AppShell
