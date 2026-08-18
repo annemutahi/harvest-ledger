@@ -89,7 +89,16 @@ function TransactionsPage() {
     <AppShell
       title="Transactions"
       actions={
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by customer, invoice, or method"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           <Button asChild>
             <Link to="/sales/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -105,19 +114,7 @@ function TransactionsPage() {
         </div>
       }
     >
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by customer, invoice, or method"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </CardContent>
-      </Card>
+
 
       <Tabs defaultValue="sales" className="mt-4">
         <TabsList>
