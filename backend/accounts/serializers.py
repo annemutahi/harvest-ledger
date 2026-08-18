@@ -75,6 +75,57 @@ class UserRoleWriteSerializer(UserSerializer):
         return instance
 
 
+class UserCreateSerializer(serializers.ModelSerializer):
+    """Admin-facing serializer to create a team member with an initial password."""
+
+    password = serializers.CharField(write_only=True)
+    role = serializers.ChoiceField(choices=[c[0] for c in ROLE_CHOICES])
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "password", "role"]
+
+    def validate_username(self, value):
+        value = (value or "").strip()
+        if not value:
+            raise serializers.ValidationError("Username is required.")
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("That username is already taken.")
+        return value
+
+    def validate_email(self, value):
+        value = (value or "").strip()
+        if value and User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("That email is already in use.")
+        return value
+
+    def validate_password(self, value):
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        try:
+            validate_password(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(list(exc.messages))
+        return value
+
+    def create(self, validated_data):
+        from .models import UserRole
+
+        role = validated_data.pop("role")
+        password = validated_data.pop("password")
+        user = User(**validated_data)
+        # Managers/Admins keep Django admin access parity with their app role.
+        user.is_staff = role in (ADMIN, MANAGER)
+        user.set_password(password)
+        user.save()
+        UserRole.objects.update_or_create(user=user, defaults={"role": role})
+        return user
+
+    def to_representation(self, instance):
+        return UserSerializer(instance).data
+
+
 class LoginSerializer(TokenObtainPairSerializer):
     """Adds the user payload to the /auth/login/ response."""
 
