@@ -16,7 +16,8 @@ const dot: Record<string, string> = {
 };
 
 export function NotificationBell() {
-  const { notifications, unreadCount, isRead, markAllRead, markRead } = useNotifications();
+  const { notifications, unreadCount, isRead, markAllRead, markRead, dismiss } =
+    useNotifications();
 
   return (
     <DropdownMenu>
