@@ -54,7 +54,7 @@ class DashboardSummaryTests(APITestCase):
         self.assertEqual(data["expenses"]["wages_paid"], 300.0)
         self.assertEqual(data["expenses"]["paid_total"], 500.0)
         # 1000 sales - 500 paid expenses; the unpaid 500 purchase is excluded.
-        self.assertEqual(data["profit"], data["total_sales"] - 500.0)
+        self.assertEqual(data["profit"], data["sales"]["total"] - 500.0)
 
     def test_summary_requires_authentication(self):
         self.client.force_authenticate(None)
