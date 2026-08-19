@@ -129,3 +129,111 @@ class PaymentApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotIn("credit_applied", response.data)
         self.assertNotIn("available_credit", response.data)
+
+
+class VoidTests(APITestCase):
+    """Voiding reverses money and stock, and is one-way."""
+
+    def setUp(self):
+        from accounts.models import UserRole
+
+        self.manager = get_user_model().objects.create_user(
+            username="void-mgr", password="Str0ng!Passw0rd#26",
+        )
+        UserRole.objects.create(user=self.manager, role="manager")
+        self.viewer = get_user_model().objects.create_user(
+            username="void-viewer", password="Str0ng!Passw0rd#26",
+        )
+        UserRole.objects.create(user=self.viewer, role="viewer")
+        self.customer = Customer.objects.create(name="Void customer")
+        self.invoice = Invoice.objects.create(
+            invoice_number="INV-VOID-1", customer=self.customer,
+            due_date=timezone.localdate(), total_amount=Decimal("100.00"),
+        )
+        self.client.force_authenticate(self.manager)
+
+    def _payment(self, amount="40.00"):
+        res = self.client.post(reverse("api:payments-list"), {
+            "invoice": self.invoice.id, "customer": self.customer.id,
+            "amount": amount, "method": "cash",
+        }, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        return res.data["id"]
+
+    def test_voiding_a_payment_restores_the_invoice_balance(self):
+        payment_id = self._payment("40.00")
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.amount_paid, Decimal("40.00"))
+
+        res = self.client.post(
+            reverse("api:payments-detail", args=[payment_id]) + "void/",
+            {"reason": "Recorded against the wrong invoice"}, format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.amount_paid, Decimal("0.00"))
+        self.assertEqual(self.invoice.status, Invoice.UNPAID)
+
+        payment = Payment.objects.get(id=payment_id)
+        self.assertIsNotNone(payment.voided_at)
+        self.assertEqual(payment.voided_by, self.manager)
+
+    def test_a_payment_cannot_be_voided_twice(self):
+        payment_id = self._payment()
+        url = reverse("api:payments-detail", args=[payment_id]) + "void/"
+        self.client.post(url, {"reason": "Duplicate entry"}, format="json")
+        res = self.client.post(url, {"reason": "Duplicate entry"}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invoice_with_live_payments_cannot_be_voided(self):
+        self._payment()
+        res = self.client.post(
+            reverse("api:invoices-detail", args=[self.invoice.id]) + "void/",
+            {"reason": "Issued in error"}, format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.invoice.refresh_from_db()
+        self.assertFalse(self.invoice.is_voided)
+
+    def test_voiding_an_invoice_returns_stock_and_blocks_edits(self):
+        product = Product.objects.create(
+            name="Void product", unit_price=Decimal("100.00"),
+            available_quantity=Decimal("9.00"),
+        )
+        sale = Sale.objects.create(
+            invoice=self.invoice, customer=self.customer,
+            payment_type=Sale.CREDIT, total=Decimal("100.00"),
+        )
+        SaleItem.objects.create(
+            sale=sale, product=product, product_name=product.name,
+            quantity=Decimal("1.00"), unit_price=Decimal("100.00"),
+        )
+
+        res = self.client.post(
+            reverse("api:invoices-detail", args=[self.invoice.id]) + "void/",
+            {"reason": "Customer cancelled the order"}, format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        product.refresh_from_db()
+        self.invoice.refresh_from_db()
+        self.assertEqual(product.available_quantity, Decimal("10.00"))
+        self.assertTrue(self.invoice.is_voided)
+        self.assertEqual(self.invoice.void_reason, "Customer cancelled the order")
+
+        edit = self.client.put(reverse("api:invoices-detail", args=[self.invoice.id]), {
+            "invoice_number": self.invoice.invoice_number,
+            "customer": self.customer.id,
+            "due_date": str(timezone.localdate()),
+            "total_amount": "50.00",
+        }, format="json")
+        self.assertEqual(edit.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_void_requires_a_reason_and_manager_rights(self):
+        payment_id = self._payment()
+        url = reverse("api:payments-detail", args=[payment_id]) + "void/"
+        self.assertEqual(self.client.post(url, {}, format="json").status_code,
+                         status.HTTP_400_BAD_REQUEST)
+
+        self.client.force_authenticate(self.viewer)
+        res = self.client.post(url, {"reason": "Not allowed"}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
