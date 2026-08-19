@@ -121,7 +121,7 @@ class CasualWageTests(APITestCase):
             worker=self.worker, worker_name="Otieno", date=date.today(),
             days_worked=1, rate_per_day=Decimal("500.00"), total=Decimal("500.00"),
         )
-        res = self.client.post(f"/api/casual-wages/{wage.id}/set-paid/", {"paid": True}, format="json")
+        res = self.client.post(f"/api/casual-wages/{wage.id}/mark-paid/", {"paid": True}, format="json")
         self.assertEqual(res.status_code, 200, res.content)
         wage.refresh_from_db()
         self.assertTrue(wage.paid)
