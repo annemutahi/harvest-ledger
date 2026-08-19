@@ -14,6 +14,7 @@ api_v1 = [
     path("search/", search_views.global_search),
     path("reports/", include("reports.urls")),
     path("audit/", include("audit.urls")),
+    path("notifications/", include("notifications.urls")),
     path("public/", include("orders.public_urls")),
 ]
 

@@ -7,6 +7,7 @@ DJANGO_SECRET_KEY, DJANGO_ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, DATABASE_URL.
 
 from __future__ import annotations
 
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     "expenses",
     "orders",
     "reports",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -197,6 +199,13 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+# The test client speaks plain HTTP; an SSL redirect would turn every request
+# into a 301 and make the suite meaningless.
+if "test" in sys.argv:
+    SECURE_SSL_REDIRECT = False
+
+
 
 # --- Webhook ---
 ORDERS_WEBHOOK_SECRET = env("ORDERS_WEBHOOK_SECRET", default="")

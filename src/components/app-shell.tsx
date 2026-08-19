@@ -1,12 +1,22 @@
 import { type ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
-import { Bell } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import GlobalSearch from "./global-search";
+import NotificationBell from "./notification-bell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
+
 
 interface AppShellProps {
   title: string;
@@ -17,7 +27,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ title, description, actions, showSearch = false, children }: AppShellProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const initials = user?.username
     ? user.username
         .split(/\s+/)
@@ -40,19 +50,36 @@ export function AppShell({ title, description, actions, showSearch = false, chil
               </div>
             )}
             <div className="ml-auto flex items-center gap-2">
-
-              <Button variant="ghost" size="icon" aria-label="Notifications">
-                <Bell className="h-4 w-4" />
-              </Button>
-              <Button asChild variant="ghost" size="icon" aria-label="Profile settings">
-                <Link to="/settings">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
-                  </Avatar>
-                </Link>
-              </Button>
+              <NotificationBell />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="Account menu">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel className="truncate">
+                    {user?.username ?? "Account"}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => void logout()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
+
           <main className="flex-1 px-4 py-6 md:px-6 md:py-8">
             <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
               <div className="min-w-0">
