@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,8 @@ const dot: Record<string, string> = {
 };
 
 export function NotificationBell() {
-  const { notifications, unreadCount, isRead, markAllRead, markRead } = useNotifications();
+  const { notifications, unreadCount, isRead, markAllRead, markRead, dismiss } =
+    useNotifications();
 
   return (
     <DropdownMenu>
@@ -50,21 +51,29 @@ export function NotificationBell() {
             </p>
           )}
           {notifications.map((n) => (
-            <Link
+            <div
               key={n.id}
-              to={n.to}
-              onClick={() => markRead(n.id)}
               className={cn(
-                "flex gap-2 border-b px-3 py-2.5 last:border-b-0 hover:bg-muted/60",
+                "group relative border-b last:border-b-0 hover:bg-muted/60",
                 !isRead(n.id) && "bg-muted/30",
               )}
             >
-              <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", dot[n.severity])} />
-              <span className="min-w-0">
-                <span className="block text-sm font-medium leading-tight">{n.title}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">{n.message}</span>
-              </span>
-            </Link>
+              <Link to={n.to} onClick={() => markRead(n.id)} className="flex gap-2 px-3 py-2.5 pr-8">
+                <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", dot[n.severity])} />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium leading-tight">{n.title}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{n.message}</span>
+                </span>
+              </Link>
+              <button
+                type="button"
+                aria-label="Dismiss notification"
+                onClick={() => dismiss(n.id)}
+                className="absolute right-2 top-2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
           ))}
         </div>
       </DropdownMenuContent>

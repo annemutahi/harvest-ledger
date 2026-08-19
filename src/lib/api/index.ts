@@ -850,6 +850,26 @@ export const api = {
       }),
     ),
 
+  // ---------- Notifications (in-app only) — /api/notifications/ ----------
+  getNotificationState: async (): Promise<{ read: string[]; dismissed: string[] }> => {
+    const r = await request<any>("/notifications/state/");
+    return { read: r?.read ?? [], dismissed: r?.dismissed ?? [] };
+  },
+  markNotificationsRead: async (keys: string[]): Promise<{ read: string[]; dismissed: string[] }> => {
+    const r = await request<any>("/notifications/read/", {
+      method: "POST",
+      body: JSON.stringify({ keys }),
+    });
+    return { read: r?.read ?? [], dismissed: r?.dismissed ?? [] };
+  },
+  dismissNotifications: async (keys: string[]): Promise<{ read: string[]; dismissed: string[] }> => {
+    const r = await request<any>("/notifications/dismiss/", {
+      method: "POST",
+      body: JSON.stringify({ keys }),
+    });
+    return { read: r?.read ?? [], dismissed: r?.dismissed ?? [] };
+  },
+
   // ---------- Stock (daily produce entries) — /api/stock/ ----------
   listStockEntries: async (params?: { from?: string; to?: string }): Promise<ApiStockEntry[]> =>
     unwrap<any>(await request(`/stock/${buildRange(params)}`)).map(mapStockEntry),

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 
@@ -142,41 +142,99 @@ export function useNotifications() {
     [invoices.data, products.data, stock.data, purchases.data, orders.data],
   );
 
-  const [read, setRead] = useState<string[]>([]);
+  // Read/dismissed state is persisted per user on the server so the bell
+  // behaves the same on every device; localStorage is only an offline cache.
+  const queryClient = useQueryClient();
+  const state = useQuery({
+    queryKey: ["notification-state"],
+    queryFn: () => api.getNotificationState(),
+    staleTime: 30_000,
+  });
+
+  const [local, setLocal] = useState<{ read: string[]; dismissed: string[] }>({
+    read: [],
+    dismissed: [],
+  });
+
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(READ_KEY);
-      if (raw) setRead(JSON.parse(raw) as string[]);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setLocal({ read: parsed as string[], dismissed: [] });
+        else if (parsed && typeof parsed === "object")
+          setLocal({ read: parsed.read ?? [], dismissed: parsed.dismissed ?? [] });
+      }
     } catch {
       /* ignore */
     }
   }, []);
 
-  const persist = useCallback((ids: string[]) => {
-    setRead(ids);
+  const persistLocal = useCallback((next: { read: string[]; dismissed: string[] }) => {
+    setLocal(next);
     try {
-      window.localStorage.setItem(READ_KEY, JSON.stringify(ids));
+      window.localStorage.setItem(READ_KEY, JSON.stringify(next));
     } catch {
       /* ignore */
     }
   }, []);
 
-  const unread = notifications.filter((n) => !read.includes(n.id));
-  const markAllRead = useCallback(
-    () => persist(notifications.map((n) => n.id)),
-    [notifications, persist],
+  useEffect(() => {
+    if (state.data) persistLocal(state.data);
+  }, [state.data, persistLocal]);
+
+  const readIds = state.data?.read ?? local.read;
+  const dismissedIds = state.data?.dismissed ?? local.dismissed;
+
+  const push = useCallback(
+    async (keys: string[], mode: "read" | "dismiss") => {
+      if (keys.length === 0) return;
+      const next = {
+        read: Array.from(new Set([...readIds, ...keys])),
+        dismissed:
+          mode === "dismiss" ? Array.from(new Set([...dismissedIds, ...keys])) : dismissedIds,
+      };
+      persistLocal(next);
+      queryClient.setQueryData(["notification-state"], next);
+      try {
+        const server =
+          mode === "dismiss"
+            ? await api.dismissNotifications(keys)
+            : await api.markNotificationsRead(keys);
+        queryClient.setQueryData(["notification-state"], server);
+        persistLocal(server);
+      } catch {
+        /* stay with the optimistic local state */
+      }
+    },
+    [readIds, dismissedIds, persistLocal, queryClient],
   );
-  const markRead = useCallback(
-    (id: string) => persist(Array.from(new Set([...read, id]))),
-    [read, persist],
+
+  const visible = useMemo(
+    () => notifications.filter((n) => !dismissedIds.includes(n.id)),
+    [notifications, dismissedIds],
+  );
+  const unread = visible.filter((n) => !readIds.includes(n.id));
+
+  const markAllRead = useCallback(
+    () => void push(visible.map((n) => n.id), "read"),
+    [visible, push],
+  );
+  const markRead = useCallback((id: string) => void push([id], "read"), [push]);
+  const dismiss = useCallback((id: string) => void push([id], "dismiss"), [push]);
+  const dismissAll = useCallback(
+    () => void push(visible.map((n) => n.id), "dismiss"),
+    [visible, push],
   );
 
   return {
-    notifications,
+    notifications: visible,
     unreadCount: unread.length,
-    isRead: (id: string) => read.includes(id),
+    isRead: (id: string) => readIds.includes(id),
     markAllRead,
     markRead,
+    dismiss,
+    dismissAll,
     isLoading: invoices.isLoading || products.isLoading || orders.isLoading,
   };
 }
