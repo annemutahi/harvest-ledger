@@ -155,7 +155,7 @@ function SettingsPage() {
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error("New password and confirmation do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
     if (!isStrongPassword(newPassword)) {
@@ -205,7 +205,6 @@ function SettingsPage() {
   return (
     <AppShell
       title="Profile Settings"
-      description="Manage your account details, password, photo, and notification preferences."
     >
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList className="flex flex-wrap">
