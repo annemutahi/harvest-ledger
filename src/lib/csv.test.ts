@@ -8,7 +8,7 @@ describe("toCsv", () => {
 
   it("escapes commas, quotes and newlines", () => {
     const csv = toCsv(["desc"], [['Maize, 2kg "premium"'], ["line1\nline2"]]);
-    expect(csv).toBe('desc\n"Maize, 2kg ""premium""","line1\nline2"');
+    expect(csv).toBe('desc\n"Maize, 2kg ""premium"""\n"line1\nline2"');
   });
 
   it("renders null/undefined as empty cells", () => {
