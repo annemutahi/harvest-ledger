@@ -7,6 +7,7 @@ DJANGO_SECRET_KEY, DJANGO_ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, DATABASE_URL.
 
 from __future__ import annotations
 
+import sys
 from datetime import timedelta
 from pathlib import Path
 
