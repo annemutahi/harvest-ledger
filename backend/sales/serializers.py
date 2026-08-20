@@ -63,10 +63,10 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "outstanding_balance", "status", "items", "sale_id",
             "payment_type", "adjustments", "credit_applied", "available_credit",
             "credit_uses",
-            "etims_number", "created_at",
+            "etims_number", "store_name", "created_at",
             "is_voided", "voided_at", "voided_by_name", "void_reason",
         ]
-        read_only_fields = [f for f in fields if f != "etims_number"]
+        read_only_fields = [f for f in fields if f not in ("etims_number", "store_name")]
 
     def get_voided_by_name(self, obj):
         user = obj.voided_by
@@ -126,13 +126,14 @@ class SaleSerializer(serializers.ModelSerializer):
     due_date = serializers.DateField(write_only=True, required=False)
     invoice_date = serializers.DateField(write_only=True, required=False)
     adjustment_note = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    store_name = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=120)
 
     class Meta:
         model = Sale
         fields = [
             "id", "invoice", "invoice_number", "customer", "customer_name",
             "date", "payment_type", "total", "status", "items",
-            "due_date", "invoice_date", "adjustment_note", "created_at",
+            "due_date", "invoice_date", "adjustment_note", "store_name", "created_at",
         ]
         read_only_fields = ["invoice", "total", "created_at"]
 
@@ -190,6 +191,7 @@ class SaleSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         items = validated_data.pop("items")
+        store_name = (validated_data.pop("store_name", "") or "").strip()
         due_date = validated_data.pop("due_date", None)
         invoice_date = validated_data.pop("invoice_date", validated_data.get("date"))
         total = sum(Decimal(i["quantity"]) * Decimal(i["unit_price"]) for i in items)
@@ -216,6 +218,7 @@ class SaleSerializer(serializers.ModelSerializer):
             due_date=due_date or timezone.localdate(),
             total_amount=total,
             amount_paid=(total if validated_data.get("payment_type") == Sale.CASH else applied_credit),
+            store_name=store_name,
         )
         invoice.recompute_status()
         invoice.save(update_fields=["status", "amount_paid"])
