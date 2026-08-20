@@ -238,7 +238,10 @@ function InvoiceDetail() {
           <Button variant="outline" asChild><Link to="/invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
           {!editing && canEdit && (
-            <Button onClick={startEdit}><Pencil className="mr-2 h-4 w-4" />Edit items</Button>
+            <Button variant="outline" onClick={() => startEdit("prices")}><Pencil className="mr-2 h-4 w-4" />Adjust prices</Button>
+          )}
+          {!editing && canEdit && (
+            <Button onClick={() => startEdit("items")}><Pencil className="mr-2 h-4 w-4" />Edit items</Button>
           )}
           {!editing && mayVoid && !invoice.isVoided && (
             <VoidDialog
