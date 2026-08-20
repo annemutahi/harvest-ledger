@@ -124,7 +124,11 @@ function InvoiceDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Could not void this payment"),
   });
 
-  const startEdit = () => {
+  const [mode, setMode] = useState<"items" | "prices">("items");
+  const pricesOnly = mode === "prices";
+
+  const startEdit = (nextMode: "items" | "prices" = "items") => {
+    setMode(nextMode);
     setLines(
       (invoice.items as SaleItem[]).map((it) => ({
         productId: it.productId,
