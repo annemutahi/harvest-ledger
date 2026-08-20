@@ -283,7 +283,7 @@ function InvoiceDetail() {
                   <span className="font-medium uppercase text-muted-foreground">Due</span>
                   <span>{formatDate(invoice.dueDate)}</span>
                 </div>
-                <div className="mt-2 border-t pt-2">
+                <div className={`mt-2 border-t pt-2${invoice.etimsNumber ? "" : " print:hidden"}`}>
                   <p className="text-xs font-medium uppercase text-muted-foreground">KRA eTIMS No.</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
                     <Input
@@ -302,10 +302,13 @@ function InvoiceDetail() {
                       {saveEtims.isPending ? "Saving…" : "Save"}
                     </Button>
                   </div>
-                  <p className="mt-1 hidden min-h-5 border-b border-dotted text-sm font-medium print:block">
-                    {invoice.etimsNumber || ""}
-                  </p>
+                  {invoice.etimsNumber ? (
+                    <p className="mt-1 hidden min-h-5 border-b border-dotted text-sm font-medium print:block">
+                      {invoice.etimsNumber}
+                    </p>
+                  ) : null}
                 </div>
+
               </div>
               <div className="flex flex-col justify-between gap-3">
                 <div className="rounded-lg border border-primary/40 bg-background p-3">
