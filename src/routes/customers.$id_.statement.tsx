@@ -136,11 +136,13 @@ function StatementPage() {
 
   const slug = customer.name.replace(/\s+/g, "-").toLowerCase();
 
+  const storeLabel = (inv: { storeName?: string }) => (inv.storeName ? `${inv.storeName} — ` : "");
+
   const tableRows = rows.flatMap((r) => {
     const row: (string | number)[] = [
       r.invoice.invoiceDate,
       r.invoice.invoiceNumber,
-      itemDescription(r.invoice),
+      storeLabel(r.invoice) + itemDescription(r.invoice),
       r.invoice.etimsNumber || "",
       r.invoice.totalAmount,
       r.status,
@@ -285,7 +287,12 @@ function StatementPage() {
                 <tr className="border-b border-foreground/20">
                   <td className="border-r border-foreground/40 px-2 py-1 text-right">{formatDate(r.invoice.invoiceDate)}</td>
                   <td className="border-r border-foreground/40 px-2 py-1 text-right">{r.invoice.invoiceNumber}</td>
-                  <td className="border-r border-foreground/40 px-2 py-1">{itemDescription(r.invoice)}</td>
+                  <td className="border-r border-foreground/40 px-2 py-1">
+                    {r.invoice.storeName && (
+                      <span className="font-semibold">{r.invoice.storeName} — </span>
+                    )}
+                    {itemDescription(r.invoice)}
+                  </td>
                   <td className="border-r border-foreground/40 px-2 py-1 text-center">{r.invoice.etimsNumber || "\u00A0"}</td>
                   <td className="border-r border-foreground/40 px-2 py-1 text-right">{num(r.invoice.totalAmount)}</td>
                   <td className="border-r border-foreground/40 px-2 py-1">{r.status}</td>

@@ -337,6 +337,7 @@ function mapInvoice(i: any): Invoice {
       createdAt: u.created_at ?? "",
     })),
     etimsNumber: i.etims_number ?? "",
+    storeName: i.store_name || undefined,
     isVoided: Boolean(i.is_voided ?? i.voided_at),
     voidedAt: i.voided_at ?? undefined,
     voidedByName: i.voided_by_name || undefined,
@@ -509,6 +510,7 @@ export const api = {
     paymentType: PaymentType;
     invoiceDate?: string;
     dueDate?: string;
+    storeName?: string;
     items: { productId: string; quantity: number; unitPrice: number }[];
   }): Promise<Sale> =>
     mapSale(
@@ -520,6 +522,7 @@ export const api = {
           date: data.invoiceDate,
           invoice_date: data.invoiceDate,
           due_date: data.dueDate,
+          store_name: data.storeName ?? "",
           items: data.items.map((i) => ({
             product: i.productId,
             quantity: i.quantity,
@@ -575,6 +578,14 @@ export const api = {
   },
   getInvoice: async (id: string): Promise<Invoice> =>
     mapInvoice(await request(`/invoices/${id}/`)),
+  updateInvoiceStore: async (id: string, storeName: string): Promise<Invoice> =>
+    mapInvoice(
+      await request(`/invoices/${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ store_name: storeName }),
+      }),
+    ),
+
   updateInvoiceEtims: async (id: string, etimsNumber: string): Promise<Invoice> =>
     mapInvoice(
       await request(`/invoices/${id}/`, {

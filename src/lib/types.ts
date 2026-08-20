@@ -87,6 +87,7 @@ export interface Invoice {
   availableCredit: number;
   creditUses: CreditUse[];
   etimsNumber: string;
+  storeName?: string;
   isVoided: boolean;
   voidedAt?: string;
   voidedByName?: string;

@@ -85,6 +85,19 @@ function InvoiceDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Could not save eTIMS number"),
   });
 
+  const [store, setStore] = useState<string | null>(null);
+  const storeValue = store ?? invoice?.storeName ?? "";
+
+  const saveStore = useMutation({
+    mutationFn: () => api.updateInvoiceStore(invoice.id, storeValue.trim()),
+    onSuccess: () => {
+      setStore(null);
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Store saved.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not save store"),
+  });
+
   const refreshAfterVoid = () => {
     qc.invalidateQueries({ queryKey: ["invoices"] });
     qc.invalidateQueries({ queryKey: ["payments"] });
@@ -315,7 +328,29 @@ function InvoiceDetail() {
                   <span className="rounded bg-primary px-2 py-1 text-xs font-semibold uppercase text-primary-foreground">
                     Bill to
                   </span>
-                  <p className="mt-2 font-semibold">{invoice.customerName}</p>
+                  <p className="mt-2 font-semibold">
+                    {invoice.customerName}
+                    {invoice.storeName ? ` - ${invoice.storeName}` : ""}
+                  </p>
+                  {customer?.type === "Corporate" && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
+                      <Input
+                        value={storeValue}
+                        onChange={(e) => setStore(e.target.value)}
+                        placeholder="Store / branch e.g. Ruaka"
+                        className="h-8 max-w-[12rem]"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={saveStore.isPending || storeValue.trim() === (invoice.storeName ?? "")}
+                        onClick={() => saveStore.mutate()}
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {saveStore.isPending ? "Saving…" : "Save"}
+                      </Button>
+                    </div>
+                  )}
                   {customer?.phone && <p className="text-sm text-muted-foreground">{customer.phone}</p>}
                   {customer?.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
                 </div>

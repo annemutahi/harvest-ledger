@@ -28,6 +28,8 @@ class Invoice(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=UNPAID)
     # KRA eTIMS invoice number, entered manually by staff until eTIMS is integrated.
     etims_number = models.CharField(max_length=64, blank=True, default="")
+    # Branch/store for corporate customers, e.g. "Ruaka" for Naivas.
+    store_name = models.CharField(max_length=120, blank=True, default="")
     voided_at = models.DateTimeField(null=True, blank=True)
     voided_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
