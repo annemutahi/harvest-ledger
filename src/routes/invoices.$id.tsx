@@ -592,7 +592,7 @@ function InvoiceDetail() {
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="print:hidden">
           <CardHeader><CardTitle>Payment History</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {pays.length === 0 && <p className="text-sm text-muted-foreground">No payments yet.</p>}
