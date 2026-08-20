@@ -472,9 +472,18 @@ function InvoiceDetail() {
                   <TableBody>
                     {lines.map((l, idx) => {
                       const total = Number(l.quantity || 0) * Number(l.unitPrice || 0);
+                      const listPrice = Number(
+                        (products.find((x: any) => x.id === l.productId) as any)?.unitPrice ?? l.unitPrice,
+                      );
                       return (
                         <TableRow key={idx}>
                           <TableCell>
+                            {pricesOnly ? (
+                              <div>
+                                <p className="text-sm font-medium">{l.productName}</p>
+                                <p className="text-xs text-muted-foreground">List price {formatCurrency(listPrice)}</p>
+                              </div>
+                            ) : (
                             <Select
                               value={l.productId}
                               onValueChange={(v) => {
@@ -493,8 +502,12 @@ function InvoiceDetail() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
+                            {pricesOnly ? (
+                              <span className="text-sm">{l.quantity}</span>
+                            ) : (
                             <Input
                               type="number"
                               min={0}
@@ -503,6 +516,7 @@ function InvoiceDetail() {
                               value={l.quantity}
                               onChange={(e) => updateLine(idx, { quantity: Number(e.target.value) })}
                             />
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <Input
@@ -516,18 +530,26 @@ function InvoiceDetail() {
                           </TableCell>
                           <TableCell className="text-right">{formatCurrency(total)}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => removeLine(idx)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {!pricesOnly && (
+                              <Button variant="ghost" size="icon" onClick={() => removeLine(idx)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
                     })}
                   </TableBody>
                 </Table>
+                {pricesOnly ? (
+                  <p className="text-xs text-muted-foreground">
+                    Price-only adjustment: products and quantities stay unchanged, so stock is not affected.
+                  </p>
+                ) : (
                 <Button variant="outline" size="sm" onClick={addLine}>
                   <Plus className="mr-2 h-4 w-4" />Add line
                 </Button>
+                )}
 
                 <div className="ml-auto max-w-sm space-y-2 border-t pt-3">
                   <div className="flex justify-between text-sm">
