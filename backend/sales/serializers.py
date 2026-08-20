@@ -264,6 +264,7 @@ class SaleSerializer(serializers.ModelSerializer):
         due_date = validated_data.pop("due_date", None)
         invoice_date = validated_data.pop("invoice_date", None)
         adjustment_note = validated_data.pop("adjustment_note", "")
+        store_name = validated_data.pop("store_name", None)
         previous_total = instance.invoice.total_amount
 
         # Restore inventory for old items, then rewrite them.
@@ -295,6 +296,8 @@ class SaleSerializer(serializers.ModelSerializer):
             instance.invoice.due_date = due_date
         if invoice_date:
             instance.invoice.issue_date = invoice_date
+        if store_name is not None:
+            instance.invoice.store_name = store_name.strip()
 
         instance.invoice.recompute_status()
         instance.invoice.save()
