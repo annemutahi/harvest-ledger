@@ -25,7 +25,7 @@ function InvoicesPage() {
   const [status, setStatus] = useState("all");
   const { data: invoices = [], isLoading, error } = useQuery({ queryKey: ["invoices"], queryFn: () => api.listInvoices() });
   const filtered = invoices.filter((i) =>
-    (!q || i.invoiceNumber.toLowerCase().includes(q.toLowerCase()) || i.customerName.toLowerCase().includes(q.toLowerCase())) &&
+    (!q || i.invoiceNumber.toLowerCase().includes(q.toLowerCase()) || i.customerName.toLowerCase().includes(q.toLowerCase()) || (i.storeName ?? "").toLowerCase().includes(q.toLowerCase())) &&
     (status === "all" || i.status === status)
   );
 
@@ -102,7 +102,10 @@ function InvoicesPage() {
                     <TableCell>
                       <Link to="/invoices/$id" params={{ id: i.id }} className={`font-medium hover:underline ${i.isVoided ? "line-through" : ""}`}>{i.invoiceNumber}</Link>
                     </TableCell>
-                    <TableCell>{i.customerName}</TableCell>
+                    <TableCell>
+                      {i.customerName}
+                      {i.storeName ? <span className="text-muted-foreground"> - {i.storeName}</span> : null}
+                    </TableCell>
                     <TableCell>{formatDate(i.invoiceDate)}</TableCell>
                     <TableCell>{formatDate(i.dueDate)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(i.totalAmount)}</TableCell>
