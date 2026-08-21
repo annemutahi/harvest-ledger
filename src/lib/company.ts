@@ -3,8 +3,9 @@
 export const COMPANY = {
   name: "Peaceful Acres Farm Limited",
   shortName: "Peaceful Acres Farm Ltd",
-  tagline: "Fresh, Organic Produce,From Our Farm To Your Table",
+  tagline: "Fresh, Organic Produce",
+  address: "P.O. Box 49670-00100",
   phone: "+254 741 961 786",
   email: "peacefulacres19@gmail.com",
-  location: "Kiambu, Kenya",
+  location: "Nairobi, Kenya",
 };

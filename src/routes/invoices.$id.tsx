@@ -268,55 +268,14 @@ function InvoiceDetail() {
                 </div>
               </div>
               <div className="space-y-1 text-sm text-muted-foreground sm:text-right">
-                <p>{COMPANY.location}</p>
                 <p>{COMPANY.phone}</p>
                 <p>{COMPANY.email}</p>
+                <p>{COMPANY.address}</p>
+                <p>{COMPANY.location}</p>
               </div>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-primary/40 bg-background p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="rounded bg-primary px-2 py-1 text-xs font-semibold uppercase text-primary-foreground">
-                    Invoice No.
-                  </span>
-                  <span className="text-lg font-bold">{invoice.invoiceNumber}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-3 border-t pt-2 text-sm">
-                  <span className="font-medium uppercase text-muted-foreground">Date</span>
-                  <span>{formatDate(invoice.invoiceDate)}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-3 border-t pt-2 text-sm">
-                  <span className="font-medium uppercase text-muted-foreground">Due</span>
-                  <span>{formatDate(invoice.dueDate)}</span>
-                </div>
-                <div className={`mt-2 border-t pt-2${invoice.etimsNumber ? "" : " print:hidden"}`}>
-                  <p className="text-xs font-medium uppercase text-muted-foreground">KRA eTIMS No.</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
-                    <Input
-                      value={etimsValue}
-                      onChange={(e) => setEtims(e.target.value)}
-                      placeholder="Enter eTIMS number once available"
-                      className="h-8 max-w-[12rem]"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={saveEtims.isPending || etimsValue.trim() === (invoice.etimsNumber ?? "")}
-                      onClick={() => saveEtims.mutate()}
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      {saveEtims.isPending ? "Saving…" : "Save"}
-                    </Button>
-                  </div>
-                  {invoice.etimsNumber ? (
-                    <p className="mt-1 hidden min-h-5 border-b border-dotted text-sm font-medium print:block">
-                      {invoice.etimsNumber}
-                    </p>
-                  ) : null}
-                </div>
-
-              </div>
               <div className="flex flex-col justify-between gap-3">
                 <div className="rounded-lg border border-primary/40 bg-background p-3">
                   <span className="rounded bg-primary px-2 py-1 text-xs font-semibold uppercase text-primary-foreground">
@@ -360,6 +319,48 @@ function InvoiceDetail() {
                   </div>
                 </div>
               </div>
+              <div className="rounded-lg border border-primary/40 bg-background p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="rounded bg-primary px-2 py-1 text-xs font-semibold uppercase text-primary-foreground">
+                    Invoice No.
+                  </span>
+                  <span className="text-lg font-bold">{invoice.invoiceNumber}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-3 border-t pt-2 text-sm">
+                  <span className="font-medium uppercase text-muted-foreground">Date</span>
+                  <span>{formatDate(invoice.invoiceDate)}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-3 border-t pt-2 text-sm">
+                  <span className="font-medium uppercase text-muted-foreground">Due</span>
+                  <span>{formatDate(invoice.dueDate)}</span>
+                </div>
+                <div className={`mt-2 border-t pt-2${invoice.etimsNumber ? "" : " print:hidden"}`}>
+                  <p className="text-xs font-medium uppercase text-muted-foreground">KRA eTIMS No.</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
+                    <Input
+                      value={etimsValue}
+                      onChange={(e) => setEtims(e.target.value)}
+                      placeholder="Enter eTIMS number once available"
+                      className="h-8 max-w-[12rem]"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={saveEtims.isPending || etimsValue.trim() === (invoice.etimsNumber ?? "")}
+                      onClick={() => saveEtims.mutate()}
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      {saveEtims.isPending ? "Saving…" : "Save"}
+                    </Button>
+                  </div>
+                  {invoice.etimsNumber ? (
+                    <p className="mt-1 hidden min-h-5 border-b border-dotted text-sm font-medium print:block">
+                      {invoice.etimsNumber}
+                    </p>
+                  ) : null}
+                </div>
+
+              </div>
             </div>
           </CardHeader>
 
@@ -382,7 +383,7 @@ function InvoiceDetail() {
                 <Table className="mt-6 border">
                   <TableHeader>
                     <TableRow className="bg-primary hover:bg-primary">
-                      <TableHead className="w-12 text-primary-foreground">Nos</TableHead>
+                      <TableHead className="w-12 text-primary-foreground">No.</TableHead>
                       <TableHead className="text-primary-foreground">Description</TableHead>
                       <TableHead className="text-right text-primary-foreground">Qty</TableHead>
                       <TableHead className="text-right text-primary-foreground">Unit Price (KSh)</TableHead>
@@ -407,15 +408,14 @@ function InvoiceDetail() {
                     <dl className="mt-3 space-y-1.5 text-sm">
                       <div className="flex justify-between gap-4">
                         <dt className="text-muted-foreground">M-Pesa Paybill</dt>
-                        <dd className="font-medium">000000</dd>
+                        <dd className="font-medium">522522</dd>
                       </div>
                       <div className="flex justify-between gap-4">
                         <dt className="text-muted-foreground">Account number</dt>
-                        <dd className="font-medium">{invoice.invoiceNumber}</dd>
+                        <dd className="font-medium">1266084088</dd>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <dt className="text-muted-foreground">Account name</dt>
-                        <dd className="font-medium">Peaceful Acres Farm Limited</dd>
+                        <dd className="font-medium">Peaceful Acres Farm</dd>
                       </div>
                     </dl>
                   </div>
