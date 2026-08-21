@@ -48,7 +48,29 @@ FOOTER_HEIGHT = 26 * mm
 
 
 def _money(value) -> str:
-    return f"{float(value or 0):,.2f}"
+    amount = float(value or 0)
+    if abs(amount - round(amount)) < 0.005:
+        return f"Ksh {round(amount):,}"
+    return f"Ksh {amount:,.2f}"
+
+
+def _qty(value) -> str:
+    amount = float(value or 0)
+    if abs(amount - round(amount)) < 0.005:
+        return f"{round(amount):,}"
+    return f"{amount:,.2f}"
+
+
+class FlexSpacer(Spacer):
+    """Grows to push the following block to the bottom of the page."""
+
+    def __init__(self, reserved: float, minimum: float = 6 * mm):
+        super().__init__(0, minimum)
+        self.reserved = reserved
+        self.minimum = minimum
+
+    def wrap(self, availWidth, availHeight):  # noqa: N803
+        return 0, max(self.minimum, availHeight - self.reserved)
 
 
 def _styles():
@@ -57,7 +79,7 @@ def _styles():
         "base": base,
         "small": ParagraphStyle("small", parent=base, fontSize=8, textColor=MUTED),
         "label": ParagraphStyle(
-            "label", parent=base, fontName="Helvetica-Bold", fontSize=7.5,
+            "label", parent=base, fontName="Helvetica-Bold", fontSize=7,
             textColor=colors.white,
         ),
         "muted": ParagraphStyle("muted", parent=base, textColor=MUTED),
@@ -78,31 +100,66 @@ def invoice_filename(invoice) -> str:
     return f"Invoice-{invoice.invoice_number}.pdf"
 
 
-def _chip(text, s):
-    """A small green uppercase chip like the on-screen labels."""
-    chip = Table([[Paragraph(text.upper(), s["label"])]], hAlign="LEFT")
+def _chip(text, s, width=None):
+    """A small green uppercase pill like the on-screen labels."""
+    text = text.upper()
+    pill_width = 5.2 * len(text) + 12
+    chip = Table([[Paragraph(text, s["label"])]], colWidths=[pill_width], hAlign="LEFT")
     chip.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), FOREST),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("ROUNDEDCORNERS", [3, 3, 3, 3]),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
         ("TOPPADDING", (0, 0), (-1, -1), 3),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
     ]))
-    return chip
+    if width is None:
+        return chip
+    row = Table([[chip, ""]], colWidths=[pill_width, max(1, width - pill_width)])
+    row.setStyle(TableStyle([
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    return row
 
 
-def _panel(rows, width):
+def _status_pill(text, s):
+    pill = Table([[Paragraph(
+        text.upper(),
+        ParagraphStyle("pill", parent=s["base"], fontName="Helvetica-Bold",
+                       fontSize=7, textColor=FOREST, alignment=1),
+    )]], colWidths=[5.6 * len(text) + 14], hAlign="RIGHT")
+    pill.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), FOREST_SOFT),
+        ("ROUNDEDCORNERS", [6, 6, 6, 6]),
+        ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
+        ("LEFTPADDING", (0, 0), (-1, -1), 7),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
+    ]))
+    return pill
+
+
+def _panel(rows, width, background=None):
     """A bordered white panel wrapping the given flowable rows."""
     panel = Table([[r] for r in rows], colWidths=[width])
-    panel.setStyle(TableStyle([
+    style = [
         ("BOX", (0, 0), (-1, -1), 0.7, BORDER),
+        ("ROUNDEDCORNERS", [4, 4, 4, 4]),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
+    ]
+    if background is not None:
+        style.append(("BACKGROUND", (0, 0), (-1, -1), background))
+    panel.setStyle(TableStyle(style))
     return panel
+
 
 
 def _decorations(canvas, doc):
