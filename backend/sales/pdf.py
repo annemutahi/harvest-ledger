@@ -257,7 +257,7 @@ def render_invoice_pdf(invoice) -> bytes:
         bill_lines.append(Paragraph(customer.phone, s["muted"]))
     if customer.email:
         bill_lines.append(Paragraph(customer.email, s["muted"]))
-    bill = _panel(bill_lines, inner)
+    bill = _panel(bill_lines, inner + 16)
 
     payment_type = (getattr(invoice, "payment_type", "") or "Credit").title()
     method = _panel([
@@ -275,7 +275,7 @@ def render_invoice_pdf(invoice) -> bytes:
                 ("RIGHTPADDING", (1, 0), (1, 0), 2),
             ]),
         ),
-    ], inner)
+    ], inner + 16)
 
     key = ParagraphStyle("k", parent=s["muted"], fontSize=8)
     meta_rows = [
@@ -287,7 +287,7 @@ def render_invoice_pdf(invoice) -> bytes:
             Paragraph("KRA ETIMS NO.", key),
             Paragraph(invoice.etims_number, s["right"]),
         ])
-    right_inner = col + 6 * mm - 16
+    right_inner = col + 6 * mm - 32
     meta_table = Table(meta_rows, colWidths=[right_inner * 0.45, right_inner * 0.55])
     meta_table.setStyle(TableStyle([
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -319,7 +319,7 @@ def render_invoice_pdf(invoice) -> bytes:
         ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
     ]))
     panels = Table(
-        [[left_stack, _panel([meta_head, meta_table], right_inner)]],
+        [[left_stack, _panel([meta_head, meta_table], right_inner + 16)]],
         colWidths=[col, col + 6 * mm],
     )
     panels.setStyle(TableStyle([
@@ -385,7 +385,7 @@ def render_invoice_pdf(invoice) -> bytes:
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
             ]),
         ),
-    ], inner, background=colors.HexColor("#f6faf6"))
+    ], inner + 16, background=colors.HexColor("#f6faf6"))
 
     balance = float(invoice.outstanding_balance or 0)
     totals = Table(
