@@ -18,7 +18,7 @@ export const Route = createFileRoute("/sales/new")({
   component: NewSalePage,
 });
 
-interface Line { productId: string; qty: number; }
+interface Line { productId: string; qty: number; price?: number; }
 
 function formatInputDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -59,20 +59,27 @@ function NewSalePage() {
   );
   const createSaleMutation = useMutation({
     mutationFn: (payload: Parameters<typeof api.createSale>[0]) => api.createSale(payload),
-    onSuccess: () => {
+    onSuccess: (sale) => {
       toast.success("Sale recorded. Invoice generated.");
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      navigate({ to: "/transactions" });
+      if (sale.invoiceId) {
+        navigate({ to: "/invoices/$id", params: { id: sale.invoiceId } });
+      } else {
+        navigate({ to: "/transactions" });
+      }
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to record sale"),
   });
 
+
+  const priceOf = (line: Line) => {
+    const product = products.find((p) => p.id === line.productId);
+    return line.price !== undefined && Number.isFinite(line.price) ? line.price : (product?.unitPrice ?? 0);
+  };
+
   const total = useMemo(
-    () => lines.reduce((sum, line) => {
-      const product = products.find((p) => p.id === line.productId);
-      return sum + (product ? product.unitPrice * line.qty : 0);
-    }, 0),
+    () => lines.reduce((sum, line) => sum + priceOf(line) * line.qty, 0),
     [lines, products],
   );
 
@@ -84,6 +91,7 @@ function NewSalePage() {
     return (
       !line.productId ||
       line.qty < 1 ||
+      priceOf(line) < 0 ||
       (product ? line.qty > product.availableQuantity : false)
     );
   });
@@ -115,14 +123,11 @@ function NewSalePage() {
             dueDate,
             items: lines
               .filter((line) => line.productId && line.qty > 0)
-              .map((line) => {
-                const product = products.find((p) => p.id === line.productId);
-                return {
-                  productId: line.productId,
-                  quantity: line.qty,
-                  unitPrice: product?.unitPrice ?? 0,
-                };
-              }),
+              .map((line) => ({
+                productId: line.productId,
+                quantity: line.qty,
+                unitPrice: priceOf(line),
+              })),
           });
         }}
       >
@@ -147,7 +152,7 @@ function NewSalePage() {
                   return (
                     <TableRow key={index}>
                       <TableCell>
-                        <Select value={line.productId} onValueChange={(value) => update(index, { productId: value })}>
+                        <Select value={line.productId} onValueChange={(value) => update(index, { productId: value, price: undefined })}>
                           <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                           <SelectContent>
                             {products.map((product) => (
@@ -173,8 +178,24 @@ function NewSalePage() {
                           className={hasStockError ? "border-destructive" : ""}
                         />
                       </TableCell>
-                      <TableCell className="text-right">{product ? formatCurrency(product.unitPrice) : "—"}</TableCell>
-                      <TableCell className="text-right font-medium">{product ? formatCurrency(product.unitPrice * line.qty) : "—"}</TableCell>
+                      <TableCell className="text-right">
+                        {product ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="w-28 text-right"
+                              value={line.price ?? product.unitPrice}
+                              onChange={(e) => update(index, { price: e.target.value === "" ? undefined : Number(e.target.value) })}
+                            />
+                            {priceOf(line) !== product.unitPrice && (
+                              <span className="text-xs text-muted-foreground">List: {formatCurrency(product.unitPrice)}</span>
+                            )}
+                          </div>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{product ? formatCurrency(priceOf(line) * line.qty) : "—"}</TableCell>
                       <TableCell>
                         <Button type="button" variant="ghost" size="icon" onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== index))}>
                           <Trash2 className="h-4 w-4 text-destructive" />
