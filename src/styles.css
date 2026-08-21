@@ -394,7 +394,7 @@
   .print-document .invoice-footer-img {
     display: block;
     width: 100%;
-    height: 28mm;
+    height: 18mm;
     object-fit: cover;
     margin-top: auto;
     -webkit-print-color-adjust: exact !important;
