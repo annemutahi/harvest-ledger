@@ -16,6 +16,8 @@ import urllib.request
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 
+from .pdf import invoice_filename, render_invoice_pdf
+
 log = logging.getLogger(__name__)
 
 SENT = "sent"
@@ -35,22 +37,13 @@ def build_sms_text(invoice) -> str:
 
 
 def build_email_body(invoice) -> tuple[str, str]:
+    """Short covering note; the invoice itself travels as a PDF attachment."""
     name = invoice.customer.contact_person or invoice.customer.name or "Customer"
-    lines = [
-        f"{item.product_name} x {item.quantity} @ {item.unit_price}"
-        for item in (invoice.sale.items.all() if getattr(invoice, "sale", None) else [])
-    ]
     company = getattr(settings, "COMPANY_NAME", "Peaceful Acres Farm")
     text = (
         f"Dear {name},\n\n"
-        f"Please find the details of invoice {invoice.invoice_number} below.\n\n"
-        f"Issue date: {invoice.issue_date:%d %b %Y}\n"
-        f"Due date:   {invoice.due_date:%d %b %Y}\n"
-        + ("\n".join(lines) + "\n" if lines else "")
-        + f"\nTotal:      KES {invoice.total_amount:,.2f}\n"
-        f"Paid:       KES {invoice.amount_paid:,.2f}\n"
-        f"Balance:    KES {invoice.outstanding_balance:,.2f}\n\n"
-        f"View your invoice: {settings.FRONTEND_URL.rstrip('/')}/invoices/{invoice.id}\n\n"
+        f"Please find attached invoice {invoice.invoice_number} for "
+        f"KES {invoice.total_amount:,.2f}, due {invoice.due_date:%d %b %Y}.\n\n"
         f"Thank you for your business.\n{company}\n"
     )
     subject = f"Invoice {invoice.invoice_number} — {company}"
@@ -67,11 +60,17 @@ def send_email(invoice) -> tuple[str, str, str]:
         message = EmailMultiAlternatives(
             subject, text, settings.DEFAULT_FROM_EMAIL, [to],
         )
+        try:
+            message.attach(
+                invoice_filename(invoice), render_invoice_pdf(invoice), "application/pdf",
+            )
+        except Exception as exc:  # noqa: BLE001 — never block the send on rendering
+            log.warning("invoice pdf failed for %s: %s", invoice.invoice_number, exc)
         message.send(fail_silently=False)
     except Exception as exc:  # noqa: BLE001 — surfaced to staff, never fatal
         log.warning("invoice email failed for %s: %s", invoice.invoice_number, exc)
         return FAILED, to, str(exc)[:300]
-    return SENT, to, "Email sent."
+    return SENT, to, "Email sent with the invoice PDF attached."
 
 
 def send_sms(invoice) -> tuple[str, str, str]:
