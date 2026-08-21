@@ -12,6 +12,7 @@ import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { FieldError } from "@/components/field-error";
 
 export const Route = createFileRoute("/sales/new")({
   head: () => ({ meta: [{ title: "New Sale" }] }),
@@ -148,7 +149,8 @@ function NewSalePage() {
                 {lines.map((line, index) => {
                   const product = products.find((p) => p.id === line.productId);
                   const available = product?.availableQuantity ?? 0;
-                  const hasStockError = product && available <= 0;
+                  const hasStockError = Boolean(product && available <= 0);
+                  const overStock = Boolean(product && available > 0 && line.qty > available);
                   return (
                     <TableRow key={index}>
                       <TableCell>
@@ -175,7 +177,17 @@ function NewSalePage() {
                           max={available > 0 ? available : undefined}
                           value={line.qty}
                           onChange={(e) => update(index, { qty: Number(e.target.value) })}
-                          className={hasStockError ? "border-destructive" : ""}
+                          className={hasStockError || overStock ? "border-destructive" : ""}
+                        />
+                        <FieldError
+                          message={
+                            hasStockError
+                              ? "Out of stock"
+                              : overStock
+                                ? `Only ${available} ${product?.unit ?? "piece"}${available === 1 ? "" : "s"} remaining`
+                                : undefined
+                          }
+                          className="mt-1"
                         />
                       </TableCell>
                       <TableCell className="text-right">
