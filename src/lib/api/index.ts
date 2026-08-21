@@ -1,7 +1,7 @@
 // Real API client — talks to Django REST Framework backend.
 // Configure VITE_API_BASE_URL in .env (default: http://127.0.0.1:8000/api).
 
-import type { Customer, Product, Sale, SaleItem, Invoice, InvoiceStatus, Payment, PaymentType, PaymentMethod, CustomerType } from "@/lib/types";
+import type { Customer, Product, Sale, SaleItem, Invoice, InvoiceStatus, Payment, PaymentType, PaymentMethod, CustomerType, InvoiceDispatchResult } from "@/lib/types";
 
 const API_BASE =
   (
@@ -343,6 +343,7 @@ function mapInvoice(i: any): Invoice {
     voidedAt: i.voided_at ?? undefined,
     voidedByName: i.voided_by_name || undefined,
     voidReason: i.void_reason || undefined,
+    lastSentAt: i.last_sent_at || undefined,
   };
 }
 
@@ -596,6 +597,9 @@ export const api = {
         body: JSON.stringify({ etims_number: etimsNumber }),
       }),
     ),
+
+  sendInvoice: async (id: string): Promise<InvoiceDispatchResult> =>
+    await request(`/invoices/${id}/send/`, { method: "POST" }),
 
   voidInvoice: async (id: string, reason: string): Promise<Invoice> =>
     mapInvoice(

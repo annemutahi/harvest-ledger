@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/status-badge";
-import { ArrowLeft, Ban, Printer, Pencil, Plus, Trash2, Save, X } from "lucide-react";
+import { ArrowLeft, Ban, Printer, Pencil, Plus, Trash2, Save, X, Send } from "lucide-react";
 import { VoidDialog } from "@/components/void-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { isManager } from "@/lib/permissions";
@@ -234,6 +234,27 @@ function InvoiceDetail() {
 
   const pays = payments.filter((p: any) => p.invoiceId === invoice.id);
   const canEdit = !!invoice.saleId && !invoice.isVoided;
+  const sendInvoice = useMutation({
+    mutationFn: () => api.sendInvoice(invoice.id),
+    onSuccess: (res) => {
+      const label = (c: string) => (c === "sms" ? "SMS" : "Email");
+      const sent = res.results.filter((r) => r.status === "sent").map((r) => label(r.channel));
+      const issues = res.results.filter((r) => r.status !== "sent");
+      if (sent.length) {
+        toast.success(`${invoice.invoiceNumber} sent by ${sent.join(" & ")}`, {
+          description: issues.length
+            ? issues.map((r) => `${label(r.channel)}: ${r.detail}`).join(" ")
+            : undefined,
+        });
+      } else {
+        toast.warning(`${invoice.invoiceNumber} was not delivered`, {
+          description: issues.map((r) => `${label(r.channel)}: ${r.detail}`).join(" "),
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not send this invoice."),
+  });
   const isCredit = invoice.outstandingBalance < 0;
 
   return (
@@ -244,6 +265,17 @@ function InvoiceDetail() {
         <>
           <Button variant="outline" asChild><Link to="/invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
+          {!invoice.isVoided && (
+            <Button
+              variant="outline"
+              onClick={() => sendInvoice.mutate()}
+              disabled={sendInvoice.isPending}
+              title="Email and SMS this invoice to the customer"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {sendInvoice.isPending ? "Sending…" : invoice.lastSentAt ? "Resend" : "Send to customer"}
+            </Button>
+          )}
           {!editing && canEdit && (
             <Button variant="outline" onClick={() => startEdit("prices")}><Pencil className="mr-2 h-4 w-4" />Adjust prices</Button>
           )}

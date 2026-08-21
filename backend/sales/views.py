@@ -9,7 +9,8 @@ from rest_framework.response import Response
 from accounts.permissions import is_manager, module_permission
 from farm_erp.date_filter import apply_date_range
 
-from .models import Invoice, Payment, Sale
+from .messaging import send_email, send_sms
+from .models import Invoice, InvoiceDispatch, Payment, Sale
 from .permissions import CanEditSales
 from .serializers import InvoiceSerializer, PaymentSerializer, SaleSerializer
 
@@ -41,7 +42,7 @@ class SaleViewSet(viewsets.ModelViewSet):
 
 class InvoiceViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Invoice.objects.select_related("customer", "voided_by").prefetch_related(
-        "sale__items", "adjustments", "credit_uses__target_invoice", "credit_applications",
+        "sale__items", "adjustments", "credit_uses__target_invoice", "credit_applications", "dispatches",
     )
     serializer_class = InvoiceSerializer
     permission_classes = [module_permission("invoices")]
@@ -89,6 +90,27 @@ class InvoiceViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
                         available_quantity=F("available_quantity") + item.quantity,
                     )
         return Response(self.get_serializer(self.get_queryset().get(pk=pk)).data)
+
+
+    @action(detail=True, methods=["post"], url_path="send")
+    def send(self, request, pk=None):
+        """Send this invoice to the customer by email and SMS in one action."""
+        invoice = self.get_object()
+        if invoice.is_voided:
+            raise ValidationError("A voided invoice cannot be sent.")
+
+        results = []
+        for channel, fn in (("email", send_email), ("sms", send_sms)):
+            status_, recipient, detail = fn(invoice)
+            InvoiceDispatch.objects.create(
+                invoice=invoice, channel=channel, status=status_,
+                recipient=recipient, detail=detail, sent_by=request.user,
+            )
+            results.append({
+                "channel": channel, "status": status_,
+                "recipient": recipient, "detail": detail,
+            })
+        return Response({"invoice_number": invoice.invoice_number, "results": results})
 
 
 class PaymentViewSet(

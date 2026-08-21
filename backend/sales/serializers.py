@@ -54,6 +54,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
     credit_uses = serializers.SerializerMethodField()
     is_voided = serializers.BooleanField(read_only=True)
     voided_by_name = serializers.SerializerMethodField()
+    last_sent_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -65,8 +66,13 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "credit_uses",
             "etims_number", "store_name", "created_at",
             "is_voided", "voided_at", "voided_by_name", "void_reason",
+            "last_sent_at",
         ]
         read_only_fields = [f for f in fields if f not in ("etims_number", "store_name")]
+
+    def get_last_sent_at(self, obj):
+        last = obj.dispatches.filter(status="sent").first()
+        return last.created_at if last else None
 
     def get_voided_by_name(self, obj):
         user = obj.voided_by
