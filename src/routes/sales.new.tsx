@@ -118,14 +118,11 @@ function NewSalePage() {
             dueDate,
             items: lines
               .filter((line) => line.productId && line.qty > 0)
-              .map((line) => {
-                const product = products.find((p) => p.id === line.productId);
-                return {
-                  productId: line.productId,
-                  quantity: line.qty,
-                  unitPrice: product?.unitPrice ?? 0,
-                };
-              }),
+              .map((line) => ({
+                productId: line.productId,
+                quantity: line.qty,
+                unitPrice: priceOf(line),
+              })),
           });
         }}
       >
