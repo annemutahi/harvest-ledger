@@ -59,14 +59,19 @@ function NewSalePage() {
   );
   const createSaleMutation = useMutation({
     mutationFn: (payload: Parameters<typeof api.createSale>[0]) => api.createSale(payload),
-    onSuccess: () => {
+    onSuccess: (sale) => {
       toast.success("Sale recorded. Invoice generated.");
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      navigate({ to: "/transactions" });
+      if (sale.invoiceId) {
+        navigate({ to: "/invoices/$id", params: { id: sale.invoiceId } });
+      } else {
+        navigate({ to: "/transactions" });
+      }
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to record sale"),
   });
+
 
   const priceOf = (line: Line) => {
     const product = products.find((p) => p.id === line.productId);
