@@ -1,35 +1,50 @@
-"""Render an invoice to a PDF byte string with ReportLab.
+"""Render an invoice to a PDF that mirrors the on-screen invoice document.
 
-Kept dependency-light and self-contained so invoices can be attached to email
-without the customer ever needing to reach the ERP itself.
+Same branding as the app: circular logo, forest-green header, boxed bill-to /
+payment-method / invoice-number panels, green table head, payment details next
+to the totals, signature lines, a faint farm watermark and the farm landscape
+footer strip.
 """
 from __future__ import annotations
 
 from io import BytesIO
+from pathlib import Path
 
 from django.conf import settings
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
-    Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+    Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
 
 FOREST = colors.HexColor("#14532d")
+FOREST_SOFT = colors.HexColor("#eaf1ea")
 LIGHT = colors.HexColor("#f1f5f0")
 MUTED = colors.HexColor("#4b5563")
+BORDER = colors.HexColor("#a7bfa9")
+
+ROOT = Path(getattr(settings, "BASE_DIR", Path(__file__).resolve().parents[2])).parent
+LOGO_PATH = ROOT / "public" / "assets" / "favicon.png"
+WATERMARK_PATH = ROOT / "src" / "assets" / "farm-watermark.png"
+FOOTER_PATH = ROOT / "src" / "assets" / "farm-footer.png"
 
 COMPANY = {
     "name": getattr(settings, "COMPANY_NAME", "Peaceful Acres Farm Limited"),
+    "tagline": "Fresh, Organic Produce",
     "address": "P.O. Box 49670-00100",
     "location": "Nairobi, Kenya",
     "phone": "+254 741 961 786",
     "email": "peacefulacres19@gmail.com",
 }
 
-MPESA_PAYBILL = getattr(settings, "MPESA_PAYBILL", "000000")
-MPESA_ACCOUNT = getattr(settings, "MPESA_ACCOUNT_NAME", COMPANY["name"])
+MPESA_PAYBILL = getattr(settings, "MPESA_PAYBILL", "522522")
+MPESA_ACCOUNT_NUMBER = getattr(settings, "MPESA_ACCOUNT_NUMBER", "1266084088")
+MPESA_ACCOUNT = getattr(settings, "MPESA_ACCOUNT_NAME", "Peaceful Acres Farm")
+
+FOOTER_HEIGHT = 26 * mm
 
 
 def _money(value) -> str:
@@ -41,13 +56,20 @@ def _styles():
     return {
         "base": base,
         "small": ParagraphStyle("small", parent=base, fontSize=8, textColor=MUTED),
+        "label": ParagraphStyle(
+            "label", parent=base, fontName="Helvetica-Bold", fontSize=7.5,
+            textColor=colors.white,
+        ),
+        "muted": ParagraphStyle("muted", parent=base, textColor=MUTED),
+        "right": ParagraphStyle("right", parent=base, alignment=2),
         "title": ParagraphStyle(
-            "title", parent=base, fontName="Helvetica-Bold", fontSize=18,
-            textColor=colors.white, leading=22,
+            "title", parent=base, fontName="Helvetica-Bold", fontSize=17,
+            textColor=FOREST, leading=20,
         ),
         "white": ParagraphStyle("white", parent=base, textColor=colors.white),
-        "h": ParagraphStyle(
-            "h", parent=base, fontName="Helvetica-Bold", fontSize=10, textColor=FOREST,
+        "center": ParagraphStyle(
+            "center", parent=base, alignment=1, textColor=FOREST,
+            fontName="Helvetica-Bold",
         ),
     }
 
@@ -56,89 +78,196 @@ def invoice_filename(invoice) -> str:
     return f"Invoice-{invoice.invoice_number}.pdf"
 
 
+def _chip(text, s):
+    """A small green uppercase chip like the on-screen labels."""
+    chip = Table([[Paragraph(text.upper(), s["label"])]], hAlign="LEFT")
+    chip.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), FOREST),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ]))
+    return chip
+
+
+def _panel(rows, width):
+    """A bordered white panel wrapping the given flowable rows."""
+    panel = Table([[r] for r in rows], colWidths=[width])
+    panel.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.7, BORDER),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    return panel
+
+
+def _decorations(canvas, doc):
+    """Watermark behind the content and the farm landscape footer strip."""
+    canvas.saveState()
+    if WATERMARK_PATH.exists():
+        try:
+            img = ImageReader(str(WATERMARK_PATH))
+            iw, ih = img.getSize()
+            w = doc.width * 0.7
+            h = w * ih / iw
+            canvas.setFillAlpha(0.06)
+            canvas.drawImage(
+                img, (A4[0] - w) / 2, (A4[1] - h) / 2, width=w, height=h,
+                mask="auto", preserveAspectRatio=True,
+            )
+            canvas.setFillAlpha(1)
+        except Exception:  # noqa: BLE001 — decoration must never break the PDF
+            pass
+    if FOOTER_PATH.exists():
+        try:
+            canvas.drawImage(
+                ImageReader(str(FOOTER_PATH)), 0, 0, width=A4[0], height=FOOTER_HEIGHT,
+                mask="auto", preserveAspectRatio=False, anchor="c",
+            )
+        except Exception:  # noqa: BLE001
+            pass
+    canvas.restoreState()
+
+
 def render_invoice_pdf(invoice) -> bytes:
     s = _styles()
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
-        leftMargin=16 * mm, rightMargin=16 * mm,
-        topMargin=14 * mm, bottomMargin=16 * mm,
+        leftMargin=15 * mm, rightMargin=15 * mm,
+        topMargin=12 * mm, bottomMargin=FOOTER_HEIGHT + 6 * mm,
         title=invoice_filename(invoice),
     )
     story: list = []
+    W = doc.width
 
     customer = invoice.customer
     customer_name = customer.name
     if invoice.store_name:
-        customer_name = f"{customer_name} — {invoice.store_name}"
+        customer_name = f"{customer_name} - {invoice.store_name}"
 
-    # Header band
+    # ---- Header: logo + company, contacts on the right -------------------
+    logo = (
+        Image(str(LOGO_PATH), width=20 * mm, height=20 * mm)
+        if LOGO_PATH.exists() else Paragraph("", s["base"])
+    )
+    brand = Table(
+        [[logo, Paragraph(
+            f"<b>{COMPANY['name']}</b><br/>"
+            f"<font size=8 color='#4b5563'>{COMPANY['tagline']}</font>",
+            s["title"],
+        )]],
+        colWidths=[23 * mm, W * 0.55 - 23 * mm],
+    )
+    brand.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+
     header = Table(
-        [[
-            Paragraph(COMPANY["name"], s["title"]),
-            Paragraph("INVOICE", ParagraphStyle("inv", parent=s["title"], alignment=2)),
-        ], [
-            Paragraph(
-                f"{COMPANY['address']}<br/>{COMPANY['location']}<br/>"
-                f"{COMPANY['phone']} · {COMPANY['email']}",
-                s["white"],
-            ),
-            Paragraph(
-                f"No. {invoice.invoice_number}"
-                + (f"<br/>KRA eTIMS: {invoice.etims_number}" if invoice.etims_number else ""),
-                ParagraphStyle("r", parent=s["white"], alignment=2),
-            ),
-        ]],
-        colWidths=[doc.width * 0.6, doc.width * 0.4],
+        [[brand, Paragraph(
+            f"{COMPANY['phone']}<br/>{COMPANY['email']}<br/>"
+            f"{COMPANY['address']}<br/>{COMPANY['location']}",
+            ParagraphStyle("hr", parent=s["muted"], alignment=2),
+        )]],
+        colWidths=[W * 0.55, W * 0.45],
     )
     header.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), FOREST),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 12),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-        ("TOPPADDING", (0, 0), (-1, 0), 12),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 12),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BACKGROUND", (0, 0), (-1, -1), FOREST_SOFT),
+        ("LINEBELOW", (0, 0), (-1, -1), 2.5, FOREST),
+        ("LEFTPADDING", (0, 0), (-1, -1), 10),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
     ]))
-    story += [header, Spacer(1, 10 * mm)]
+    story += [header, Spacer(1, 6 * mm)]
 
-    # Bill to / dates
-    meta = Table(
-        [[
-            Paragraph(
-                "<b>BILL TO</b><br/>" + customer_name
-                + (f"<br/>{customer.contact_person}" if customer.contact_person else "")
-                + (f"<br/>{customer.phone}" if customer.phone else "")
-                + (f"<br/>{customer.email}" if customer.email else ""),
-                s["base"],
-            ),
-            Paragraph(
-                f"<b>Issue date</b>  {invoice.issue_date:%d %b %Y}<br/>"
-                f"<b>Due date</b>  {invoice.due_date:%d %b %Y}<br/>"
-                f"<b>Status</b>  {invoice.get_status_display()}",
-                ParagraphStyle("r2", parent=s["base"], alignment=2),
-            ),
-        ]],
-        colWidths=[doc.width * 0.6, doc.width * 0.4],
+    # ---- Bill to / payment method / invoice meta panels ------------------
+    col = (W - 6 * mm) / 2
+    inner = col - 16
+    bill_lines = [_chip("Bill to", s), Paragraph(f"<b>{customer_name}</b>", s["base"])]
+    if customer.contact_person:
+        bill_lines.append(Paragraph(customer.contact_person, s["muted"]))
+    if customer.phone:
+        bill_lines.append(Paragraph(customer.phone, s["muted"]))
+    if customer.email:
+        bill_lines.append(Paragraph(customer.email, s["muted"]))
+    bill = _panel(bill_lines, inner)
+
+    payment_type = (getattr(invoice, "payment_type", "") or "Credit").title()
+    method = _panel([
+        _chip("Payment method", s),
+        Table(
+            [[Paragraph(payment_type, s["base"]),
+              Paragraph(f"<b>{invoice.get_status_display()}</b>",
+                        ParagraphStyle("st", parent=s["base"], alignment=2, textColor=FOREST))]],
+            colWidths=[inner * 0.5, inner * 0.5],
+            style=TableStyle([
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ]),
+        ),
+    ], inner)
+
+    meta_rows = [
+        [Paragraph("<b>INVOICE NO.</b>", ParagraphStyle("k", parent=s["muted"], fontSize=8)),
+         Paragraph(f"<b>{invoice.invoice_number}</b>", ParagraphStyle("v", parent=s["base"], alignment=2, fontSize=11))],
+        [Paragraph("DATE", ParagraphStyle("k2", parent=s["muted"], fontSize=8)),
+         Paragraph(f"{invoice.issue_date:%d %b %Y}", s["right"])],
+        [Paragraph("DUE", ParagraphStyle("k3", parent=s["muted"], fontSize=8)),
+         Paragraph(f"{invoice.due_date:%d %b %Y}", s["right"])],
+    ]
+    if invoice.etims_number:
+        meta_rows.append([
+            Paragraph("KRA ETIMS NO.", ParagraphStyle("k4", parent=s["muted"], fontSize=8)),
+            Paragraph(invoice.etims_number, s["right"]),
+        ])
+    meta_table = Table(meta_rows, colWidths=[inner * 0.45, inner * 0.55])
+    meta_table.setStyle(TableStyle([
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LINEBELOW", (0, 0), (-1, -2), 0.4, BORDER),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+
+    left_stack = Table([[bill], [Spacer(1, 3 * mm)], [method]], colWidths=[col])
+    left_stack.setStyle(TableStyle([
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    panels = Table(
+        [[left_stack, _panel([meta_table], inner)]],
+        colWidths=[col, col + 6 * mm],
     )
-    meta.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
-    story += [meta, Spacer(1, 8 * mm)]
+    panels.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (0, 0), 0),
+        ("RIGHTPADDING", (-1, 0), (-1, 0), 0),
+    ]))
+    story += [panels, Spacer(1, 7 * mm)]
 
-    # Items
+    # ---- Items -----------------------------------------------------------
     sale = getattr(invoice, "sale", None)
     items = list(sale.items.all()) if sale else []
-    rows = [["Item", "Qty", "Unit price", "Amount"]]
-    for item in items:
+    rows = [["No.", "Description", "Qty", "Unit Price (KSh)", "Amount (KSh)"]]
+    for i, item in enumerate(items, start=1):
         rows.append([
-            item.product_name,
-            _money(item.quantity),
-            _money(item.unit_price),
-            _money(item.line_total),
+            str(i), item.product_name, _money(item.quantity),
+            _money(item.unit_price), _money(item.line_total),
         ])
     if not items:
-        rows.append(["—", "", "", _money(invoice.total_amount)])
+        rows.append(["1", "—", "", "", _money(invoice.total_amount)])
 
     table = Table(
-        rows, colWidths=[doc.width * 0.5, doc.width * 0.13, doc.width * 0.18, doc.width * 0.19],
+        rows,
+        colWidths=[W * 0.08, W * 0.42, W * 0.12, W * 0.19, W * 0.19],
         repeatRows=1,
     )
     table.setStyle(TableStyle([
@@ -146,9 +275,10 @@ def render_invoice_pdf(invoice) -> bytes:
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+        ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT]),
+        ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
         ("LINEBELOW", (0, 1), (-1, -1), 0.25, colors.HexColor("#d1d5db")),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
@@ -157,43 +287,78 @@ def render_invoice_pdf(invoice) -> bytes:
     ]))
     story += [table, Spacer(1, 8 * mm)]
 
-    # Payment details + totals
+    # ---- Payment details + totals ---------------------------------------
+    pay = _panel([
+        Paragraph("<b><font color='#14532d'>PAYMENT DETAILS</font></b>", s["small"]),
+        Table(
+            [
+                [Paragraph("M-Pesa Paybill", s["muted"]), Paragraph(f"<b>{MPESA_PAYBILL}</b>", s["right"])],
+                [Paragraph("Account number", s["muted"]), Paragraph(f"<b>{MPESA_ACCOUNT_NUMBER}</b>", s["right"])],
+                [Paragraph("Account name", s["muted"]), Paragraph(f"<b>{MPESA_ACCOUNT}</b>", s["right"])],
+                [Paragraph("Reference", s["muted"]), Paragraph(f"<b>{invoice.invoice_number}</b>", s["right"])],
+            ],
+            colWidths=[inner * 0.45, inner * 0.55],
+            style=TableStyle([
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
+            ]),
+        ),
+    ], inner)
+
+    balance = float(invoice.outstanding_balance or 0)
     totals = Table(
         [
             ["Subtotal", _money(invoice.total_amount)],
             ["Paid", _money(invoice.amount_paid)],
-            ["Balance due", _money(invoice.outstanding_balance)],
+            ["Overdraft" if balance < 0 else "Balance Due", _money(abs(balance))],
         ],
-        colWidths=[doc.width * 0.22, doc.width * 0.18],
+        colWidths=[col * 0.55, col * 0.45],
     )
     totals.setStyle(TableStyle([
         ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTSIZE", (0, 0), (-1, -1), 9.5),
+        ("TEXTCOLOR", (0, 0), (0, -2), MUTED),
+        ("LINEBELOW", (0, 0), (-1, -2), 0.4, BORDER),
         ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-        ("BACKGROUND", (0, -1), (-1, -1), LIGHT),
-        ("TEXTCOLOR", (0, -1), (-1, -1), FOREST),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("FONTSIZE", (0, -1), (-1, -1), 10.5),
+        ("BACKGROUND", (0, -1), (-1, -1), FOREST),
+        ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, -1), (-1, -1), 8),
+        ("RIGHTPADDING", (0, -1), (-1, -1), 8),
     ]))
 
-    pay = Paragraph(
-        "<b>PAYMENT DETAILS</b><br/>"
-        f"M-Pesa Paybill: {MPESA_PAYBILL}<br/>"
-        f"Account name: {MPESA_ACCOUNT}<br/>"
-        f"Reference: {invoice.invoice_number}",
-        s["base"],
-    )
-    footer = Table([[pay, totals]], colWidths=[doc.width * 0.55, doc.width * 0.45])
+    footer = Table([[pay, totals]], colWidths=[col, col + 6 * mm])
     footer.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("LEFTPADDING", (0, 0), (0, 0), 0),
+        ("RIGHTPADDING", (-1, 0), (-1, 0), 0),
     ]))
-    story += [footer, Spacer(1, 10 * mm)]
 
-    story.append(Paragraph(
-        "Thank you for your business. This invoice was generated by "
-        f"{COMPANY['name']}.", s["small"],
-    ))
+    # ---- Signatures + closing line --------------------------------------
+    signatures = Table(
+        [[Paragraph("RECEIVED BY", s["small"]), Paragraph("CUSTOMER SIGNATURE", s["small"])],
+         ["", ""]],
+        colWidths=[col, col + 6 * mm], rowHeights=[12, 18],
+    )
+    signatures.setStyle(TableStyle([
+        ("LINEBELOW", (0, 1), (-1, 1), 0.6, colors.HexColor("#6b7280")),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+        ("LINEABOVE", (0, 0), (-1, 0), 0.4, BORDER),
+        ("TOPPADDING", (0, 0), (-1, 0), 8),
+    ]))
 
-    doc.build(story)
+    story.append(KeepTogether([
+        footer, Spacer(1, 9 * mm), signatures, Spacer(1, 6 * mm),
+        Paragraph(
+            "From Our Farm to Your Table. Thank you for supporting local farmers.",
+            s["center"],
+        ),
+    ]))
+
+    doc.build(story, onFirstPage=_decorations, onLaterPages=_decorations)
     return buffer.getvalue()
