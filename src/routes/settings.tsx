@@ -69,6 +69,7 @@ function initials(name: string) {
 function SettingsPage() {
   const { user } = useAuth();
   const isManager = canManageProducts(user);
+  const canViewUsers = can(user, "users", "view");
   const canManageUsers = can(user, "users", "change");
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
