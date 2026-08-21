@@ -169,11 +169,11 @@ def _decorations(canvas, doc):
         try:
             img = ImageReader(str(WATERMARK_PATH))
             iw, ih = img.getSize()
-            w = doc.width * 0.7
+            w = doc.width * 0.8
             h = w * ih / iw
-            canvas.setFillAlpha(0.06)
+            canvas.setFillAlpha(0.07)
             canvas.drawImage(
-                img, (A4[0] - w) / 2, (A4[1] - h) / 2, width=w, height=h,
+                img, (A4[0] - w) / 2, A4[1] * 0.40, width=w, height=h,
                 mask="auto", preserveAspectRatio=True,
             )
             canvas.setFillAlpha(1)
@@ -188,6 +188,7 @@ def _decorations(canvas, doc):
         except Exception:  # noqa: BLE001
             pass
     canvas.restoreState()
+
 
 
 def render_invoice_pdf(invoice) -> bytes:
