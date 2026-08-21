@@ -18,7 +18,7 @@ export const Route = createFileRoute("/sales/new")({
   component: NewSalePage,
 });
 
-interface Line { productId: string; qty: number; }
+interface Line { productId: string; qty: number; price?: number; }
 
 function formatInputDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -68,11 +68,13 @@ function NewSalePage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to record sale"),
   });
 
+  const priceOf = (line: Line) => {
+    const product = products.find((p) => p.id === line.productId);
+    return line.price !== undefined && Number.isFinite(line.price) ? line.price : (product?.unitPrice ?? 0);
+  };
+
   const total = useMemo(
-    () => lines.reduce((sum, line) => {
-      const product = products.find((p) => p.id === line.productId);
-      return sum + (product ? product.unitPrice * line.qty : 0);
-    }, 0),
+    () => lines.reduce((sum, line) => sum + priceOf(line) * line.qty, 0),
     [lines, products],
   );
 
@@ -84,6 +86,7 @@ function NewSalePage() {
     return (
       !line.productId ||
       line.qty < 1 ||
+      priceOf(line) < 0 ||
       (product ? line.qty > product.availableQuantity : false)
     );
   });
