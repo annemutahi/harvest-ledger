@@ -173,8 +173,24 @@ function NewSalePage() {
                           className={hasStockError ? "border-destructive" : ""}
                         />
                       </TableCell>
-                      <TableCell className="text-right">{product ? formatCurrency(product.unitPrice) : "—"}</TableCell>
-                      <TableCell className="text-right font-medium">{product ? formatCurrency(product.unitPrice * line.qty) : "—"}</TableCell>
+                      <TableCell className="text-right">
+                        {product ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="w-28 text-right"
+                              value={line.price ?? product.unitPrice}
+                              onChange={(e) => update(index, { price: e.target.value === "" ? undefined : Number(e.target.value) })}
+                            />
+                            {priceOf(line) !== product.unitPrice && (
+                              <span className="text-xs text-muted-foreground">List: {formatCurrency(product.unitPrice)}</span>
+                            )}
+                          </div>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{product ? formatCurrency(priceOf(line) * line.qty) : "—"}</TableCell>
                       <TableCell>
                         <Button type="button" variant="ghost" size="icon" onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== index))}>
                           <Trash2 className="h-4 w-4 text-destructive" />
