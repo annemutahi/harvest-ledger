@@ -247,19 +247,6 @@ function InvoiceDetail() {
           {!editing && canEdit && (
             <Button onClick={() => startEdit("items")}><Pencil className="mr-2 h-4 w-4" />Edit items</Button>
           )}
-          {!editing && mayVoid && !invoice.isVoided && (
-            <VoidDialog
-              title={`Void ${invoice.invoiceNumber}?`}
-              description="The invoice stays on record but is cancelled: it is excluded from statements, receivables and reports, and its stock is returned."
-              pending={voidInvoice.isPending}
-              onConfirm={async (reason) => { await voidInvoice.mutateAsync(reason); }}
-              trigger={
-                <Button variant="outline" className="text-destructive">
-                  <Ban className="mr-2 h-4 w-4" />Void invoice
-                </Button>
-              }
-            />
-          )}
         </>
       }
     >
@@ -431,9 +418,6 @@ function InvoiceDetail() {
                         <dd className="font-medium">Peaceful Acres Farm Limited</dd>
                       </div>
                     </dl>
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      Please quote the account number when making payment.
-                    </p>
                   </div>
                   <div className="ml-auto w-full max-w-sm space-y-2">
                     <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(invoice.totalAmount)}</span></div>
@@ -457,7 +441,7 @@ function InvoiceDetail() {
                   </div>
                 </div>
                 <p className="mt-6 text-center text-sm font-medium text-primary">
-                  From Our Farm to Your Table — thank you for supporting local farmers
+                  From Our Farm to Your Table. Thank you for supporting local farmers.
                 </p>
 
                 {invoice.adjustments.length > 0 && (
@@ -545,7 +529,7 @@ function InvoiceDetail() {
                             <Input
                               type="number"
                               min={0}
-                              step="0.01"
+                              step="1"
                               className="text-right"
                               value={l.unitPrice}
                               onChange={(e) => updateLine(idx, { unitPrice: Number(e.target.value) })}
@@ -654,6 +638,21 @@ function InvoiceDetail() {
             <Button asChild className="w-full print:hidden" variant="outline"><Link to="/payments/new">Record Payment</Link></Button>
           </CardContent>
         </Card>
+      </div>
+      <div className="print:hidden mt-6 flex justify-end gap-2">
+        {!editing && mayVoid && !invoice.isVoided && (
+            <VoidDialog
+              title={`Void ${invoice.invoiceNumber}?`}
+              description="The invoice stays on record but is cancelled: it is excluded from statements, receivables and reports, and its stock is returned."
+              pending={voidInvoice.isPending}
+              onConfirm={async (reason) => { await voidInvoice.mutateAsync(reason); }}
+              trigger={
+                <Button variant="outline" className="text-destructive">
+                  <Ban className="mr-2 h-4 w-4" />Void invoice
+                </Button>
+              }
+            />
+          )}
       </div>
     </AppShell>
   );
