@@ -18,6 +18,9 @@ import { api, ApiError } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { InvoiceAdjustment, SaleItem } from "@/lib/types";
 import { COMPANY } from "@/lib/company";
+import watermarkAsset from "@/assets/farm-watermark.png.asset.json";
+import farmFooterAsset from "@/assets/farm-footer.jpg.asset.json";
+
 
 export const Route = createFileRoute("/invoices/$id")({
   head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id}` }] }),
