@@ -414,15 +414,38 @@ function InvoiceDetail() {
                     ))}
                   </TableBody>
                 </Table>
-                <div className="ml-auto mt-6 max-w-sm space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(invoice.totalAmount)}</span></div>
-                  {invoice.creditApplied > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Credit applied</span><span className="text-success">−{formatCurrency(invoice.creditApplied)}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Paid</span><span className="text-success">{formatCurrency(invoice.amountPaid)}</span></div>
-                  <div className="flex justify-between rounded bg-primary px-3 py-2 text-base font-semibold text-primary-foreground">
-                    <span>{isCredit ? "Overdraft" : "Balance Due"}</span>
-                    <span>{formatCurrency(Math.abs(invoice.outstandingBalance))}</span>
+                <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                  <div className="rounded-lg border border-primary/40 bg-background p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">Payment details</p>
+                    <dl className="mt-3 space-y-1.5 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">M-Pesa Paybill</dt>
+                        <dd className="font-medium">000000</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">Account number</dt>
+                        <dd className="font-medium">{invoice.invoiceNumber}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">Account name</dt>
+                        <dd className="font-medium">Peaceful Acres Farm Limited</dd>
+                      </div>
+                    </dl>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Please quote the account number when making payment.
+                    </p>
+                  </div>
+                  <div className="ml-auto w-full max-w-sm space-y-2">
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(invoice.totalAmount)}</span></div>
+                    {invoice.creditApplied > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Credit applied</span><span className="text-success">−{formatCurrency(invoice.creditApplied)}</span></div>}
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Paid</span><span className="text-success">{formatCurrency(invoice.amountPaid)}</span></div>
+                    <div className="flex justify-between rounded bg-primary px-3 py-2 text-base font-semibold text-primary-foreground">
+                      <span>{isCredit ? "Overdraft" : "Balance Due"}</span>
+                      <span>{formatCurrency(Math.abs(invoice.outstandingBalance))}</span>
+                    </div>
                   </div>
                 </div>
+
                 <div className="mt-8 grid gap-6 border-t pt-4 sm:grid-cols-2">
                   <div>
                     <p className="text-xs font-semibold uppercase text-muted-foreground">Received by</p>
