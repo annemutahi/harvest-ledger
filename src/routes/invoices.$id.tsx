@@ -374,7 +374,7 @@ function InvoiceDetail() {
             </div>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="invoice-body relative">
             {invoice.isVoided && (
               <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
                 <p className="text-sm font-semibold text-destructive">VOIDED</p>
