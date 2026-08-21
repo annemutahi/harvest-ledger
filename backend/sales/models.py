@@ -175,3 +175,30 @@ class Payment(models.Model):
     def is_voided(self) -> bool:
         return self.voided_at is not None
 
+
+
+class InvoiceDispatch(models.Model):
+    """Audit trail of invoices sent to customers by email / SMS."""
+
+    EMAIL = "email"
+    SMS = "sms"
+    CHANNEL_CHOICES = [(EMAIL, "Email"), (SMS, "SMS")]
+
+    SENT = "sent"
+    SKIPPED = "skipped"
+    FAILED = "failed"
+    STATUS_CHOICES = [(SENT, "Sent"), (SKIPPED, "Skipped"), (FAILED, "Failed")]
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="dispatches")
+    channel = models.CharField(max_length=10, choices=CHANNEL_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    recipient = models.CharField(max_length=200, blank=True, default="")
+    detail = models.TextField(blank=True, default="")
+    sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="invoice_dispatches",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]

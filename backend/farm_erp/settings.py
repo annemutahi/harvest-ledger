@@ -231,6 +231,13 @@ FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:8080")
 
 
 
+# --- SMS gateway (optional; connected later) ---
+# When unset, invoice SMS is logged and reported to staff as "not sent".
+SMS_GATEWAY_URL = env("SMS_GATEWAY_URL", default="")
+SMS_GATEWAY_API_KEY = env("SMS_GATEWAY_API_KEY", default="")
+SMS_SENDER_ID = env("SMS_SENDER_ID", default="PEACEFULACRES")
+COMPANY_NAME = env("COMPANY_NAME", default="Peaceful Acres Farm")
+
 # --- Store sync (optional) ---
 STORE_API_URL = env("STORE_API_URL", default="")
 STORE_API_KEY = env("STORE_API_KEY", default="")
