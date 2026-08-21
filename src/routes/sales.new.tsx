@@ -175,7 +175,17 @@ function NewSalePage() {
                           max={available > 0 ? available : undefined}
                           value={line.qty}
                           onChange={(e) => update(index, { qty: Number(e.target.value) })}
-                          className={hasStockError ? "border-destructive" : ""}
+                          className={hasStockError || overStock ? "border-destructive" : ""}
+                        />
+                        <FieldError
+                          message={
+                            hasStockError
+                              ? "Out of stock"
+                              : overStock
+                                ? `Only ${available} ${product?.unit ?? "piece"}${available === 1 ? "" : "s"} remaining`
+                                : undefined
+                          }
+                          className="mt-1"
                         />
                       </TableCell>
                       <TableCell className="text-right">
