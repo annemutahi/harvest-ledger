@@ -610,7 +610,16 @@ function InvoiceDetail() {
               </div>
             )}
           </CardContent>
+          {!editing && (
+            <img
+              src={farmFooterAsset.url}
+              alt="Peaceful Acres Farm fields"
+              loading="lazy"
+              className="invoice-footer-img mt-6 h-24 w-full object-cover sm:h-32"
+            />
+          )}
         </Card>
+
         <Card className="print:hidden">
           <CardHeader><CardTitle>Payment History</CardTitle></CardHeader>
           <CardContent className="space-y-3">
