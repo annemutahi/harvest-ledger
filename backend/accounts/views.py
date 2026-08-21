@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import mixins, permissions, status, viewsets
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -99,6 +99,35 @@ class UserViewSet(
         if self.request.method in ("PUT", "PATCH"):
             return UserRoleWriteSerializer
         return UserSerializer
+
+    @action(detail=True, methods=["post"], url_path="set-password")
+    def set_password(self, request, pk=None):
+        """Admin resets a team member's password to a typed temporary one."""
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        target = self.get_object()
+        new_password = str(request.data.get("new_password") or "")
+        if not new_password:
+            return Response(
+                {"new_password": ["A new password is required."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            validate_password(new_password, target)
+        except DjangoValidationError as exc:
+            return Response(
+                {"new_password": list(exc.messages)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        target.set_password(new_password)
+        target.save(update_fields=["password"])
+        clear_failures(target.get_username())
+        return Response(
+            {"detail": f"Password reset for {target.get_username()}."},
+            status=status.HTTP_200_OK,
+        )
 
 
 @api_view(["POST"])
