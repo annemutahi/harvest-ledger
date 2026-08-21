@@ -36,3 +36,24 @@ class ProductSerializer(serializers.ModelSerializer):
         if value > 1000000:
             raise serializers.ValidationError("Quantity is too large.")
         return value
+
+    def create(self, validated_data):
+        """Revive a soft-deleted product with the same name.
+
+        `name` is unique at the database level but `validate_name` only sees
+        live rows, so creating a product whose name matches a tombstoned row
+        used to blow up with an IntegrityError (HTTP 500).
+        """
+        name = validated_data.get("name", "")
+        existing = Product.all_objects.filter(name__iexact=name, is_deleted=True).first()
+        if existing is None:
+            return super().create(validated_data)
+        for field, value in validated_data.items():
+            setattr(existing, field, value)
+        existing.is_deleted = False
+        existing.deleted_at = None
+        existing.deleted_by = None
+        existing.active = True
+        existing.save()
+        return existing
+
