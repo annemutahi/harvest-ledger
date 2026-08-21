@@ -18,8 +18,8 @@ import { api, ApiError } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { InvoiceAdjustment, SaleItem } from "@/lib/types";
 import { COMPANY } from "@/lib/company";
-import watermarkAsset from "@/assets/farm-watermark.png.asset.json";
-import farmFooterAsset from "@/assets/farm-footer.jpg.asset.json";
+import watermarkAsset from "@/assets/farm-watermark.png";
+import farmFooterAsset from "@/assets/farm-footer.png";
 
 
 export const Route = createFileRoute("/invoices/$id")({
@@ -256,7 +256,7 @@ function InvoiceDetail() {
       <div className="print-document grid gap-4 lg:grid-cols-3">
         <Card className="invoice-sheet relative overflow-hidden lg:col-span-2">
           <img
-            src={watermarkAsset.url}
+            src={watermarkAsset}
             alt=""
             aria-hidden="true"
             className="invoice-watermark pointer-events-none absolute left-1/2 top-1/2 w-[70%] max-w-[520px] -translate-x-1/2 -translate-y-1/2 opacity-[0.06]"
@@ -612,7 +612,7 @@ function InvoiceDetail() {
           </CardContent>
           {!editing && (
             <img
-              src={farmFooterAsset.url}
+              src={farmFooterAsset}
               alt="Peaceful Acres Farm fields"
               loading="eager"
               decoding="sync"
