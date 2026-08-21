@@ -85,6 +85,19 @@ function InvoiceDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Could not save eTIMS number"),
   });
 
+  const [store, setStore] = useState<string | null>(null);
+  const storeValue = store ?? invoice?.storeName ?? "";
+
+  const saveStore = useMutation({
+    mutationFn: () => api.updateInvoiceStore(invoice.id, storeValue.trim()),
+    onSuccess: () => {
+      setStore(null);
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Store saved.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not save store"),
+  });
+
   const refreshAfterVoid = () => {
     qc.invalidateQueries({ queryKey: ["invoices"] });
     qc.invalidateQueries({ queryKey: ["payments"] });
@@ -111,7 +124,11 @@ function InvoiceDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Could not void this payment"),
   });
 
-  const startEdit = () => {
+  const [mode, setMode] = useState<"items" | "prices">("items");
+  const pricesOnly = mode === "prices";
+
+  const startEdit = (nextMode: "items" | "prices" = "items") => {
+    setMode(nextMode);
     setLines(
       (invoice.items as SaleItem[]).map((it) => ({
         productId: it.productId,
@@ -225,7 +242,10 @@ function InvoiceDetail() {
           <Button variant="outline" asChild><Link to="/invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button>
           {!editing && canEdit && (
-            <Button onClick={startEdit}><Pencil className="mr-2 h-4 w-4" />Edit items</Button>
+            <Button variant="outline" onClick={() => startEdit("prices")}><Pencil className="mr-2 h-4 w-4" />Adjust prices</Button>
+          )}
+          {!editing && canEdit && (
+            <Button onClick={() => startEdit("items")}><Pencil className="mr-2 h-4 w-4" />Edit items</Button>
           )}
           {!editing && mayVoid && !invoice.isVoided && (
             <VoidDialog
@@ -283,7 +303,7 @@ function InvoiceDetail() {
                   <span className="font-medium uppercase text-muted-foreground">Due</span>
                   <span>{formatDate(invoice.dueDate)}</span>
                 </div>
-                <div className="mt-2 border-t pt-2">
+                <div className={`mt-2 border-t pt-2${invoice.etimsNumber ? "" : " print:hidden"}`}>
                   <p className="text-xs font-medium uppercase text-muted-foreground">KRA eTIMS No.</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
                     <Input
@@ -302,17 +322,42 @@ function InvoiceDetail() {
                       {saveEtims.isPending ? "Saving…" : "Save"}
                     </Button>
                   </div>
-                  <p className="mt-1 hidden min-h-5 border-b border-dotted text-sm font-medium print:block">
-                    {invoice.etimsNumber || ""}
-                  </p>
+                  {invoice.etimsNumber ? (
+                    <p className="mt-1 hidden min-h-5 border-b border-dotted text-sm font-medium print:block">
+                      {invoice.etimsNumber}
+                    </p>
+                  ) : null}
                 </div>
+
               </div>
               <div className="flex flex-col justify-between gap-3">
                 <div className="rounded-lg border border-primary/40 bg-background p-3">
                   <span className="rounded bg-primary px-2 py-1 text-xs font-semibold uppercase text-primary-foreground">
                     Bill to
                   </span>
-                  <p className="mt-2 font-semibold">{invoice.customerName}</p>
+                  <p className="mt-2 font-semibold">
+                    {invoice.customerName}
+                    {invoice.storeName ? ` - ${invoice.storeName}` : ""}
+                  </p>
+                  {customer?.type === "Corporate" && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
+                      <Input
+                        value={storeValue}
+                        onChange={(e) => setStore(e.target.value)}
+                        placeholder="Store / branch e.g. Ruaka"
+                        className="h-8 max-w-[12rem]"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={saveStore.isPending || storeValue.trim() === (invoice.storeName ?? "")}
+                        onClick={() => saveStore.mutate()}
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {saveStore.isPending ? "Saving…" : "Save"}
+                      </Button>
+                    </div>
+                  )}
                   {customer?.phone && <p className="text-sm text-muted-foreground">{customer.phone}</p>}
                   {customer?.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
                 </div>
@@ -369,15 +414,38 @@ function InvoiceDetail() {
                     ))}
                   </TableBody>
                 </Table>
-                <div className="ml-auto mt-6 max-w-sm space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(invoice.totalAmount)}</span></div>
-                  {invoice.creditApplied > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Credit applied</span><span className="text-success">−{formatCurrency(invoice.creditApplied)}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Paid</span><span className="text-success">{formatCurrency(invoice.amountPaid)}</span></div>
-                  <div className="flex justify-between rounded bg-primary px-3 py-2 text-base font-semibold text-primary-foreground">
-                    <span>{isCredit ? "Overdraft" : "Balance Due"}</span>
-                    <span>{formatCurrency(Math.abs(invoice.outstandingBalance))}</span>
+                <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                  <div className="rounded-lg border border-primary/40 bg-background p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">Payment details</p>
+                    <dl className="mt-3 space-y-1.5 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">M-Pesa Paybill</dt>
+                        <dd className="font-medium">000000</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">Account number</dt>
+                        <dd className="font-medium">{invoice.invoiceNumber}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">Account name</dt>
+                        <dd className="font-medium">Peaceful Acres Farm Limited</dd>
+                      </div>
+                    </dl>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Please quote the account number when making payment.
+                    </p>
+                  </div>
+                  <div className="ml-auto w-full max-w-sm space-y-2">
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(invoice.totalAmount)}</span></div>
+                    {invoice.creditApplied > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Credit applied</span><span className="text-success">−{formatCurrency(invoice.creditApplied)}</span></div>}
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Paid</span><span className="text-success">{formatCurrency(invoice.amountPaid)}</span></div>
+                    <div className="flex justify-between rounded bg-primary px-3 py-2 text-base font-semibold text-primary-foreground">
+                      <span>{isCredit ? "Overdraft" : "Balance Due"}</span>
+                      <span>{formatCurrency(Math.abs(invoice.outstandingBalance))}</span>
+                    </div>
                   </div>
                 </div>
+
                 <div className="mt-8 grid gap-6 border-t pt-4 sm:grid-cols-2">
                   <div>
                     <p className="text-xs font-semibold uppercase text-muted-foreground">Received by</p>
@@ -427,9 +495,18 @@ function InvoiceDetail() {
                   <TableBody>
                     {lines.map((l, idx) => {
                       const total = Number(l.quantity || 0) * Number(l.unitPrice || 0);
+                      const listPrice = Number(
+                        (products.find((x: any) => x.id === l.productId) as any)?.unitPrice ?? l.unitPrice,
+                      );
                       return (
                         <TableRow key={idx}>
                           <TableCell>
+                            {pricesOnly ? (
+                              <div>
+                                <p className="text-sm font-medium">{l.productName}</p>
+                                <p className="text-xs text-muted-foreground">List price {formatCurrency(listPrice)}</p>
+                              </div>
+                            ) : (
                             <Select
                               value={l.productId}
                               onValueChange={(v) => {
@@ -448,8 +525,12 @@ function InvoiceDetail() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
+                            {pricesOnly ? (
+                              <span className="text-sm">{l.quantity}</span>
+                            ) : (
                             <Input
                               type="number"
                               min={0}
@@ -458,6 +539,7 @@ function InvoiceDetail() {
                               value={l.quantity}
                               onChange={(e) => updateLine(idx, { quantity: Number(e.target.value) })}
                             />
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <Input
@@ -471,18 +553,26 @@ function InvoiceDetail() {
                           </TableCell>
                           <TableCell className="text-right">{formatCurrency(total)}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => removeLine(idx)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {!pricesOnly && (
+                              <Button variant="ghost" size="icon" onClick={() => removeLine(idx)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
                     })}
                   </TableBody>
                 </Table>
+                {pricesOnly ? (
+                  <p className="text-xs text-muted-foreground">
+                    Price-only adjustment: products and quantities stay unchanged, so stock is not affected.
+                  </p>
+                ) : (
                 <Button variant="outline" size="sm" onClick={addLine}>
                   <Plus className="mr-2 h-4 w-4" />Add line
                 </Button>
+                )}
 
                 <div className="ml-auto max-w-sm space-y-2 border-t pt-3">
                   <div className="flex justify-between text-sm">
@@ -525,7 +615,7 @@ function InvoiceDetail() {
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="print:hidden">
           <CardHeader><CardTitle>Payment History</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {pays.length === 0 && <p className="text-sm text-muted-foreground">No payments yet.</p>}

@@ -29,6 +29,7 @@ function NewSalePage() {
   const queryClient = useQueryClient();
   const [customerId, setCustomerId] = useState("");
   const [paymentType, setPaymentType] = useState("Cash");
+  const [storeName, setStoreName] = useState("");
   const [lines, setLines] = useState<Line[]>([{ productId: "", qty: 1 }]);
   const [invoiceDate, setInvoiceDate] = useState(() => formatInputDate(new Date()));
   const [dueDate, setDueDate] = useState(() => {
@@ -40,6 +41,22 @@ function NewSalePage() {
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: api.listCustomers });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: api.listProducts });
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: async () => (await api.listInvoices()).filter((i) => !i.isVoided) });
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => c.id === customerId),
+    [customers, customerId],
+  );
+  const isCorporate = selectedCustomer?.type === "Corporate";
+  const knownStores = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          invoices
+            .filter((i) => i.customerId === customerId && i.storeName)
+            .map((i) => i.storeName as string),
+        ),
+      ).sort(),
+    [invoices, customerId],
+  );
   const createSaleMutation = useMutation({
     mutationFn: (payload: Parameters<typeof api.createSale>[0]) => api.createSale(payload),
     onSuccess: () => {
@@ -92,6 +109,7 @@ function NewSalePage() {
           if (!customerId || total === 0 || hasInvalidLine || !invoiceDate || !dueDate) return;
           createSaleMutation.mutate({
             customerId,
+            storeName: storeName.trim() || undefined,
             paymentType: paymentType as "Cash" | "Credit",
             invoiceDate,
             dueDate,
@@ -187,6 +205,27 @@ function NewSalePage() {
                 </SelectContent>
               </Select>
             </div>
+            {isCorporate && (
+              <div className="grid gap-2">
+                <Label htmlFor="store">Store / Branch</Label>
+                <Input
+                  id="store"
+                  list="store-options"
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
+                  placeholder="e.g. Ruaka"
+                />
+                <datalist id="store-options">
+                  {knownStores.map((s) => (
+                    <option key={s} value={s} />
+                  ))}
+                </datalist>
+                <p className="text-xs text-muted-foreground">
+                  Shown on the invoice as “{selectedCustomer?.name ?? "Customer"}
+                  {storeName.trim() ? ` - ${storeName.trim()}` : ""}”. Statements stay under the corporate account.
+                </p>
+              </div>
+            )}
             <div className="grid gap-2">
               <Label>Date Created</Label>
               <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
