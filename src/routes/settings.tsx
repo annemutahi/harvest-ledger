@@ -104,13 +104,13 @@ function SettingsPage() {
   const usersQuery = useQuery({
     queryKey: ["team-users"],
     queryFn: () => api.listUsers(),
-    enabled: canManageUsers,
+    enabled: canViewUsers,
   });
 
   const matrixQuery = useQuery({
     queryKey: ["role-matrix"],
     queryFn: () => api.roleMatrix(),
-    enabled: canManageUsers,
+    enabled: canViewUsers,
     staleTime: 5 * 60_000,
   });
 
@@ -221,7 +221,7 @@ function SettingsPage() {
             <Bell className="mr-2 h-4 w-4" />
             Notifications
           </TabsTrigger>
-          {canManageUsers && (
+          {canViewUsers && (
             <TabsTrigger value="roles">
               <Users className="mr-2 h-4 w-4" />
               Roles
@@ -380,7 +380,7 @@ function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {canManageUsers && (
+        {canViewUsers && (
           <TabsContent value="roles">
             <Card>
               <CardHeader>
