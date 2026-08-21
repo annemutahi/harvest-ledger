@@ -343,6 +343,7 @@ function mapInvoice(i: any): Invoice {
     voidedAt: i.voided_at ?? undefined,
     voidedByName: i.voided_by_name || undefined,
     voidReason: i.void_reason || undefined,
+    lastSentAt: i.last_sent_at || undefined,
   };
 }
 
@@ -596,6 +597,9 @@ export const api = {
         body: JSON.stringify({ etims_number: etimsNumber }),
       }),
     ),
+
+  sendInvoice: async (id: string): Promise<InvoiceDispatchResult> =>
+    await request(`/invoices/${id}/send/`, { method: "POST" }),
 
   voidInvoice: async (id: string, reason: string): Promise<Invoice> =>
     mapInvoice(

@@ -92,6 +92,20 @@ export interface Invoice {
   voidedAt?: string;
   voidedByName?: string;
   voidReason?: string;
+  lastSentAt?: string;
+}
+
+export type DispatchChannel = "email" | "sms";
+export type DispatchStatus = "sent" | "skipped" | "failed";
+
+export interface InvoiceDispatchResult {
+  invoiceNumber?: string;
+  results: {
+    channel: DispatchChannel;
+    status: DispatchStatus;
+    recipient: string;
+    detail: string;
+  }[];
 }
 
 export type PaymentMethod = "Cash" | "Bank Transfer" | "Mobile Money" | "Cheque";
