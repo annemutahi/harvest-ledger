@@ -46,6 +46,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "is_staff",
             "is_superuser",
+            "is_active",
             "can_edit_sales",
             "role",
             "permissions",
@@ -62,9 +63,21 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserRoleWriteSerializer(UserSerializer):
-    """Admin-facing serializer that allows changing a user's role."""
+    """Admin-facing serializer that allows changing a user's role or status."""
 
-    role = RoleField(choices=ROLE_CHOICES)
+    role = RoleField(choices=ROLE_CHOICES, required=False)
+    is_active = serializers.BooleanField(required=False)
+
+    def validate_is_active(self, value):
+        request = self.context.get("request")
+        if (
+            request is not None
+            and self.instance is not None
+            and request.user.pk == self.instance.pk
+            and value is False
+        ):
+            raise serializers.ValidationError("You cannot deactivate your own account.")
+        return value
 
     def update(self, instance, validated_data):
         role = validated_data.get("role")
@@ -72,6 +85,9 @@ class UserRoleWriteSerializer(UserSerializer):
             from .models import UserRole
 
             UserRole.objects.update_or_create(user=instance, defaults={"role": role})
+        if "is_active" in validated_data:
+            instance.is_active = validated_data["is_active"]
+            instance.save(update_fields=["is_active"])
         return instance
 
 
