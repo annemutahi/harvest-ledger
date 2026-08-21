@@ -19,7 +19,7 @@ export const Route = createFileRoute("/sales/new")({
   component: NewSalePage,
 });
 
-interface Line { productId: string; qty: number; price?: number; }
+interface Line { productId: string; qty: number; price?: number; priceText?: string; }
 
 function formatInputDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -87,12 +87,21 @@ function NewSalePage() {
   const update = (index: number, patch: Partial<Line>) =>
     setLines((prev) => prev.map((line, idx) => (idx === index ? { ...line, ...patch } : line)));
 
+  const priceErrorOf = (line: Line) => {
+    if (!line.productId) return undefined;
+    if (line.priceText !== undefined && line.priceText.trim() === "") return "Enter a unit price";
+    if (line.price !== undefined && (!Number.isFinite(line.price) || line.price <= 0)) {
+      return "Price must be greater than 0";
+    }
+    return undefined;
+  };
+
   const hasInvalidLine = lines.some((line) => {
     const product = products.find((p) => p.id === line.productId);
     return (
       !line.productId ||
       line.qty < 1 ||
-      priceOf(line) < 0 ||
+      Boolean(priceErrorOf(line)) ||
       (product ? line.qty > product.availableQuantity : false)
     );
   });
@@ -151,10 +160,11 @@ function NewSalePage() {
                   const available = product?.availableQuantity ?? 0;
                   const hasStockError = Boolean(product && available <= 0);
                   const overStock = Boolean(product && available > 0 && line.qty > available);
+                  const priceError = priceErrorOf(line);
                   return (
                     <TableRow key={index}>
                       <TableCell>
-                        <Select value={line.productId} onValueChange={(value) => update(index, { productId: value, price: undefined })}>
+                        <Select value={line.productId} onValueChange={(value) => update(index, { productId: value, price: undefined, priceText: undefined })}>
                           <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                           <SelectContent>
                             {products.map((product) => (
@@ -197,11 +207,23 @@ function NewSalePage() {
                               type="number"
                               min={0}
                               step="0.01"
-                              className="w-28 text-right"
-                              value={line.price ?? product.unitPrice}
-                              onChange={(e) => update(index, { price: e.target.value === "" ? undefined : Number(e.target.value) })}
+                              className={`w-28 text-right ${priceError ? "border-destructive" : ""}`}
+                              value={line.priceText ?? String(line.price ?? product.unitPrice)}
+                              onChange={(e) => {
+                                const text = e.target.value;
+                                update(index, {
+                                  priceText: text,
+                                  price: text.trim() === "" ? undefined : Number(text),
+                                });
+                              }}
+                              onBlur={() => {
+                                if ((line.priceText ?? "").trim() === "") {
+                                  update(index, { priceText: undefined, price: undefined });
+                                }
+                              }}
                             />
-                            {priceOf(line) !== product.unitPrice && (
+                            <FieldError message={priceError} />
+                            {!priceError && priceOf(line) !== product.unitPrice && (
                               <span className="text-xs text-muted-foreground">List: {formatCurrency(product.unitPrice)}</span>
                             )}
                           </div>
