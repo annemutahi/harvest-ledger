@@ -108,7 +108,6 @@ function NewSalePage() {
   return (
     <AppShell
       title="New Sale"
-      description="Record a sale and auto-generate an invoice."
       actions={<Button variant="outline" asChild><Link to="/transactions"><ArrowLeft className="mr-2 h-4 w-4" />Cancel</Link></Button>}
     >
       <form
@@ -164,7 +163,7 @@ function NewSalePage() {
                                 disabled={product.availableQuantity <= 0}
                               >
                                 {product.name}
-                                {product.availableQuantity <= 0 ? " — Out of stock" : ""}
+                                {product.availableQuantity <= 0 ? " - Out of stock" : ""}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -270,6 +269,8 @@ function NewSalePage() {
                 <SelectContent>
                   <SelectItem value="Cash">Cash</SelectItem>
                   <SelectItem value="Credit">Credit</SelectItem>
+                  <SelectItem value="Mpesa">M-Pesa</SelectItem>
+                  <SelectItem value="Bank">Bank Transfer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
