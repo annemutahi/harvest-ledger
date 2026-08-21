@@ -536,7 +536,7 @@ function SettingsPage() {
                                 disabled={
                                   activeMutation.isPending ||
                                   !canManageUsers ||
-                                  String(member.id) === String(currentUser?.id)
+                                  String(member.id) === String(user?.id)
                                 }
                                 aria-label={`Toggle access for ${member.username}`}
                               />
