@@ -412,7 +412,9 @@ function InvoiceDetail() {
                     ))}
                   </TableBody>
                 </Table>
+                <div className="invoice-spacer" aria-hidden="true" />
                 <div className="mt-6 grid gap-6 sm:grid-cols-2">
+
                   <div className="rounded-lg border border-primary/40 bg-background p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">Payment details</p>
                     <dl className="mt-3 space-y-1.5 text-sm">
