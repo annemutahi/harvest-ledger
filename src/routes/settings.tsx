@@ -124,6 +124,17 @@ function SettingsPage() {
     onError: () => toast.error("Could not update that role."),
   });
 
+  const activeMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: number | string; isActive: boolean }) =>
+      api.setUserActive(id, isActive),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["team-users"] });
+      toast.success(vars.isActive ? "User activated." : "User deactivated.");
+    },
+    onError: (error: any) =>
+      toast.error(error?.message || "Could not update that user's status."),
+  });
+
   const handlePhotoChange = (file?: File) => {
     if (!file) return;
     setPhotoUrl(URL.createObjectURL(file));
@@ -478,12 +489,13 @@ function SettingsPage() {
                         <TableHead>User</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead className="w-56">Role</TableHead>
+                        <TableHead className="w-40">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {usersQuery.isLoading && (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                          <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
                             Loading team…
                           </TableCell>
                         </TableRow>
@@ -513,6 +525,25 @@ function SettingsPage() {
                                 ))}
                               </SelectContent>
                             </Select>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={member.is_active !== false}
+                                onCheckedChange={(checked) =>
+                                  activeMutation.mutate({ id: member.id, isActive: checked })
+                                }
+                                disabled={
+                                  activeMutation.isPending ||
+                                  !canManageUsers ||
+                                  String(member.id) === String(currentUser?.id)
+                                }
+                                aria-label={`Toggle access for ${member.username}`}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {member.is_active === false ? "Inactive" : "Active"}
+                              </span>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
