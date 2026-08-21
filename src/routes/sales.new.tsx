@@ -160,6 +160,7 @@ function NewSalePage() {
                   const available = product?.availableQuantity ?? 0;
                   const hasStockError = Boolean(product && available <= 0);
                   const overStock = Boolean(product && available > 0 && line.qty > available);
+                  const priceError = priceErrorOf(line);
                   return (
                     <TableRow key={index}>
                       <TableCell>
