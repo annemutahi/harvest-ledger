@@ -614,8 +614,9 @@ function InvoiceDetail() {
             <img
               src={farmFooterAsset.url}
               alt="Peaceful Acres Farm fields"
-              loading="lazy"
-              className="invoice-footer-img mt-6 h-16 w-full object-cover sm:h-20"
+              loading="eager"
+              decoding="sync"
+              className="invoice-footer-img mt-6 block h-16 w-full object-cover sm:h-20"
             />
           )}
         </Card>
