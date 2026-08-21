@@ -147,7 +147,7 @@ function NewSalePage() {
                   return (
                     <TableRow key={index}>
                       <TableCell>
-                        <Select value={line.productId} onValueChange={(value) => update(index, { productId: value })}>
+                        <Select value={line.productId} onValueChange={(value) => update(index, { productId: value, price: undefined })}>
                           <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                           <SelectContent>
                             {products.map((product) => (
