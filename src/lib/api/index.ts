@@ -975,6 +975,15 @@ export const api = {
       body: JSON.stringify({ is_active: isActive }),
     }),
 
+  resetUserPassword: async (
+    id: number | string,
+    newPassword: string,
+  ): Promise<{ detail: string }> =>
+    request(`/auth/users/${id}/set-password/`, {
+      method: "POST",
+      body: JSON.stringify({ new_password: newPassword }),
+    }),
+
   createUser: async (payload: {
     username: string;
     email?: string;

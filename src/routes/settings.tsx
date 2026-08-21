@@ -19,6 +19,14 @@ import { ROLE_LABELS, can, canManageProducts, roleOf } from "@/lib/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AppRole } from "@/lib/api";
 import { PasswordInput } from "@/components/password-input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PasswordStrength, isStrongPassword } from "@/components/password-strength";
 import { FieldError } from "@/components/field-error";
 
@@ -123,6 +131,37 @@ function SettingsPage() {
     },
     onError: () => toast.error("Could not update that role."),
   });
+
+  const [resetTarget, setResetTarget] = useState<{ id: number | string; username: string } | null>(
+    null,
+  );
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetConfirm, setResetConfirm] = useState("");
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ id, password }: { id: number | string; password: string }) =>
+      api.resetUserPassword(id, password),
+    onSuccess: (data) => {
+      toast.success(data?.detail || "Password reset.");
+      setResetTarget(null);
+      setResetPassword("");
+      setResetConfirm("");
+    },
+    onError: (error: any) => toast.error(error?.message || "Could not reset that password."),
+  });
+
+  const submitResetPassword = () => {
+    if (!resetTarget) return;
+    if (!isStrongPassword(resetPassword)) {
+      toast.error("Choose a stronger password.");
+      return;
+    }
+    if (resetPassword !== resetConfirm) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    resetPasswordMutation.mutate({ id: resetTarget.id, password: resetPassword });
+  };
 
   const activeMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: number | string; isActive: boolean }) =>
@@ -490,12 +529,13 @@ function SettingsPage() {
                         <TableHead>Email</TableHead>
                         <TableHead className="w-56">Role</TableHead>
                         <TableHead className="w-40">Status</TableHead>
+                        <TableHead className="w-32 text-right">Password</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {usersQuery.isLoading && (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                          <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
                             Loading team…
                           </TableCell>
                         </TableRow>
@@ -545,6 +585,20 @@ function SettingsPage() {
                               </span>
                             </div>
                           </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!canManageUsers}
+                              onClick={() => {
+                                setResetPassword("");
+                                setResetConfirm("");
+                                setResetTarget({ id: member.id, username: member.username });
+                              }}
+                            >
+                              Reset
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -590,6 +644,56 @@ function SettingsPage() {
                     </Table>
                   </div>
                 )}
+                <Dialog
+                  open={resetTarget !== null}
+                  onOpenChange={(open) => {
+                    if (!open) setResetTarget(null);
+                  }}
+                >
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Reset password</DialogTitle>
+                      <DialogDescription>
+                        Set a temporary password for {resetTarget?.username}. Share it privately and
+                        ask them to change it from their profile after signing in.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-3">
+                      <div className="grid gap-1">
+                        <Label htmlFor="reset-new">New password</Label>
+                        <PasswordInput
+                          id="reset-new"
+                          value={resetPassword}
+                          onChange={(e) => setResetPassword(e.target.value)}
+                        />
+                        <PasswordStrength password={resetPassword} />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label htmlFor="reset-confirm">Confirm password</Label>
+                        <PasswordInput
+                          id="reset-confirm"
+                          value={resetConfirm}
+                          onChange={(e) => setResetConfirm(e.target.value)}
+                        />
+                        {resetConfirm && resetConfirm !== resetPassword && (
+                          <FieldError message="Passwords do not match." />
+                        )}
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setResetTarget(null)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={submitResetPassword}
+                        disabled={resetPasswordMutation.isPending}
+                      >
+                        {resetPasswordMutation.isPending ? "Resetting…" : "Reset password"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
                 <p className="text-xs text-muted-foreground">
                   Rights are enforced on the server for every module; changing a role takes effect
                   the next time that user loads the app.
