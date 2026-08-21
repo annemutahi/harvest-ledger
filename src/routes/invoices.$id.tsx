@@ -251,8 +251,15 @@ function InvoiceDetail() {
       }
     >
       <div className="print-document grid gap-4 lg:grid-cols-3">
-        <Card className="overflow-hidden lg:col-span-2">
-          <CardHeader className="border-b-4 border-primary bg-primary/5">
+        <Card className="invoice-sheet relative overflow-hidden lg:col-span-2">
+          <img
+            src={watermarkAsset.url}
+            alt=""
+            aria-hidden="true"
+            className="invoice-watermark pointer-events-none absolute left-1/2 top-1/2 w-[70%] max-w-[520px] -translate-x-1/2 -translate-y-1/2 opacity-[0.06]"
+          />
+          <CardHeader className="relative border-b-4 border-primary bg-primary/5">
+
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <img
