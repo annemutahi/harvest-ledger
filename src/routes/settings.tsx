@@ -180,21 +180,21 @@ function SettingsPage() {
     },
     onError: (error: unknown) =>
       toast.error(
-        error instanceof Error && error.message ? error.message : "Could not create that user.",
+        error instanceof Error && error.message ? error.message : "Could not create user.",
       ),
   });
 
   const submitNewUser = () => {
     if (!newUser.username.trim() || !newUser.password) {
-      toast.error("Username and initial password are required.");
+      toast.error("Username and password are required.");
       return;
     }
     if (newUser.password !== newUser.confirm) {
-      toast.error("Initial password and confirmation do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
     if (!isStrongPassword(newUser.password)) {
-      toast.error("Initial password does not meet all the requirements.");
+      toast.error("Password does not meet all the requirements.");
       return;
     }
     createUserMutation.mutate();
