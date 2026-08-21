@@ -38,6 +38,7 @@ export type AuthUser = {
   email?: string;
   is_staff?: boolean;
   is_superuser?: boolean;
+  is_active?: boolean;
   can_edit_sales?: boolean;
   role?: AppRole | null;
   permissions?: Record<string, string[]>;
@@ -967,6 +968,12 @@ export const api = {
 
   setUserRole: async (id: number | string, role: AppRole): Promise<AuthUser> =>
     request(`/auth/users/${id}/`, { method: "PATCH", body: JSON.stringify({ role }) }),
+
+  setUserActive: async (id: number | string, isActive: boolean): Promise<AuthUser> =>
+    request(`/auth/users/${id}/`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_active: isActive }),
+    }),
 
   createUser: async (payload: {
     username: string;
