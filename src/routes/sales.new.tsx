@@ -19,7 +19,7 @@ export const Route = createFileRoute("/sales/new")({
   component: NewSalePage,
 });
 
-interface Line { productId: string; qty: number; price?: number; }
+interface Line { productId: string; qty: number; price?: number; priceText?: string; }
 
 function formatInputDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -87,12 +87,21 @@ function NewSalePage() {
   const update = (index: number, patch: Partial<Line>) =>
     setLines((prev) => prev.map((line, idx) => (idx === index ? { ...line, ...patch } : line)));
 
+  const priceErrorOf = (line: Line) => {
+    if (!line.productId) return undefined;
+    if (line.priceText !== undefined && line.priceText.trim() === "") return "Enter a unit price";
+    if (line.price !== undefined && (!Number.isFinite(line.price) || line.price <= 0)) {
+      return "Price must be greater than 0";
+    }
+    return undefined;
+  };
+
   const hasInvalidLine = lines.some((line) => {
     const product = products.find((p) => p.id === line.productId);
     return (
       !line.productId ||
       line.qty < 1 ||
-      priceOf(line) < 0 ||
+      Boolean(priceErrorOf(line)) ||
       (product ? line.qty > product.availableQuantity : false)
     );
   });
