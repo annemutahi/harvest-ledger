@@ -130,7 +130,7 @@ def _status_pill(text, s):
         text.upper(),
         ParagraphStyle("pill", parent=s["base"], fontName="Helvetica-Bold",
                        fontSize=7, textColor=FOREST, alignment=1),
-    )]], colWidths=[5.6 * len(text) + 14], hAlign="RIGHT")
+    )]], colWidths=[5.6 * len(text) + 12], hAlign="RIGHT")
     pill.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), FOREST_SOFT),
         ("ROUNDEDCORNERS", [6, 6, 6, 6]),
@@ -169,11 +169,11 @@ def _decorations(canvas, doc):
         try:
             img = ImageReader(str(WATERMARK_PATH))
             iw, ih = img.getSize()
-            w = doc.width * 0.8
+            w = doc.width * 0.68
             h = w * ih / iw
             canvas.setFillAlpha(0.07)
             canvas.drawImage(
-                img, (A4[0] - w) / 2, A4[1] * 0.40, width=w, height=h,
+                img, (A4[0] - w) / 2, A4[1] * 0.30, width=w, height=h,
                 mask="auto", preserveAspectRatio=True,
             )
             canvas.setFillAlpha(1)
@@ -272,6 +272,7 @@ def render_invoice_pdf(invoice) -> bytes:
                 ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                ("RIGHTPADDING", (1, 0), (1, 0), 2),
             ]),
         ),
     ], inner)
@@ -286,7 +287,8 @@ def render_invoice_pdf(invoice) -> bytes:
             Paragraph("KRA ETIMS NO.", key),
             Paragraph(invoice.etims_number, s["right"]),
         ])
-    meta_table = Table(meta_rows, colWidths=[inner * 0.45, inner * 0.55])
+    right_inner = col + 6 * mm - 16
+    meta_table = Table(meta_rows, colWidths=[right_inner * 0.45, right_inner * 0.55])
     meta_table.setStyle(TableStyle([
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
@@ -301,7 +303,7 @@ def render_invoice_pdf(invoice) -> bytes:
           Paragraph(f"<b>{invoice.invoice_number}</b>",
                     ParagraphStyle("no", parent=s["base"], alignment=2, fontSize=14,
                                    fontName="Helvetica-Bold", textColor=colors.black))]],
-        colWidths=[inner * 0.45, inner * 0.55],
+        colWidths=[right_inner * 0.45, right_inner * 0.55],
     )
     meta_head.setStyle(TableStyle([
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -317,7 +319,7 @@ def render_invoice_pdf(invoice) -> bytes:
         ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
     ]))
     panels = Table(
-        [[left_stack, _panel([meta_head, meta_table], inner)]],
+        [[left_stack, _panel([meta_head, meta_table], right_inner)]],
         colWidths=[col, col + 6 * mm],
     )
     panels.setStyle(TableStyle([
