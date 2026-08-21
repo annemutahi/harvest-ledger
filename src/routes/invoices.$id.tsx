@@ -18,6 +18,9 @@ import { api, ApiError } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { InvoiceAdjustment, SaleItem } from "@/lib/types";
 import { COMPANY } from "@/lib/company";
+import watermarkAsset from "@/assets/farm-watermark.png.asset.json";
+import farmFooterAsset from "@/assets/farm-footer.jpg.asset.json";
+
 
 export const Route = createFileRoute("/invoices/$id")({
   head: ({ params }) => ({ meta: [{ title: `Invoice ${params.id}` }] }),
@@ -251,8 +254,15 @@ function InvoiceDetail() {
       }
     >
       <div className="print-document grid gap-4 lg:grid-cols-3">
-        <Card className="overflow-hidden lg:col-span-2">
-          <CardHeader className="border-b-4 border-primary bg-primary/5">
+        <Card className="invoice-sheet relative overflow-hidden lg:col-span-2">
+          <img
+            src={watermarkAsset.url}
+            alt=""
+            aria-hidden="true"
+            className="invoice-watermark pointer-events-none absolute left-1/2 top-1/2 w-[70%] max-w-[520px] -translate-x-1/2 -translate-y-1/2 opacity-[0.06]"
+          />
+          <CardHeader className="relative border-b-4 border-primary bg-primary/5">
+
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <img
@@ -364,7 +374,7 @@ function InvoiceDetail() {
             </div>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="invoice-body relative">
             {invoice.isVoided && (
               <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
                 <p className="text-sm font-semibold text-destructive">VOIDED</p>
@@ -402,7 +412,9 @@ function InvoiceDetail() {
                     ))}
                   </TableBody>
                 </Table>
+                <div className="invoice-spacer" aria-hidden="true" />
                 <div className="mt-6 grid gap-6 sm:grid-cols-2">
+
                   <div className="rounded-lg border border-primary/40 bg-background p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">Payment details</p>
                     <dl className="mt-3 space-y-1.5 text-sm">
@@ -598,7 +610,16 @@ function InvoiceDetail() {
               </div>
             )}
           </CardContent>
+          {!editing && (
+            <img
+              src={farmFooterAsset.url}
+              alt="Peaceful Acres Farm fields"
+              loading="lazy"
+              className="invoice-footer-img mt-6 h-24 w-full object-cover sm:h-32"
+            />
+          )}
         </Card>
+
         <Card className="print:hidden">
           <CardHeader><CardTitle>Payment History</CardTitle></CardHeader>
           <CardContent className="space-y-3">
