@@ -1,7 +1,7 @@
 // Real API client — talks to Django REST Framework backend.
 // Configure VITE_API_BASE_URL in .env (default: http://127.0.0.1:8000/api).
 
-import type { Customer, Product, Sale, SaleItem, Invoice, InvoiceStatus, Payment, PaymentType, PaymentMethod, CustomerType } from "@/lib/types";
+import type { Customer, Product, Sale, SaleItem, Invoice, InvoiceStatus, Payment, PaymentType, PaymentMethod, CustomerType, InvoiceDispatchResult } from "@/lib/types";
 
 const API_BASE =
   (
