@@ -106,16 +106,24 @@ function StockPage() {
   const approveMutation = useMutation({
     mutationFn: async () => {
       if (!approving) throw new Error("No entry selected");
+      // If the catalogue already has this product, approve against it instead
+      // of creating a duplicate (the backend rejects duplicate names).
+      const existing = findMatch(products, approving.productName);
+      if (existing) {
+        return api.approveStockEntry(approving.id, existing.id);
+      }
       // Create the product with 0 stock, then approve — approval increments
       // stock by the entry's quantity, keeping the audit path consistent.
       const created = await api.createProduct({
         name: approving.productName,
         category: approving.category,
-        unitPrice: priceForm.unitPrice,
+        unitPrice: Math.round(priceForm.unitPrice * 100) / 100,
+        unit: priceForm.unit.trim() || "piece",
         availableQuantity: 0,
       });
       return api.approveStockEntry(approving.id, created.id);
     },
+
     onSuccess: () => {
       toast.success("Product added to catalogue.");
       invalidateStock();
