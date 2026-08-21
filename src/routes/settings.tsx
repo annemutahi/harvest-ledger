@@ -500,7 +500,7 @@ function SettingsPage() {
                               onValueChange={(value) =>
                                 roleMutation.mutate({ id: member.id, role: value as AppRole })
                               }
-                              disabled={roleMutation.isPending}
+                              disabled={roleMutation.isPending || !canManageUsers}
                             >
                               <SelectTrigger>
                                 <SelectValue />
