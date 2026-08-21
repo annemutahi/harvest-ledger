@@ -206,11 +206,23 @@ function NewSalePage() {
                               type="number"
                               min={0}
                               step="0.01"
-                              className="w-28 text-right"
-                              value={line.price ?? product.unitPrice}
-                              onChange={(e) => update(index, { price: e.target.value === "" ? undefined : Number(e.target.value) })}
+                              className={`w-28 text-right ${priceError ? "border-destructive" : ""}`}
+                              value={line.priceText ?? String(line.price ?? product.unitPrice)}
+                              onChange={(e) => {
+                                const text = e.target.value;
+                                update(index, {
+                                  priceText: text,
+                                  price: text.trim() === "" ? undefined : Number(text),
+                                });
+                              }}
+                              onBlur={() => {
+                                if ((line.priceText ?? "").trim() === "") {
+                                  update(index, { priceText: undefined, price: undefined });
+                                }
+                              }}
                             />
-                            {priceOf(line) !== product.unitPrice && (
+                            <FieldError message={priceError} />
+                            {!priceError && priceOf(line) !== product.unitPrice && (
                               <span className="text-xs text-muted-foreground">List: {formatCurrency(product.unitPrice)}</span>
                             )}
                           </div>
