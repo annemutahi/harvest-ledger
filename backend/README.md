@@ -44,6 +44,20 @@ python manage.py runserver 0.0.0.0:8000
 Frontend already points at `http://127.0.0.1:8000/api` via
 `VITE_API_URL` — no frontend changes required.
 
+## Roles
+
+Roles live in the `accounts_userrole` table (created by `accounts/migrations/0001_initial.py`).
+Run `python manage.py migrate` after pulling: without that table every account
+falls back to the legacy staff flags, which is why an "admin" could get
+`403 Forbidden` on `/auth/users/`.
+
+Existing accounts are seeded automatically (superuser → Admin, staff → Manager,
+everyone else → Sales). To change a role from the shell:
+
+```bash
+python manage.py set_role <username> admin
+```
+
 ## Environment
 
 See `.env.example`. Required in production:
