@@ -476,9 +476,11 @@ export const api = {
         body: JSON.stringify({
           name: data.name?.trim() ?? "",
           category: data.category?.trim() ?? "",
-          unit_price: Number(data.unitPrice ?? 0),
+          unit_price: Math.round(Number(data.unitPrice ?? 0) * 100) / 100,
           available_quantity: Number(data.availableQuantity ?? 0),
+          unit: data.unit?.trim() || undefined,
           description: data.description?.trim() ?? undefined,
+
         }),
       }),
     ),
