@@ -148,7 +148,8 @@ function NewSalePage() {
                 {lines.map((line, index) => {
                   const product = products.find((p) => p.id === line.productId);
                   const available = product?.availableQuantity ?? 0;
-                  const hasStockError = product && available <= 0;
+                  const hasStockError = Boolean(product && available <= 0);
+                  const overStock = Boolean(product && available > 0 && line.qty > available);
                   return (
                     <TableRow key={index}>
                       <TableCell>
