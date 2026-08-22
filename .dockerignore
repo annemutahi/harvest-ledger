@@ -1,0 +1,10 @@
+node_modules
+.output
+.nitro
+dist
+.git
+.env
+backend
+**/__pycache__
+*.sqlite3
+/tmp
