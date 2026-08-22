@@ -85,19 +85,18 @@ TEMPLATES = [
     },
 ]
 
-# Database — Postgres in production, SQLite fallback for local dev.
-# DATABASES = {
-#     "default": env.db_url(
-#         "DATABASE_URL",
-#         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-#     ),
-# }
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+# Database — Postgres when DATABASE_URL is set (Docker/production),
+# SQLite fallback for local dev.
+_database_url = env("DATABASE_URL", default="")
+if _database_url:
+    DATABASES = {"default": env.db_url_config(_database_url)}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
 
 # Argon2 first — modern, memory-hard hashing.
 PASSWORD_HASHERS = [
@@ -192,7 +191,8 @@ SECURE_REFERRER_POLICY = "same-origin"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    # Set SECURE_SSL_REDIRECT=False when running behind plain HTTP (e.g. local Docker).
+    SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365  # 1 year
