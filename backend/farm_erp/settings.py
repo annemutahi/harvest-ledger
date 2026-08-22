@@ -191,7 +191,8 @@ SECURE_REFERRER_POLICY = "same-origin"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    # Set SECURE_SSL_REDIRECT=False when running behind plain HTTP (e.g. local Docker).
+    SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365  # 1 year
