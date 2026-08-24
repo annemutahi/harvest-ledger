@@ -298,7 +298,7 @@ function SettingsPage() {
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -311,7 +311,7 @@ function SettingsPage() {
                     Change Photo
                   </Button>
                   <p className="text-xs text-muted-foreground">Use a square image for the cleanest crop.</p>
-                </div>
+                </div> */}
               </div>
 
               <Separator />
