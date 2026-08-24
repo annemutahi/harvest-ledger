@@ -696,13 +696,13 @@ function PnlReport({ data, monthMode, period }: { data: {
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Revenue" value={formatCurrency(data.revenue)} icon={TrendingUp} tone="primary" />
-        <StatCard label="Expenses" value={formatCurrency(data.expenses)} icon={TrendingDown} tone="destructive" />
+        <StatCard label="Money Received" value={formatCurrency(data.revenue)} icon={TrendingUp} tone="primary" />
+        <StatCard label="Money Paid Out" value={formatCurrency(data.expenses)} icon={TrendingDown} tone="destructive" />
         <StatCard label={data.net >= 0 ? "Net Profit" : "Net Loss"} value={formatCurrency(Math.abs(data.net))} icon={PiggyBank} tone={netTone} />
         <StatCard label="Margin" value={`${data.margin.toFixed(1)}%`} icon={BarChart3} tone="earth" />
       </div>
 
-      <ChartCard title={monthMode ? "Revenue vs Expenses (Monthly)" : "Revenue vs Expenses"}>
+      <ChartCard title={monthMode ? "Cash In vs Cash Out (Monthly)" : "Cash In vs Cash Out"}>
         {data.buckets.length === 0 ? <EmptyState label="No data" /> : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.buckets} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
@@ -711,8 +711,8 @@ function PnlReport({ data, monthMode, period }: { data: {
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip formatter={(v: number) => formatCurrency(v)} />
               <Legend />
-              <Bar dataKey="revenue" fill={CHART_COLORS[0]} name="Revenue" />
-              <Bar dataKey="expenses" fill={CHART_COLORS[4]} name="Expenses" />
+              <Bar dataKey="revenue" fill={CHART_COLORS[0]} name="Money Received" />
+              <Bar dataKey="expenses" fill={CHART_COLORS[4]} name="Money Paid Out" />
               {monthMode && <Bar dataKey="net" fill={CHART_COLORS[2]} name="Net" />}
             </BarChart>
           </ResponsiveContainer>
@@ -721,10 +721,10 @@ function PnlReport({ data, monthMode, period }: { data: {
 
       <Card>
         <TableCardHeader
-          title="P&L Summary"
+          title="P&L Summary (cash basis)"
           onExport={() => exportSheet("profit-and-loss", "P&L", [
-            { Metric: "Revenue", Value: data.revenue },
-            { Metric: "Expenses", Value: data.expenses },
+            { Metric: "Money Received", Value: data.revenue },
+            { Metric: "Money Paid Out", Value: data.expenses },
             { Metric: data.net >= 0 ? "Net Profit" : "Net Loss", Value: data.net },
             { Metric: "Margin (%)", Value: +data.margin.toFixed(2) },
             ...data.buckets.map((b) => ({ Metric: b.label, Value: `Rev ${b.revenue} / Exp ${b.expenses} / Net ${b.net}` })),
@@ -734,8 +734,8 @@ function PnlReport({ data, monthMode, period }: { data: {
           <Table>
             <TableHeader><TableRow><TableHead>Metric</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
             <TableBody>
-              <TableRow><TableCell>Revenue</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.revenue)}</TableCell></TableRow>
-              <TableRow><TableCell>Expenses</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.expenses)}</TableCell></TableRow>
+              <TableRow><TableCell>Money Received</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.revenue)}</TableCell></TableRow>
+              <TableRow><TableCell>Money Paid Out</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.expenses)}</TableCell></TableRow>
               <TableRow><TableCell className="font-medium">{data.net >= 0 ? "Net Profit" : "Net Loss"}</TableCell><TableCell className="text-right tabular-nums font-medium">{formatCurrency(Math.abs(data.net))}</TableCell></TableRow>
               <TableRow><TableCell>Margin</TableCell><TableCell className="text-right tabular-nums">{data.margin.toFixed(1)}%</TableCell></TableRow>
             </TableBody>
