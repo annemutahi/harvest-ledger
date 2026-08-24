@@ -115,6 +115,7 @@ function LandingPage() {
   const [chartPeriod, setChartPeriod] = useState<"week" | "month" | "year">("month");
   const [chartYear, setChartYear] = useState<number>(now.getFullYear() < 2026 ? 2026 : now.getFullYear());
   const [chartMonth, setChartMonth] = useState<number>(now.getMonth());
+  const [chartMetric, setChartMetric] = useState<"sales" | "collected" | "both">("both");
 
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => api.listOrders() });
 
