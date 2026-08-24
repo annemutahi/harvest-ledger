@@ -115,16 +115,19 @@ def expenses_report(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def pnl_report(request):
+    """Cash-basis P&L: money actually received vs money actually paid out."""
     d_from, d_to = _range(request)
-    revenue = Sale.objects.filter(date__gte=d_from, date__lte=d_to)\
+    revenue = Payment.objects.filter(
+        date__gte=d_from, date__lte=d_to, voided_at__isnull=True
+    ).aggregate(t=Sum("amount"))["t"] or 0
+    purchases = Purchase.objects.filter(date__gte=d_from, date__lte=d_to, paid=True)\
         .aggregate(t=Sum("total"))["t"] or 0
-    purchases = Purchase.objects.filter(date__gte=d_from, date__lte=d_to)\
-        .aggregate(t=Sum("total"))["t"] or 0
-    wages = CasualWage.objects.filter(date__gte=d_from, date__lte=d_to)\
+    wages = CasualWage.objects.filter(date__gte=d_from, date__lte=d_to, paid=True)\
         .aggregate(t=Sum("total"))["t"] or 0
     expenses_total = float(purchases) + float(wages)
     return Response({
         "from": d_from, "to": d_to,
+        "basis": "cash",
         "revenue": float(revenue),
         "expenses": {
             "purchases": float(purchases),
@@ -133,6 +136,7 @@ def pnl_report(request):
         },
         "gross_profit": float(revenue) - expenses_total,
     })
+
 
 
 def _month_bounds(today: date | None = None):
