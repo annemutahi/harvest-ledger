@@ -1087,16 +1087,18 @@ function ReconciliationReport({ data, period }: {
     defaultPageSize: 50,
   });
 
-  let running = 0;
+  let running = data.opening;
 
   return (
     <div className="mt-6 space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard label="Opening Balance" value={formatCurrency(data.opening)} icon={Scale} />
         <StatCard label="Money In" value={formatCurrency(data.moneyIn)} icon={TrendingUp} />
         <StatCard label="Money Out" value={formatCurrency(data.moneyOut)} icon={TrendingDown} />
-        <StatCard label="Net Balance" value={formatCurrency(data.balance)} icon={Scale} />
-        <StatCard label="Transactions" value={String(data.rows.length)} icon={ArrowRight} />
+        <StatCard label="Net Movement" value={formatCurrency(data.balance)} icon={ArrowRight} />
+        <StatCard label="Closing Balance" value={formatCurrency(data.closing)} icon={Scale} />
       </div>
+
 
       <Card>
         <TableCardHeader
