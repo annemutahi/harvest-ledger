@@ -485,7 +485,7 @@ function InvoiceDetail() {
                   </div>
                 </div>
                 <p className="mt-6 text-center text-sm font-medium text-primary">
-                  From Our Farm to Your Table. Thank you for supporting local farmers.
+                  Thank you for supporting our business.
                 </p>
 
                 {invoice.adjustments.length > 0 && (

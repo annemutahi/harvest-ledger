@@ -1,11 +1,3 @@
-"""Send invoices to customers by email and SMS.
-
-Both channels are pluggable: email uses Django's configured email backend
-(console in dev), SMS posts to an HTTP gateway defined by
-`settings.SMS_GATEWAY_URL` / `settings.SMS_GATEWAY_API_KEY`. Until a gateway is
-connected the SMS is logged and recorded as `skipped` — no exception is raised,
-so staff always get a clear per-channel result.
-"""
 from __future__ import annotations
 
 import json
@@ -32,7 +24,7 @@ def build_sms_text(invoice) -> str:
     company = getattr(settings, "COMPANY_NAME", "Peaceful Acres Farm")
     return (
         f"Hi {name}, invoice {invoice.invoice_number} of {amount} is due "
-        f"{invoice.due_date:%d %b %Y}. Thank you for your business. {company}."
+        f"{invoice.due_date:%d %b %Y}. Thank you for supporting our business. {company}."
     )
 
 
@@ -44,7 +36,7 @@ def build_email_body(invoice) -> tuple[str, str]:
         f"Dear {name},\n\n"
         f"Please find attached invoice {invoice.invoice_number} for "
         f"KES {invoice.total_amount:,.2f}, due {invoice.due_date:%d %b %Y}.\n\n"
-        f"Thank you for your business.\n{company}\n"
+        f"Thank you for supporting our business.\n{company}\n"
     )
     subject = f"Invoice {invoice.invoice_number} — {company}"
     return subject, text

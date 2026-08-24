@@ -306,7 +306,6 @@ function LandingPage() {
             value={formatCurrency(paidExpensesMTD)}
             icon={Wallet}
             tone="destructive"
-            trend={`${formatCurrency(expensesThisMonth.total - paidExpensesMTD)} still unpaid`}
             trendDirection="neutral"
           />
           <StatCard
@@ -314,17 +313,13 @@ function LandingPage() {
             value={formatCurrency(cashProfit)}
             icon={PiggyBank}
             tone={cashProfit >= 0 ? "success" : "destructive"}
-            trend={`Collected − expenses paid · ${pctChange(cashProfit, prevCashProfit)}`}
+            trend={`Cash collected − expenses paid`}
             trendDirection={cashProfit >= prevCashProfit ? "up" : "down"}
           />
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Sales are invoiced value (accrual). Profit is cash basis: money received less expenses actually paid. Delivered orders contribute {formatCurrency(deliveredOrdersMTD)} of sales.
-        </p>
       </section>
 
       <section className="mt-6">
-        <h2 className="text-sm font-semibold text-muted-foreground">Balances as at today</h2>
         <div className="mt-3 grid gap-4 md:grid-cols-3">
           <StatCard
             label="Owed to us (receivables)"
@@ -346,7 +341,7 @@ function LandingPage() {
             value={formatCurrency(totalCredit)}
             icon={CreditCard}
             tone="earth"
-            trend="Overpayments we owe back to customers"
+            trend="Owed to customers"
           />
         </div>
       </section>
@@ -420,9 +415,9 @@ function LandingPage() {
                     type="monotone"
                     dataKey="sales"
                     name="Invoiced sales"
-                    stroke="var(--color-primary)"
+                    stroke="var(--color-collected)"
                     strokeWidth={2}
-                    fill="var(--color-primary)"
+                    fill="var(--color-collected)"
                     fillOpacity={0.18}
                   />
                 )}
