@@ -301,7 +301,11 @@ function ReportsPage() {
   // ---------- Reconciliation ----------
   const reconciliation = useMemo(() => {
     const rows: ReconRow[] = [];
+    // Opening balance: net cash of every settled transaction before this period.
+    let opening = 0;
+    const before = (d: string) => d.slice(0, 10) < period.from;
     (paymentsQ.data ?? []).forEach((p) => {
+      if (before(p.date)) { opening += p.amount; return; }
       if (!inRange(p.date, period.from, period.to)) return;
       rows.push({
         id: `pay-${p.id}`,
@@ -316,6 +320,7 @@ function ReportsPage() {
     (purchasesQ.data ?? []).forEach((p) => {
       if (!p.paid) return;
       const d = (p.paidAt || p.date).slice(0, 10);
+      if (before(d)) { opening -= p.total; return; }
       if (!inRange(d, period.from, period.to)) return;
       rows.push({
         id: `pur-${p.id}`,
@@ -330,6 +335,7 @@ function ReportsPage() {
     (wagesQ.data ?? []).forEach((w) => {
       if (!w.paid) return;
       const d = (w.paidAt || w.date).slice(0, 10);
+      if (before(d)) { opening -= w.total; return; }
       if (!inRange(d, period.from, period.to)) return;
       rows.push({
         id: `wage-${w.id}`,
@@ -344,8 +350,10 @@ function ReportsPage() {
     rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     const moneyIn = rows.reduce((a, r) => a + r.moneyIn, 0);
     const moneyOut = rows.reduce((a, r) => a + r.moneyOut, 0);
-    return { rows, moneyIn, moneyOut, balance: moneyIn - moneyOut };
+    const net = moneyIn - moneyOut;
+    return { rows, moneyIn, moneyOut, balance: net, opening, closing: opening + net };
   }, [paymentsQ.data, purchasesQ.data, wagesQ.data, period]);
+
 
   const handlePrint = () => window.print();
 
