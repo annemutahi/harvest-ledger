@@ -741,17 +741,14 @@ function PnlReport({ data, monthMode, period }: { data: {
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} unit="%" />
               <Tooltip
                 formatter={(v: number, name: string) =>
-                  name === "Net Margin" ? `${v.toFixed(1)}%` : formatCurrency(v)
+                  name === "Net Margin (%)" ? `${v.toFixed(1)}%` : formatCurrency(v)
                 }
               />
               <Legend />
               <Bar yAxisId="left" dataKey="revenue" fill={CHART_COLORS[0]} name="Money Received" />
               <Bar yAxisId="left" dataKey="expenses" fill={CHART_COLORS[4]} name="Money Paid Out" />
               {monthMode && <Bar yAxisId="left" dataKey="net" fill={CHART_COLORS[2]} name="Net" />}
-              <Line
-                yAxisId="right" type="monotone" dataKey="margin" name="Net Margin"
-                stroke={CHART_COLORS[1]} strokeWidth={2} dot={{ r: 3 }}
-              />
+              <Bar yAxisId="right" dataKey="margin" fill={CHART_COLORS[1]} name="Net Margin (%)" />
             </ComposedChart>
           </ResponsiveContainer>
         )}
