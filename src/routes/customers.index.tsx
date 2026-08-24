@@ -22,7 +22,7 @@ import {
   amountSchema,
   nameSchema,
   normalizePhone,
-  optionalSchema,
+  optionalEmailSchema,
   optionalPhoneSchema,
   validate,
   hasErrors,
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/customers/")({
 const customerSchema = z.object({
   name: nameSchema,
   phone: optionalPhoneSchema,
-  : optionalSchema,
+  email: optionalEmailSchema,
   creditLimit: amountSchema,
 });
 
@@ -61,7 +61,7 @@ function CustomersPage() {
     company: "",
     contactPerson: "",
     phone: "",
-    : "",
+    email: "",
     creditLimit: 0,
   });
 
@@ -74,14 +74,14 @@ function CustomersPage() {
       toast.success("Customer created");
       qc.invalidateQueries({ queryKey: ["customers"] });
       setOpen(false);
-      setForm({ name: "", type: "Individual", company: "", contactPerson: "", phone: "", : "", creditLimit: 0 });
+      setForm({ name: "", type: "Individual", company: "", contactPerson: "", phone: "", email: "", creditLimit: 0 });
       setErrors({});
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed to create customer"),
   });
 
   const filtered = (customers ?? []).filter((c) => {
-    const matchQ = !q || c.name.toLowerCase().includes(q.toLowerCase()) || c..toLowerCase().includes(q.toLowerCase());
+    const matchQ = !q || c.name.toLowerCase().includes(q.toLowerCase()) || (c.email ?? "").toLowerCase().includes(q.toLowerCase());
     const matchT = type === "all" || c.type === type;
     return matchQ && matchT;
   });
@@ -150,9 +150,9 @@ function CustomersPage() {
                   <Input inputMode="tel" placeholder="0712 345 678" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} aria-invalid={!!errors.phone} />
                   <FieldError message={errors.phone} />
                 </div>
-                <div className="grid gap-2"><Label></Label>
-                  <Input type="" placeholder="name@example.com" value={form.} onChange={(e) => setForm({ ...form, : e.target.value })} aria-invalid={!!errors.} />
-                  <FieldError message={errors.} />
+                <div className="grid gap-2"><Label>Email</Label>
+                  <Input type="email" placeholder="name@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} aria-invalid={!!errors.email} />
+                  <FieldError message={errors.email} />
                 </div>
               </div>
               <div className="grid gap-2"><Label>Credit Limit (KES)</Label>
