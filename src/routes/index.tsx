@@ -401,79 +401,54 @@ function LandingPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Payments Due Soon</CardTitle>
+            <CardTitle>Needs attention</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dueSoon.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell>
-                      <Link to="/invoices/$id" params={{ id: invoice.id }} className="font-medium hover:underline">
-                        {invoice.invoiceNumber}
-                      </Link>
-                      <p className="mt-1 text-xs text-muted-foreground">{invoice.customerName}</p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span>{formatDate(invoice.dueDate)}</span>
-                        <StatusBadge status={invoice.status} />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold text-earth">
-                      {formatCurrency(invoice.outstandingBalance)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {dueSoon.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
-                      No payments due soon.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="flex items-center gap-3 p-5">
-            <FileText className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium">Open Invoices</p>
-              <p className="text-2xl font-bold">{invoices.filter((invoice) => invoice.outstandingBalance > 0).length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-5">
-            <BanknoteArrowUp className="h-5 w-5 text-success" />
-            <div>
-              <p className="text-sm font-medium">Latest Payment</p>
-              <p className="text-2xl font-bold">{formatCurrency(payments[0]?.amount ?? 0)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-5">
-            <CalendarClock className="h-5 w-5 text-warning-foreground" />
-            <div>
-              <p className="text-sm font-medium">Next Due</p>
-              <p className="text-2xl font-bold">{dueSoon[0] ? formatDate(dueSoon[0].dueDate) : "None"}</p>
-            </div>
+            <ul className="divide-y">
+              {overdue.map((invoice) => (
+                <li key={invoice.id} className="flex items-start justify-between gap-3 px-5 py-3">
+                  <div className="min-w-0">
+                    <Link to="/invoices/$id" params={{ id: invoice.id }} className="font-medium hover:underline">
+                      {invoice.invoiceNumber}
+                    </Link>
+                    <p className="mt-1 truncate text-xs text-destructive">
+                      {invoice.customerName} · {Math.abs(invoice.daysUntilDue)} days overdue
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-semibold text-destructive">{formatCurrency(invoice.outstandingBalance)}</span>
+                </li>
+              ))}
+              {dueSoon.map((invoice) => (
+                <li key={invoice.id} className="flex items-start justify-between gap-3 px-5 py-3">
+                  <div className="min-w-0">
+                    <Link to="/invoices/$id" params={{ id: invoice.id }} className="font-medium hover:underline">
+                      {invoice.invoiceNumber}
+                    </Link>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {invoice.customerName} · due {formatDate(invoice.dueDate)}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-semibold text-earth">{formatCurrency(invoice.outstandingBalance)}</span>
+                </li>
+              ))}
+              {pendingStock.length > 0 && (
+                <li className="flex items-center justify-between gap-3 px-5 py-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <PackageCheck className="h-4 w-4 shrink-0 text-warning-foreground" />
+                    <Link to="/stock" className="font-medium hover:underline">
+                      {pendingStock.length} stock {pendingStock.length === 1 ? "entry" : "entries"} awaiting approval
+                    </Link>
+                  </div>
+                </li>
+              )}
+              {overdue.length === 0 && dueSoon.length === 0 && pendingStock.length === 0 && (
+                <li className="px-5 py-8 text-center text-sm text-muted-foreground">Nothing needs attention right now.</li>
+              )}
+            </ul>
           </CardContent>
         </Card>
       </div>
     </AppShell>
   );
 }
+
