@@ -231,7 +231,7 @@ function ReportsPage() {
       { name: "Net", value: net },
     ];
     // Monthly comparison series for the year
-    const buckets: { label: string; revenue: number; expenses: number; net: number }[] = [];
+    const buckets: { label: string; revenue: number; expenses: number; net: number; margin: number }[] = [];
     if (month === "all") {
       const r = new Array(12).fill(0), e = new Array(12).fill(0);
       receipts.forEach((p) => { const d = new Date(p.date); if (d.getFullYear() === year) r[d.getMonth()] += p.amount; });
