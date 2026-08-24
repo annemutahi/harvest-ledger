@@ -1104,13 +1104,15 @@ function ReconciliationReport({ data, period }: {
         <TableCardHeader
           title={`Reconciliation Statement — ${period.label}`}
           onExport={() => exportSheet("reconciliation", "Reconciliation", [
+            { Date: "", Name: "OPENING BALANCE", Details: "", "Money In": "", "Money Out": "", Balance: data.opening },
             ...data.rows.map((r) => ({
               Date: r.date, Name: r.name, Details: r.detail,
-              "Money In": r.moneyIn || "", "Money Out": r.moneyOut || "",
+              "Money In": r.moneyIn || "", "Money Out": r.moneyOut || "", Balance: "",
             })),
-            { Date: "", Name: "TOTALS", Details: "", "Money In": data.moneyIn, "Money Out": data.moneyOut },
-            { Date: "", Name: "BALANCE", Details: "", "Money In": data.balance, "Money Out": "" },
+            { Date: "", Name: "TOTALS", Details: "", "Money In": data.moneyIn, "Money Out": data.moneyOut, Balance: "" },
+            { Date: "", Name: "CLOSING BALANCE", Details: "", "Money In": "", "Money Out": "", Balance: data.closing },
           ], period)}
+
         />
         <CardContent className="p-0">
           {data.rows.length === 0 ? (
