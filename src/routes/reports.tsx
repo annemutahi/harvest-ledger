@@ -1116,7 +1116,17 @@ function ReconciliationReport({ data, period }: {
         />
         <CardContent className="p-0">
           {data.rows.length === 0 ? (
-            <div className="p-6"><EmptyState label="No settled transactions in this period" /></div>
+            <div className="space-y-3 p-6">
+              <EmptyState label="No settled transactions in this period" />
+              <div className="flex justify-between border-t pt-3 text-sm font-semibold">
+                <span>Opening balance</span>
+                <span className="tabular-nums">{formatCurrency(data.opening)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-semibold">
+                <span>Closing balance</span>
+                <span className="tabular-nums">{formatCurrency(data.closing)}</span>
+              </div>
+            </div>
           ) : (
             <>
               <Table>
@@ -1129,6 +1139,10 @@ function ReconciliationReport({ data, period }: {
                   <TableHead className="text-right">Running Balance</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
+                  <TableRow className="bg-muted/40 font-semibold">
+                    <TableCell colSpan={5}>Opening balance as at {formatDate(period.from)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(data.opening)}</TableCell>
+                  </TableRow>
                   {ctrl.sorted.map((r) => {
                     running += r.moneyIn - r.moneyOut;
                     const bal = running;
@@ -1159,17 +1173,18 @@ function ReconciliationReport({ data, period }: {
                     );
                   })}
                   <TableRow className="border-t-2 font-semibold">
-                    <TableCell colSpan={3}>Totals</TableCell>
+                    <TableCell colSpan={3}>Totals for {period.label}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(data.moneyIn)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(data.moneyOut)}</TableCell>
-                    <TableCell />
-                  </TableRow>
-                  <TableRow className="font-semibold">
-                    <TableCell colSpan={5}>Closing balance for {period.label}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(data.balance)}</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-muted/40 font-semibold">
+                    <TableCell colSpan={5}>Closing balance as at {formatDate(period.to)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(data.closing)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
+
               <TablePagination ctrl={ctrl} label="transactions" />
             </>
           )}
