@@ -5,28 +5,45 @@ import { AppShell } from "@/components/app-shell";
 import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { StatusBadge } from "@/components/status-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp, Wallet, PiggyBank } from "lucide-react";
+import { AlertTriangle, BanknoteArrowUp, CalendarClock, CreditCard, PackageCheck, PiggyBank, TrendingUp, Wallet } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Dashboard" }] }),
+  head: () => ({
+    meta: [
+      { title: "Dashboard · Peaceful Acres Farm ERP" },
+      { name: "description", content: "Month-to-date sales, cash collected, expenses and outstanding receivables for Peaceful Acres Farm." },
+      { property: "og:title", content: "Dashboard · Peaceful Acres Farm ERP" },
+      { property: "og:description", content: "Month-to-date sales, cash collected, expenses and outstanding receivables." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: LandingPage,
 });
 
 const today = new Date();
 const dueSoonWindowDays = 7;
 
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 function daysUntil(date: string) {
   const due = new Date(date);
   return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
+
+function pctChange(current: number, previous: number): string {
+  if (!previous) return "No prior-month figure";
+  const change = ((current - previous) / Math.abs(previous)) * 100;
+  const sign = change >= 0 ? "+" : "";
+  return `${sign}${change.toFixed(0)}% vs last month (${formatCurrency(previous)})`;
+}
+
 
 function groupMonthlySales(invoices: Array<{ invoiceDate: string; totalAmount: number; outstandingBalance: number }>) {
   const groups = new Map<string, { key: string; month: string; sales: number; receivables: number }>();
@@ -63,12 +80,21 @@ function groupMonthlySales(invoices: Array<{ invoiceDate: string; totalAmount: n
 function LandingPage() {
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: async () => (await api.listInvoices()).filter((i) => !i.isVoided) });
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: async () => (await api.listPayments()).filter((p) => !p.isVoided) });
+  const { data: stockEntries = [] } = useQuery({ queryKey: ["stock-entries"], queryFn: () => api.listStockEntries() });
+
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const prevStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const prevEnd = new Date(today.getFullYear(), today.getMonth(), 0);
 
   // Server-side MTD aggregates: invoice sales, delivered orders, expenses, profit.
   const { data: summary } = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: () => api.getDashboardSummary(),
     refetchOnWindowFocus: true,
+  });
+  const { data: prevSummary } = useQuery({
+    queryKey: ["dashboard-summary", iso(prevStart), iso(prevEnd)],
+    queryFn: () => api.getDashboardSummary({ from: iso(prevStart), to: iso(prevEnd) }),
   });
   const expensesThisMonth = summary?.expenses ?? {
     purchases: 0,
@@ -79,6 +105,7 @@ function LandingPage() {
     paidTotal: 0,
   };
   const deliveredOrdersMTD = summary?.sales.deliveredOrders ?? 0;
+
 
 
   const monthlySales = useMemo(() => groupMonthlySales(invoices), [invoices]);
@@ -187,21 +214,39 @@ function LandingPage() {
     label: new Date(2026, i, 1).toLocaleString("default", { month: "long" }),
   }));
 
-  const currentMonth = monthlySales[monthlySales.length - 1] ?? { month: "", sales: 0, receivables: 0 };
-  const previousMonth = monthlySales[monthlySales.length - 2];
-  const totalMonthSales = currentMonth.sales + deliveredOrdersMTD;
-  const monthlyChange = previousMonth
-    ? ((totalMonthSales - previousMonth.sales) / previousMonth.sales) * 100
-    : 0;
-  const monthlyProfit = totalMonthSales - expensesThisMonth.paidTotal;
-  const paymentsReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const monthLabel = today.toLocaleString("default", { month: "long" });
+  const totalMonthSales = summary?.sales.total ?? 0;
+  const prevMonthSales = prevSummary?.sales.total ?? 0;
+
+  const inThisMonth = (d: string) => {
+    const date = new Date(d);
+    return date >= monthStart && date <= today;
+  };
+  const inPrevMonth = (d: string) => {
+    const date = new Date(d);
+    return date >= prevStart && date <= prevEnd;
+  };
+  const collectedMTD = payments.filter((p) => inThisMonth(p.date)).reduce((s, p) => s + p.amount, 0);
+  const collectedPrev = payments.filter((p) => inPrevMonth(p.date)).reduce((s, p) => s + p.amount, 0);
+
+  const paidExpensesMTD = expensesThisMonth.paidTotal;
+  const prevPaidExpenses = prevSummary?.expenses.paidTotal ?? 0;
+  const cashProfit = collectedMTD - paidExpensesMTD;
+  const prevCashProfit = collectedPrev - prevPaidExpenses;
+
+  const openInvoices = invoices.filter((invoice) => invoice.outstandingBalance > 0);
+  const receivables = openInvoices.reduce((s, i) => s + i.outstandingBalance, 0);
+  const overdue = openInvoices
+    .map((invoice) => ({ ...invoice, daysUntilDue: daysUntil(invoice.dueDate) }))
+    .filter((invoice) => invoice.daysUntilDue < 0)
+    .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+  const overdueTotal = overdue.reduce((s, i) => s + i.outstandingBalance, 0);
   const totalCredit = invoices.reduce((sum, invoice) => sum + invoice.availableCredit, 0);
-  const dueSoon = invoices
-    .filter((invoice) => invoice.outstandingBalance > 0)
+  const dueSoon = openInvoices
     .map((invoice) => ({ ...invoice, daysUntilDue: daysUntil(invoice.dueDate) }))
     .filter((invoice) => invoice.daysUntilDue >= 0 && invoice.daysUntilDue <= dueSoonWindowDays)
     .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-  const dueSoonTotal = dueSoon.reduce((sum, invoice) => sum + invoice.outstandingBalance, 0);
+  const pendingStock = stockEntries.filter((s) => s.status === "pending");
 
   return (
     <AppShell
@@ -214,54 +259,77 @@ function LandingPage() {
         </Button>
       }
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          label={`${currentMonth.month || "This Month"} Sales`}
-          value={formatCurrency(totalMonthSales)}
-          icon={TrendingUp}
-          tone="primary"
-          trend={`Invoices ${formatCurrency(currentMonth.sales)} · Delivered orders ${formatCurrency(deliveredOrdersMTD)}`}
-          trendDirection={monthlyChange >= 0 ? "up" : "down"}
-        />
-        <StatCard
-          label="Monthly Profits"
-          value={formatCurrency(monthlyProfit)}
-          icon={PiggyBank}
-          tone={monthlyProfit >= 0 ? "success" : "destructive"}
-          trend={`Sales ${formatCurrency(totalMonthSales)} − Paid expenses ${formatCurrency(expensesThisMonth.paidTotal)}`}
-          trendDirection={monthlyProfit >= 0 ? "up" : "down"}
-        />
-        <StatCard
-          label="Payments"
-          value={formatCurrency(paymentsReceived)}
-          icon={BanknoteArrowUp}
-          tone="success"
-          trend={`${payments.length} payments recorded`}
-          trendDirection="up"
-        />
-        <StatCard
-          label="Total Credit"
-          value={formatCurrency(totalCredit)}
-          icon={CreditCard}
-          tone="earth"
-          trend="Outstanding customer balance"
-        />
-        <StatCard
-          label="Payments Due Soon"
-          value={formatCurrency(dueSoonTotal)}
-          icon={CalendarClock}
-          tone="warning"
-          trend={`${dueSoon.length} invoices due in ${dueSoonWindowDays} days`}
-        />
-        <StatCard
-          label="Expenses This Month"
-          value={formatCurrency(expensesThisMonth.total)}
-          icon={Wallet}
-          tone="destructive"
-          trend={`Purchases ${formatCurrency(expensesThisMonth.purchases)} · Wages ${formatCurrency(expensesThisMonth.wages)}`}
-          trendDirection={expensesThisMonth.total > 0 ? "down" : "neutral"}
-        />
-      </div>
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          {monthLabel} so far · 1–{today.getDate()} {monthLabel}
+        </h2>
+        <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Sales invoiced"
+            value={formatCurrency(totalMonthSales)}
+            icon={TrendingUp}
+            tone="primary"
+            trend={pctChange(totalMonthSales, prevMonthSales)}
+            trendDirection={totalMonthSales >= prevMonthSales ? "up" : "down"}
+          />
+          <StatCard
+            label="Cash collected"
+            value={formatCurrency(collectedMTD)}
+            icon={BanknoteArrowUp}
+            tone="success"
+            trend={pctChange(collectedMTD, collectedPrev)}
+            trendDirection={collectedMTD >= collectedPrev ? "up" : "down"}
+          />
+          <StatCard
+            label="Expenses paid"
+            value={formatCurrency(paidExpensesMTD)}
+            icon={Wallet}
+            tone="destructive"
+            trend={`${formatCurrency(expensesThisMonth.total - paidExpensesMTD)} still unpaid`}
+            trendDirection="neutral"
+          />
+          <StatCard
+            label="Net cash profit"
+            value={formatCurrency(cashProfit)}
+            icon={PiggyBank}
+            tone={cashProfit >= 0 ? "success" : "destructive"}
+            trend={`Collected − expenses paid · ${pctChange(cashProfit, prevCashProfit)}`}
+            trendDirection={cashProfit >= prevCashProfit ? "up" : "down"}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Sales are invoiced value (accrual). Profit is cash basis: money received less expenses actually paid. Delivered orders contribute {formatCurrency(deliveredOrdersMTD)} of sales.
+        </p>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="text-sm font-semibold text-muted-foreground">Balances as at today</h2>
+        <div className="mt-3 grid gap-4 md:grid-cols-3">
+          <StatCard
+            label="Owed to us (receivables)"
+            value={formatCurrency(receivables)}
+            icon={CalendarClock}
+            tone="warning"
+            trend={`${openInvoices.length} open invoices`}
+          />
+          <StatCard
+            label="Overdue"
+            value={formatCurrency(overdueTotal)}
+            icon={AlertTriangle}
+            tone="destructive"
+            trend={`${overdue.length} invoices past due date`}
+            trendDirection={overdueTotal > 0 ? "down" : "neutral"}
+          />
+          <StatCard
+            label="Customer credit held"
+            value={formatCurrency(totalCredit)}
+            icon={CreditCard}
+            tone="earth"
+            trend="Overpayments we owe back to customers"
+          />
+        </div>
+      </section>
+
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card>
@@ -333,79 +401,54 @@ function LandingPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Payments Due Soon</CardTitle>
+            <CardTitle>Needs attention</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dueSoon.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell>
-                      <Link to="/invoices/$id" params={{ id: invoice.id }} className="font-medium hover:underline">
-                        {invoice.invoiceNumber}
-                      </Link>
-                      <p className="mt-1 text-xs text-muted-foreground">{invoice.customerName}</p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span>{formatDate(invoice.dueDate)}</span>
-                        <StatusBadge status={invoice.status} />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold text-earth">
-                      {formatCurrency(invoice.outstandingBalance)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {dueSoon.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
-                      No payments due soon.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="flex items-center gap-3 p-5">
-            <FileText className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium">Open Invoices</p>
-              <p className="text-2xl font-bold">{invoices.filter((invoice) => invoice.outstandingBalance > 0).length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-5">
-            <BanknoteArrowUp className="h-5 w-5 text-success" />
-            <div>
-              <p className="text-sm font-medium">Latest Payment</p>
-              <p className="text-2xl font-bold">{formatCurrency(payments[0]?.amount ?? 0)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-5">
-            <CalendarClock className="h-5 w-5 text-warning-foreground" />
-            <div>
-              <p className="text-sm font-medium">Next Due</p>
-              <p className="text-2xl font-bold">{dueSoon[0] ? formatDate(dueSoon[0].dueDate) : "None"}</p>
-            </div>
+            <ul className="divide-y">
+              {overdue.map((invoice) => (
+                <li key={invoice.id} className="flex items-start justify-between gap-3 px-5 py-3">
+                  <div className="min-w-0">
+                    <Link to="/invoices/$id" params={{ id: invoice.id }} className="font-medium hover:underline">
+                      {invoice.invoiceNumber}
+                    </Link>
+                    <p className="mt-1 truncate text-xs text-destructive">
+                      {invoice.customerName} · {Math.abs(invoice.daysUntilDue)} days overdue
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-semibold text-destructive">{formatCurrency(invoice.outstandingBalance)}</span>
+                </li>
+              ))}
+              {dueSoon.map((invoice) => (
+                <li key={invoice.id} className="flex items-start justify-between gap-3 px-5 py-3">
+                  <div className="min-w-0">
+                    <Link to="/invoices/$id" params={{ id: invoice.id }} className="font-medium hover:underline">
+                      {invoice.invoiceNumber}
+                    </Link>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {invoice.customerName} · due {formatDate(invoice.dueDate)}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-semibold text-earth">{formatCurrency(invoice.outstandingBalance)}</span>
+                </li>
+              ))}
+              {pendingStock.length > 0 && (
+                <li className="flex items-center justify-between gap-3 px-5 py-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <PackageCheck className="h-4 w-4 shrink-0 text-warning-foreground" />
+                    <Link to="/stock" className="font-medium hover:underline">
+                      {pendingStock.length} stock {pendingStock.length === 1 ? "entry" : "entries"} awaiting approval
+                    </Link>
+                  </div>
+                </li>
+              )}
+              {overdue.length === 0 && dueSoon.length === 0 && pendingStock.length === 0 && (
+                <li className="px-5 py-8 text-center text-sm text-muted-foreground">Nothing needs attention right now.</li>
+              )}
+            </ul>
           </CardContent>
         </Card>
       </div>
     </AppShell>
   );
 }
+
