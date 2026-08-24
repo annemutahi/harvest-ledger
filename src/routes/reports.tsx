@@ -237,11 +237,14 @@ function ReportsPage() {
       receipts.forEach((p) => { const d = new Date(p.date); if (d.getFullYear() === year) r[d.getMonth()] += p.amount; });
       paidPurchases.forEach((x: any) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
       paidWages.forEach((x: any) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
-      for (let i = 0; i < 12; i++) buckets.push({ label: MONTHS[i].slice(0, 3), revenue: r[i], expenses: e[i], net: r[i] - e[i] });
+      for (let i = 0; i < 12; i++) buckets.push({
+        label: MONTHS[i].slice(0, 3), revenue: r[i], expenses: e[i], net: r[i] - e[i],
+        margin: r[i] > 0 ? ((r[i] - e[i]) / r[i]) * 100 : 0,
+      });
     } else {
-      buckets.push({ label: "Revenue", revenue, expenses: 0, net: 0 });
-      buckets.push({ label: "Expenses", revenue: 0, expenses, net: 0 });
-      buckets.push({ label: "Net", revenue: 0, expenses: 0, net });
+      buckets.push({ label: "Revenue", revenue, expenses: 0, net: 0, margin: 0 });
+      buckets.push({ label: "Expenses", revenue: 0, expenses, net: 0, margin: 0 });
+      buckets.push({ label: "Net", revenue: 0, expenses: 0, net, margin });
     }
     return { revenue, expenses, net, margin, comparison, buckets };
   }, [paymentsQ.data, expenseData, period, month, year]);
@@ -716,7 +719,7 @@ function ExpensesReport({ data, period }: { data: {
 function PnlReport({ data, monthMode, period }: { data: {
   revenue: number; expenses: number; net: number; margin: number;
   comparison: { name: string; value: number }[];
-  buckets: { label: string; revenue: number; expenses: number; net: number }[];
+  buckets: { label: string; revenue: number; expenses: number; net: number; margin: number }[];
 }; monthMode: boolean; period: Period }) {
   const netTone = data.net >= 0 ? "success" : "destructive";
   return (
@@ -731,16 +734,25 @@ function PnlReport({ data, monthMode, period }: { data: {
       <ChartCard title={monthMode ? "Cash In vs Cash Out (Monthly)" : "Cash In vs Cash Out"}>
         {data.buckets.length === 0 ? <EmptyState label="No data" /> : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.buckets} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+            <ComposedChart data={data.buckets} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
+              <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} unit="%" />
+              <Tooltip
+                formatter={(v: number, name: string) =>
+                  name === "Net Margin" ? `${v.toFixed(1)}%` : formatCurrency(v)
+                }
+              />
               <Legend />
-              <Bar dataKey="revenue" fill={CHART_COLORS[0]} name="Money Received" />
-              <Bar dataKey="expenses" fill={CHART_COLORS[4]} name="Money Paid Out" />
-              {monthMode && <Bar dataKey="net" fill={CHART_COLORS[2]} name="Net" />}
-            </BarChart>
+              <Bar yAxisId="left" dataKey="revenue" fill={CHART_COLORS[0]} name="Money Received" />
+              <Bar yAxisId="left" dataKey="expenses" fill={CHART_COLORS[4]} name="Money Paid Out" />
+              {monthMode && <Bar yAxisId="left" dataKey="net" fill={CHART_COLORS[2]} name="Net" />}
+              <Line
+                yAxisId="right" type="monotone" dataKey="margin" name="Net Margin"
+                stroke={CHART_COLORS[1]} strokeWidth={2} dot={{ r: 3 }}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         )}
       </ChartCard>
