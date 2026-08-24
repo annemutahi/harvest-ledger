@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, BanknoteArrowUp, CalendarClock, CreditCard, PackageCheck, PiggyBank, TrendingUp, Wallet } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 
@@ -115,17 +115,24 @@ function LandingPage() {
   const [chartPeriod, setChartPeriod] = useState<"week" | "month" | "year">("month");
   const [chartYear, setChartYear] = useState<number>(now.getFullYear() < 2026 ? 2026 : now.getFullYear());
   const [chartMonth, setChartMonth] = useState<number>(now.getMonth());
+  const [chartMetric, setChartMetric] = useState<"sales" | "collected" | "both">("both");
 
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => api.listOrders() });
 
   const chartData = useMemo(() => {
-    type Point = { label: string; sales: number };
+    type Point = { label: string; sales: number; collected: number };
     const deliveredOrders = orders.filter((o) => o.status === "delivered");
 
-    const addToBucket = (buckets: Map<string, Point>, key: string, label: string, amount: number) => {
+    const addToBucket = (
+      buckets: Map<string, Point>,
+      key: string,
+      label: string,
+      amount: number,
+      field: "sales" | "collected" = "sales",
+    ) => {
       const existing = buckets.get(key);
-      if (existing) existing.sales += amount;
-      else buckets.set(key, { label, sales: amount });
+      if (existing) existing[field] += amount;
+      else buckets.set(key, { label, sales: 0, collected: 0, [field]: amount } as Point);
     };
 
     if (chartPeriod === "year") {
@@ -133,7 +140,7 @@ function LandingPage() {
       for (let m = 0; m < 12; m++) {
         const key = String(m).padStart(2, "0");
         const label = new Date(chartYear, m, 1).toLocaleString("default", { month: "short" });
-        buckets.set(key, { label, sales: 0 });
+        buckets.set(key, { label, sales: 0, collected: 0 });
       }
       invoices.forEach((inv) => {
         const d = new Date(inv.invoiceDate);
@@ -149,6 +156,13 @@ function LandingPage() {
             d.toLocaleString("default", { month: "short" }), Number(o.total || 0));
         }
       });
+      payments.forEach((p) => {
+        const d = new Date(p.date);
+        if (d.getFullYear() === chartYear) {
+          addToBucket(buckets, String(d.getMonth()).padStart(2, "0"),
+            d.toLocaleString("default", { month: "short" }), p.amount, "collected");
+        }
+      });
       return Array.from(buckets.values());
     }
 
@@ -156,19 +170,20 @@ function LandingPage() {
       const daysInMonth = new Date(chartYear, chartMonth + 1, 0).getDate();
       const buckets = new Map<string, Point>();
       for (let day = 1; day <= daysInMonth; day++) {
-        buckets.set(String(day), { label: String(day), sales: 0 });
+        buckets.set(String(day), { label: String(day), sales: 0, collected: 0 });
       }
+      const inMonth = (d: Date) => d.getFullYear() === chartYear && d.getMonth() === chartMonth;
       invoices.forEach((inv) => {
         const d = new Date(inv.invoiceDate);
-        if (d.getFullYear() === chartYear && d.getMonth() === chartMonth) {
-          addToBucket(buckets, String(d.getDate()), String(d.getDate()), inv.totalAmount);
-        }
+        if (inMonth(d)) addToBucket(buckets, String(d.getDate()), String(d.getDate()), inv.totalAmount);
       });
       deliveredOrders.forEach((o) => {
         const d = new Date(o.updatedAt || o.placedAt);
-        if (d.getFullYear() === chartYear && d.getMonth() === chartMonth) {
-          addToBucket(buckets, String(d.getDate()), String(d.getDate()), Number(o.total || 0));
-        }
+        if (inMonth(d)) addToBucket(buckets, String(d.getDate()), String(d.getDate()), Number(o.total || 0));
+      });
+      payments.forEach((p) => {
+        const d = new Date(p.date);
+        if (inMonth(d)) addToBucket(buckets, String(d.getDate()), String(d.getDate()), p.amount, "collected");
       });
       return Array.from(buckets.values());
     }
@@ -185,7 +200,7 @@ function LandingPage() {
     for (let i = 0; i < 7; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      buckets.set(d.toDateString(), { label: dayLabels[i], sales: 0 });
+      buckets.set(d.toDateString(), { label: dayLabels[i], sales: 0, collected: 0 });
     }
     invoices.forEach((inv) => {
       const d = new Date(inv.invoiceDate);
@@ -197,9 +212,15 @@ function LandingPage() {
       if (d >= start && d < end) addToBucket(buckets, d.toDateString(),
         dayLabels[(d.getDay() + 6) % 7], Number(o.total || 0));
     });
+    payments.forEach((p) => {
+      const d = new Date(p.date);
+      if (d >= start && d < end) addToBucket(buckets, d.toDateString(),
+        dayLabels[(d.getDay() + 6) % 7], p.amount, "collected");
+    });
     return Array.from(buckets.values());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoices, orders, chartPeriod, chartYear, chartMonth]);
+  }, [invoices, orders, payments, chartPeriod, chartYear, chartMonth]);
+
 
   const chartTitle = chartPeriod === "year"
     ? `Sales · ${chartYear}`
@@ -344,28 +365,37 @@ function LandingPage() {
                 </TabsList>
               </Tabs>
             </div>
-            {chartPeriod !== "week" && (
-              <div className="flex flex-wrap gap-2">
-                {chartPeriod === "month" && (
-                  <Select value={String(chartMonth)} onValueChange={(v) => setChartMonth(Number(v))}>
-                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <div className="flex flex-wrap items-center gap-2">
+              <Tabs value={chartMetric} onValueChange={(v) => setChartMetric(v as "sales" | "collected" | "both")}>
+                <TabsList>
+                  <TabsTrigger value="sales">Invoiced</TabsTrigger>
+                  <TabsTrigger value="collected">Cash collected</TabsTrigger>
+                  <TabsTrigger value="both">Both</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {chartPeriod !== "week" && (
+                <>
+                  {chartPeriod === "month" && (
+                    <Select value={String(chartMonth)} onValueChange={(v) => setChartMonth(Number(v))}>
+                      <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {monthOptions.map((m) => (
+                          <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Select value={String(chartYear)} onValueChange={(v) => setChartYear(Number(v))}>
+                    <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {monthOptions.map((m) => (
-                        <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
+                      {yearOptions.map((y) => (
+                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                )}
-                <Select value={String(chartYear)} onValueChange={(v) => setChartYear(Number(v))}>
-                  <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {yearOptions.map((y) => (
-                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -385,18 +415,34 @@ function LandingPage() {
                     borderRadius: 8,
                   }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="sales"
-                  stroke="var(--color-primary)"
-                  strokeWidth={2}
-                  fill="var(--color-primary)"
-                  fillOpacity={0.18}
-                />
+                {chartMetric !== "collected" && (
+                  <Area
+                    type="monotone"
+                    dataKey="sales"
+                    name="Invoiced sales"
+                    stroke="var(--color-primary)"
+                    strokeWidth={2}
+                    fill="var(--color-primary)"
+                    fillOpacity={0.18}
+                  />
+                )}
+                {chartMetric !== "sales" && (
+                  <Area
+                    type="monotone"
+                    dataKey="collected"
+                    name="Cash collected"
+                    stroke="var(--color-success)"
+                    strokeWidth={2}
+                    fill="var(--color-success)"
+                    fillOpacity={0.14}
+                  />
+                )}
+                {chartMetric === "both" && <Legend />}
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
 
 
         <Card>
