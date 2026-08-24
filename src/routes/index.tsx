@@ -80,12 +80,21 @@ function groupMonthlySales(invoices: Array<{ invoiceDate: string; totalAmount: n
 function LandingPage() {
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: async () => (await api.listInvoices()).filter((i) => !i.isVoided) });
   const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: async () => (await api.listPayments()).filter((p) => !p.isVoided) });
+  const { data: stockEntries = [] } = useQuery({ queryKey: ["stock-entries"], queryFn: () => api.listStockEntries() });
+
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const prevStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const prevEnd = new Date(today.getFullYear(), today.getMonth(), 0);
 
   // Server-side MTD aggregates: invoice sales, delivered orders, expenses, profit.
   const { data: summary } = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: () => api.getDashboardSummary(),
     refetchOnWindowFocus: true,
+  });
+  const { data: prevSummary } = useQuery({
+    queryKey: ["dashboard-summary", iso(prevStart), iso(prevEnd)],
+    queryFn: () => api.getDashboardSummary({ from: iso(prevStart), to: iso(prevEnd) }),
   });
   const expensesThisMonth = summary?.expenses ?? {
     purchases: 0,
@@ -96,6 +105,7 @@ function LandingPage() {
     paidTotal: 0,
   };
   const deliveredOrdersMTD = summary?.sales.deliveredOrders ?? 0;
+
 
 
   const monthlySales = useMemo(() => groupMonthlySales(invoices), [invoices]);
