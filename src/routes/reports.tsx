@@ -108,6 +108,21 @@ function ReportsPage() {
   const stockQ = useQuery({ queryKey: ["stock", range], queryFn: () => api.listStockEntries(range) });
   const ordersQ = useQuery({ queryKey: ["orders", range], queryFn: () => api.listOrders(range) });
 
+  // Everything settled before this period — used to carry the previous
+  // closing balance forward as this period's opening balance.
+  const priorRange = useMemo(() => {
+    const d = new Date(`${period.from}T00:00:00`);
+    d.setDate(d.getDate() - 1);
+    return { from: "2000-01-01", to: d.toISOString().slice(0, 10) };
+  }, [period.from]);
+  const priorPaymentsQ = useQuery({
+    queryKey: ["payments-prior", priorRange],
+    queryFn: async () => (await api.listPayments(priorRange)).filter((p) => !p.isVoided),
+  });
+  const priorPurchasesQ = useQuery({ queryKey: ["purchases-prior", priorRange], queryFn: () => api.listPurchases(priorRange) });
+  const priorWagesQ = useQuery({ queryKey: ["casual-wages-prior", priorRange], queryFn: () => api.listCasualWages(priorRange) });
+
+
   const loading =
     invoicesQ.isLoading || salesQ.isLoading || paymentsQ.isLoading || customersQ.isLoading ||
     productsQ.isLoading || purchasesQ.isLoading || wagesQ.isLoading || workersQ.isLoading ||
@@ -199,10 +214,14 @@ function ReportsPage() {
     return { purchases, wages, purchasesTotal, wagesTotal, total, categories, trend };
   }, [purchasesQ.data, wagesQ.data, period, month, year]);
 
-  // ---------- P&L ----------
+  // ---------- P&L (cash basis: money received vs money paid) ----------
   const pnl = useMemo(() => {
-    const revenue = salesData.totalSales;
-    const expenses = expenseData.total;
+    const receipts = (paymentsQ.data ?? []).filter((p) => inRange(p.date, period.from, period.to));
+    const paidPurchases = expenseData.purchases.filter((p: any) => p.paid);
+    const paidWages = expenseData.wages.filter((w: any) => w.paid);
+    const revenue = receipts.reduce((a, p) => a + p.amount, 0);
+    const expenses = paidPurchases.reduce((a: number, p: any) => a + p.total, 0)
+      + paidWages.reduce((a: number, w: any) => a + w.total, 0);
     const net = revenue - expenses;
     const margin = revenue > 0 ? (net / revenue) * 100 : 0;
     const comparison = [
@@ -214,9 +233,9 @@ function ReportsPage() {
     const buckets: { label: string; revenue: number; expenses: number; net: number }[] = [];
     if (month === "all") {
       const r = new Array(12).fill(0), e = new Array(12).fill(0);
-      salesData.sales.forEach((s) => { const d = new Date(s.date); if (d.getFullYear() === year) r[d.getMonth()] += s.amount; });
-      expenseData.purchases.forEach((x) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
-      expenseData.wages.forEach((x) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
+      receipts.forEach((p) => { const d = new Date(p.date); if (d.getFullYear() === year) r[d.getMonth()] += p.amount; });
+      paidPurchases.forEach((x: any) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
+      paidWages.forEach((x: any) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
       for (let i = 0; i < 12; i++) buckets.push({ label: MONTHS[i].slice(0, 3), revenue: r[i], expenses: e[i], net: r[i] - e[i] });
     } else {
       buckets.push({ label: "Revenue", revenue, expenses: 0, net: 0 });
@@ -224,7 +243,8 @@ function ReportsPage() {
       buckets.push({ label: "Net", revenue: 0, expenses: 0, net });
     }
     return { revenue, expenses, net, margin, comparison, buckets };
-  }, [salesData, expenseData, month, year]);
+  }, [paymentsQ.data, expenseData, period, month, year]);
+
 
   // ---------- Inventory ----------
   const inventory = useMemo(() => {
@@ -301,11 +321,21 @@ function ReportsPage() {
   // ---------- Reconciliation ----------
   const reconciliation = useMemo(() => {
     const rows: ReconRow[] = [];
-    // Opening balance: net cash of every settled transaction before this period.
+    // Opening balance = closing balance of every prior period: net cash of all
+    // settled transactions dated before this period's start.
     let opening = 0;
     const before = (d: string) => d.slice(0, 10) < period.from;
+    (priorPaymentsQ.data ?? []).forEach((p) => { if (before(p.date)) opening += p.amount; });
+    (priorPurchasesQ.data ?? []).forEach((p) => {
+      if (!p.paid) return;
+      if (before((p.paidAt || p.date))) opening -= p.total;
+    });
+    (priorWagesQ.data ?? []).forEach((w) => {
+      if (!w.paid) return;
+      if (before((w.paidAt || w.date))) opening -= w.total;
+    });
+
     (paymentsQ.data ?? []).forEach((p) => {
-      if (before(p.date)) { opening += p.amount; return; }
       if (!inRange(p.date, period.from, period.to)) return;
       rows.push({
         id: `pay-${p.id}`,
@@ -320,7 +350,6 @@ function ReportsPage() {
     (purchasesQ.data ?? []).forEach((p) => {
       if (!p.paid) return;
       const d = (p.paidAt || p.date).slice(0, 10);
-      if (before(d)) { opening -= p.total; return; }
       if (!inRange(d, period.from, period.to)) return;
       rows.push({
         id: `pur-${p.id}`,
@@ -335,7 +364,6 @@ function ReportsPage() {
     (wagesQ.data ?? []).forEach((w) => {
       if (!w.paid) return;
       const d = (w.paidAt || w.date).slice(0, 10);
-      if (before(d)) { opening -= w.total; return; }
       if (!inRange(d, period.from, period.to)) return;
       rows.push({
         id: `wage-${w.id}`,
@@ -352,7 +380,9 @@ function ReportsPage() {
     const moneyOut = rows.reduce((a, r) => a + r.moneyOut, 0);
     const net = moneyIn - moneyOut;
     return { rows, moneyIn, moneyOut, balance: net, opening, closing: opening + net };
-  }, [paymentsQ.data, purchasesQ.data, wagesQ.data, period]);
+  }, [paymentsQ.data, purchasesQ.data, wagesQ.data,
+      priorPaymentsQ.data, priorPurchasesQ.data, priorWagesQ.data, period]);
+
 
 
   const handlePrint = () => window.print();
@@ -691,13 +721,13 @@ function PnlReport({ data, monthMode, period }: { data: {
   return (
     <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Revenue" value={formatCurrency(data.revenue)} icon={TrendingUp} tone="primary" />
-        <StatCard label="Expenses" value={formatCurrency(data.expenses)} icon={TrendingDown} tone="destructive" />
+        <StatCard label="Money Received" value={formatCurrency(data.revenue)} icon={TrendingUp} tone="primary" />
+        <StatCard label="Money Paid Out" value={formatCurrency(data.expenses)} icon={TrendingDown} tone="destructive" />
         <StatCard label={data.net >= 0 ? "Net Profit" : "Net Loss"} value={formatCurrency(Math.abs(data.net))} icon={PiggyBank} tone={netTone} />
         <StatCard label="Margin" value={`${data.margin.toFixed(1)}%`} icon={BarChart3} tone="earth" />
       </div>
 
-      <ChartCard title={monthMode ? "Revenue vs Expenses (Monthly)" : "Revenue vs Expenses"}>
+      <ChartCard title={monthMode ? "Cash In vs Cash Out (Monthly)" : "Cash In vs Cash Out"}>
         {data.buckets.length === 0 ? <EmptyState label="No data" /> : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.buckets} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
@@ -706,8 +736,8 @@ function PnlReport({ data, monthMode, period }: { data: {
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip formatter={(v: number) => formatCurrency(v)} />
               <Legend />
-              <Bar dataKey="revenue" fill={CHART_COLORS[0]} name="Revenue" />
-              <Bar dataKey="expenses" fill={CHART_COLORS[4]} name="Expenses" />
+              <Bar dataKey="revenue" fill={CHART_COLORS[0]} name="Money Received" />
+              <Bar dataKey="expenses" fill={CHART_COLORS[4]} name="Money Paid Out" />
               {monthMode && <Bar dataKey="net" fill={CHART_COLORS[2]} name="Net" />}
             </BarChart>
           </ResponsiveContainer>
@@ -716,10 +746,10 @@ function PnlReport({ data, monthMode, period }: { data: {
 
       <Card>
         <TableCardHeader
-          title="P&L Summary"
+          title="P&L Summary (cash basis)"
           onExport={() => exportSheet("profit-and-loss", "P&L", [
-            { Metric: "Revenue", Value: data.revenue },
-            { Metric: "Expenses", Value: data.expenses },
+            { Metric: "Money Received", Value: data.revenue },
+            { Metric: "Money Paid Out", Value: data.expenses },
             { Metric: data.net >= 0 ? "Net Profit" : "Net Loss", Value: data.net },
             { Metric: "Margin (%)", Value: +data.margin.toFixed(2) },
             ...data.buckets.map((b) => ({ Metric: b.label, Value: `Rev ${b.revenue} / Exp ${b.expenses} / Net ${b.net}` })),
@@ -729,8 +759,8 @@ function PnlReport({ data, monthMode, period }: { data: {
           <Table>
             <TableHeader><TableRow><TableHead>Metric</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
             <TableBody>
-              <TableRow><TableCell>Revenue</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.revenue)}</TableCell></TableRow>
-              <TableRow><TableCell>Expenses</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.expenses)}</TableCell></TableRow>
+              <TableRow><TableCell>Money Received</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.revenue)}</TableCell></TableRow>
+              <TableRow><TableCell>Money Paid Out</TableCell><TableCell className="text-right tabular-nums">{formatCurrency(data.expenses)}</TableCell></TableRow>
               <TableRow><TableCell className="font-medium">{data.net >= 0 ? "Net Profit" : "Net Loss"}</TableCell><TableCell className="text-right tabular-nums font-medium">{formatCurrency(Math.abs(data.net))}</TableCell></TableRow>
               <TableRow><TableCell>Margin</TableCell><TableCell className="text-right tabular-nums">{data.margin.toFixed(1)}%</TableCell></TableRow>
             </TableBody>
