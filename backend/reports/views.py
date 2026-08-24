@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from expenses.models import CasualWage, Purchase
 from orders.models import Order
 from products.models import Product
-from sales.models import Invoice, Sale
+from sales.models import Invoice, Payment, Sale
 
 
 def _range(request):
