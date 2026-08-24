@@ -108,6 +108,21 @@ function ReportsPage() {
   const stockQ = useQuery({ queryKey: ["stock", range], queryFn: () => api.listStockEntries(range) });
   const ordersQ = useQuery({ queryKey: ["orders", range], queryFn: () => api.listOrders(range) });
 
+  // Everything settled before this period — used to carry the previous
+  // closing balance forward as this period's opening balance.
+  const priorRange = useMemo(() => {
+    const d = new Date(`${period.from}T00:00:00`);
+    d.setDate(d.getDate() - 1);
+    return { from: "2000-01-01", to: d.toISOString().slice(0, 10) };
+  }, [period.from]);
+  const priorPaymentsQ = useQuery({
+    queryKey: ["payments-prior", priorRange],
+    queryFn: async () => (await api.listPayments(priorRange)).filter((p) => !p.isVoided),
+  });
+  const priorPurchasesQ = useQuery({ queryKey: ["purchases-prior", priorRange], queryFn: () => api.listPurchases(priorRange) });
+  const priorWagesQ = useQuery({ queryKey: ["casual-wages-prior", priorRange], queryFn: () => api.listCasualWages(priorRange) });
+
+
   const loading =
     invoicesQ.isLoading || salesQ.isLoading || paymentsQ.isLoading || customersQ.isLoading ||
     productsQ.isLoading || purchasesQ.isLoading || wagesQ.isLoading || workersQ.isLoading ||
@@ -306,11 +321,21 @@ function ReportsPage() {
   // ---------- Reconciliation ----------
   const reconciliation = useMemo(() => {
     const rows: ReconRow[] = [];
-    // Opening balance: net cash of every settled transaction before this period.
+    // Opening balance = closing balance of every prior period: net cash of all
+    // settled transactions dated before this period's start.
     let opening = 0;
     const before = (d: string) => d.slice(0, 10) < period.from;
+    (priorPaymentsQ.data ?? []).forEach((p) => { if (before(p.date)) opening += p.amount; });
+    (priorPurchasesQ.data ?? []).forEach((p) => {
+      if (!p.paid) return;
+      if (before((p.paidAt || p.date))) opening -= p.total;
+    });
+    (priorWagesQ.data ?? []).forEach((w) => {
+      if (!w.paid) return;
+      if (before((w.paidAt || w.date))) opening -= w.total;
+    });
+
     (paymentsQ.data ?? []).forEach((p) => {
-      if (before(p.date)) { opening += p.amount; return; }
       if (!inRange(p.date, period.from, period.to)) return;
       rows.push({
         id: `pay-${p.id}`,
@@ -325,7 +350,6 @@ function ReportsPage() {
     (purchasesQ.data ?? []).forEach((p) => {
       if (!p.paid) return;
       const d = (p.paidAt || p.date).slice(0, 10);
-      if (before(d)) { opening -= p.total; return; }
       if (!inRange(d, period.from, period.to)) return;
       rows.push({
         id: `pur-${p.id}`,
@@ -340,7 +364,6 @@ function ReportsPage() {
     (wagesQ.data ?? []).forEach((w) => {
       if (!w.paid) return;
       const d = (w.paidAt || w.date).slice(0, 10);
-      if (before(d)) { opening -= w.total; return; }
       if (!inRange(d, period.from, period.to)) return;
       rows.push({
         id: `wage-${w.id}`,
@@ -357,7 +380,9 @@ function ReportsPage() {
     const moneyOut = rows.reduce((a, r) => a + r.moneyOut, 0);
     const net = moneyIn - moneyOut;
     return { rows, moneyIn, moneyOut, balance: net, opening, closing: opening + net };
-  }, [paymentsQ.data, purchasesQ.data, wagesQ.data, period]);
+  }, [paymentsQ.data, purchasesQ.data, wagesQ.data,
+      priorPaymentsQ.data, priorPurchasesQ.data, priorWagesQ.data, period]);
+
 
 
   const handlePrint = () => window.print();
