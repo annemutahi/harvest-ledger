@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,15 +18,22 @@ import { formatCurrency } from "@/lib/format";
 
 export const Route = createFileRoute("/payments/new")({
   head: () => ({ meta: [{ title: "Record Payment" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    customer: typeof search.customer === "string" ? search.customer : undefined,
+    invoice: typeof search.invoice === "string" ? search.invoice : undefined,
+  }),
   component: RecordPaymentPage,
 });
 
 function RecordPaymentPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [customerId, setCustomerId] = useState("");
-  const [invoiceId, setInvoiceId] = useState("");
+  const { customer: customerParam, invoice: invoiceParam } = Route.useSearch();
+  const [customerId, setCustomerId] = useState(customerParam ?? "");
+  const [invoiceId, setInvoiceId] = useState(invoiceParam ?? "");
   const [amount, setAmount] = useState(0);
+  // Prefill the amount with the invoice's outstanding balance once it loads.
+  const prefilledRef = useRef(false);
   const [method, setMethod] = useState<"Cash" | "Bank Transfer" | "Mobile Money" | "Cheque">("Cash");
   const [notes, setNotes] = useState("");
   // One stable key per submission attempt: retries/double-clicks reuse it,
@@ -69,6 +76,11 @@ function RecordPaymentPage() {
   );
 
   const inv = invoices.find((i) => i.id === invoiceId);
+  useEffect(() => {
+    if (prefilledRef.current || !invoiceParam || !inv) return;
+    prefilledRef.current = true;
+    setAmount(inv.outstandingBalance);
+  }, [inv, invoiceParam]);
   const remaining = inv ? Math.max(inv.outstandingBalance - amount, 0) : 0;
   const amountError =
     validate(z.object({ amount: positiveAmountSchema }), { amount }).amount ??
