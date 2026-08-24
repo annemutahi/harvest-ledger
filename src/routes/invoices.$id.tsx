@@ -689,7 +689,11 @@ function InvoiceDetail() {
                 )}
               </div>
             ))}
-            <Button asChild className="w-full print:hidden" variant="outline"><Link to="/payments/new">Record Payment</Link></Button>
+            <Button asChild className="w-full print:hidden" variant="outline">
+              <Link to="/payments/new" search={{ customer: invoice.customerId, invoice: invoice.id }}>
+                Record Payment
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
