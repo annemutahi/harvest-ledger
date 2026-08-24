@@ -119,13 +119,19 @@ function LandingPage() {
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => api.listOrders() });
 
   const chartData = useMemo(() => {
-    type Point = { label: string; sales: number };
+    type Point = { label: string; sales: number; collected: number };
     const deliveredOrders = orders.filter((o) => o.status === "delivered");
 
-    const addToBucket = (buckets: Map<string, Point>, key: string, label: string, amount: number) => {
+    const addToBucket = (
+      buckets: Map<string, Point>,
+      key: string,
+      label: string,
+      amount: number,
+      field: "sales" | "collected" = "sales",
+    ) => {
       const existing = buckets.get(key);
-      if (existing) existing.sales += amount;
-      else buckets.set(key, { label, sales: amount });
+      if (existing) existing[field] += amount;
+      else buckets.set(key, { label, sales: 0, collected: 0, [field]: amount } as Point);
     };
 
     if (chartPeriod === "year") {
@@ -133,7 +139,7 @@ function LandingPage() {
       for (let m = 0; m < 12; m++) {
         const key = String(m).padStart(2, "0");
         const label = new Date(chartYear, m, 1).toLocaleString("default", { month: "short" });
-        buckets.set(key, { label, sales: 0 });
+        buckets.set(key, { label, sales: 0, collected: 0 });
       }
       invoices.forEach((inv) => {
         const d = new Date(inv.invoiceDate);
@@ -149,6 +155,13 @@ function LandingPage() {
             d.toLocaleString("default", { month: "short" }), Number(o.total || 0));
         }
       });
+      payments.forEach((p) => {
+        const d = new Date(p.date);
+        if (d.getFullYear() === chartYear) {
+          addToBucket(buckets, String(d.getMonth()).padStart(2, "0"),
+            d.toLocaleString("default", { month: "short" }), p.amount, "collected");
+        }
+      });
       return Array.from(buckets.values());
     }
 
@@ -156,19 +169,20 @@ function LandingPage() {
       const daysInMonth = new Date(chartYear, chartMonth + 1, 0).getDate();
       const buckets = new Map<string, Point>();
       for (let day = 1; day <= daysInMonth; day++) {
-        buckets.set(String(day), { label: String(day), sales: 0 });
+        buckets.set(String(day), { label: String(day), sales: 0, collected: 0 });
       }
+      const inMonth = (d: Date) => d.getFullYear() === chartYear && d.getMonth() === chartMonth;
       invoices.forEach((inv) => {
         const d = new Date(inv.invoiceDate);
-        if (d.getFullYear() === chartYear && d.getMonth() === chartMonth) {
-          addToBucket(buckets, String(d.getDate()), String(d.getDate()), inv.totalAmount);
-        }
+        if (inMonth(d)) addToBucket(buckets, String(d.getDate()), String(d.getDate()), inv.totalAmount);
       });
       deliveredOrders.forEach((o) => {
         const d = new Date(o.updatedAt || o.placedAt);
-        if (d.getFullYear() === chartYear && d.getMonth() === chartMonth) {
-          addToBucket(buckets, String(d.getDate()), String(d.getDate()), Number(o.total || 0));
-        }
+        if (inMonth(d)) addToBucket(buckets, String(d.getDate()), String(d.getDate()), Number(o.total || 0));
+      });
+      payments.forEach((p) => {
+        const d = new Date(p.date);
+        if (inMonth(d)) addToBucket(buckets, String(d.getDate()), String(d.getDate()), p.amount, "collected");
       });
       return Array.from(buckets.values());
     }
@@ -185,7 +199,7 @@ function LandingPage() {
     for (let i = 0; i < 7; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      buckets.set(d.toDateString(), { label: dayLabels[i], sales: 0 });
+      buckets.set(d.toDateString(), { label: dayLabels[i], sales: 0, collected: 0 });
     }
     invoices.forEach((inv) => {
       const d = new Date(inv.invoiceDate);
@@ -197,9 +211,15 @@ function LandingPage() {
       if (d >= start && d < end) addToBucket(buckets, d.toDateString(),
         dayLabels[(d.getDay() + 6) % 7], Number(o.total || 0));
     });
+    payments.forEach((p) => {
+      const d = new Date(p.date);
+      if (d >= start && d < end) addToBucket(buckets, d.toDateString(),
+        dayLabels[(d.getDay() + 6) % 7], p.amount, "collected");
+    });
     return Array.from(buckets.values());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoices, orders, chartPeriod, chartYear, chartMonth]);
+  }, [invoices, orders, payments, chartPeriod, chartYear, chartMonth]);
+
 
   const chartTitle = chartPeriod === "year"
     ? `Sales · ${chartYear}`
