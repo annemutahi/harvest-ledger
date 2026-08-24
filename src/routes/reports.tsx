@@ -301,7 +301,11 @@ function ReportsPage() {
   // ---------- Reconciliation ----------
   const reconciliation = useMemo(() => {
     const rows: ReconRow[] = [];
+    // Opening balance: net cash of every settled transaction before this period.
+    let opening = 0;
+    const before = (d: string) => d.slice(0, 10) < period.from;
     (paymentsQ.data ?? []).forEach((p) => {
+      if (before(p.date)) { opening += p.amount; return; }
       if (!inRange(p.date, period.from, period.to)) return;
       rows.push({
         id: `pay-${p.id}`,
@@ -316,6 +320,7 @@ function ReportsPage() {
     (purchasesQ.data ?? []).forEach((p) => {
       if (!p.paid) return;
       const d = (p.paidAt || p.date).slice(0, 10);
+      if (before(d)) { opening -= p.total; return; }
       if (!inRange(d, period.from, period.to)) return;
       rows.push({
         id: `pur-${p.id}`,
@@ -330,6 +335,7 @@ function ReportsPage() {
     (wagesQ.data ?? []).forEach((w) => {
       if (!w.paid) return;
       const d = (w.paidAt || w.date).slice(0, 10);
+      if (before(d)) { opening -= w.total; return; }
       if (!inRange(d, period.from, period.to)) return;
       rows.push({
         id: `wage-${w.id}`,
@@ -344,8 +350,10 @@ function ReportsPage() {
     rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     const moneyIn = rows.reduce((a, r) => a + r.moneyIn, 0);
     const moneyOut = rows.reduce((a, r) => a + r.moneyOut, 0);
-    return { rows, moneyIn, moneyOut, balance: moneyIn - moneyOut };
+    const net = moneyIn - moneyOut;
+    return { rows, moneyIn, moneyOut, balance: net, opening, closing: opening + net };
   }, [paymentsQ.data, purchasesQ.data, wagesQ.data, period]);
+
 
   const handlePrint = () => window.print();
 
@@ -1063,7 +1071,7 @@ function AllCustomersTable({ rows }: { rows: {
 
 /* ---------------- Reconciliation ---------------- */
 function ReconciliationReport({ data, period }: {
-  data: { rows: ReconRow[]; moneyIn: number; moneyOut: number; balance: number };
+  data: { rows: ReconRow[]; moneyIn: number; moneyOut: number; balance: number; opening: number; closing: number };
   period: Period;
 }) {
   const ctrl = useTableView<ReconRow>({
@@ -1079,32 +1087,46 @@ function ReconciliationReport({ data, period }: {
     defaultPageSize: 50,
   });
 
-  let running = 0;
+  let running = data.opening;
 
   return (
     <div className="mt-6 space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard label="Opening Balance" value={formatCurrency(data.opening)} icon={Scale} />
         <StatCard label="Money In" value={formatCurrency(data.moneyIn)} icon={TrendingUp} />
         <StatCard label="Money Out" value={formatCurrency(data.moneyOut)} icon={TrendingDown} />
-        <StatCard label="Net Balance" value={formatCurrency(data.balance)} icon={Scale} />
-        <StatCard label="Transactions" value={String(data.rows.length)} icon={ArrowRight} />
+        <StatCard label="Net Movement" value={formatCurrency(data.balance)} icon={ArrowRight} />
+        <StatCard label="Closing Balance" value={formatCurrency(data.closing)} icon={Scale} />
       </div>
+
 
       <Card>
         <TableCardHeader
           title={`Reconciliation Statement — ${period.label}`}
           onExport={() => exportSheet("reconciliation", "Reconciliation", [
+            { Date: "", Name: "OPENING BALANCE", Details: "", "Money In": "", "Money Out": "", Balance: data.opening },
             ...data.rows.map((r) => ({
               Date: r.date, Name: r.name, Details: r.detail,
-              "Money In": r.moneyIn || "", "Money Out": r.moneyOut || "",
+              "Money In": r.moneyIn || "", "Money Out": r.moneyOut || "", Balance: "",
             })),
-            { Date: "", Name: "TOTALS", Details: "", "Money In": data.moneyIn, "Money Out": data.moneyOut },
-            { Date: "", Name: "BALANCE", Details: "", "Money In": data.balance, "Money Out": "" },
+            { Date: "", Name: "TOTALS", Details: "", "Money In": data.moneyIn, "Money Out": data.moneyOut, Balance: "" },
+            { Date: "", Name: "CLOSING BALANCE", Details: "", "Money In": "", "Money Out": "", Balance: data.closing },
           ], period)}
+
         />
         <CardContent className="p-0">
           {data.rows.length === 0 ? (
-            <div className="p-6"><EmptyState label="No settled transactions in this period" /></div>
+            <div className="space-y-3 p-6">
+              <EmptyState label="No settled transactions in this period" />
+              <div className="flex justify-between border-t pt-3 text-sm font-semibold">
+                <span>Opening balance</span>
+                <span className="tabular-nums">{formatCurrency(data.opening)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-semibold">
+                <span>Closing balance</span>
+                <span className="tabular-nums">{formatCurrency(data.closing)}</span>
+              </div>
+            </div>
           ) : (
             <>
               <Table>
@@ -1117,6 +1139,10 @@ function ReconciliationReport({ data, period }: {
                   <TableHead className="text-right">Running Balance</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
+                  <TableRow className="bg-muted/40 font-semibold">
+                    <TableCell colSpan={5}>Opening balance as at {formatDate(period.from)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(data.opening)}</TableCell>
+                  </TableRow>
                   {ctrl.sorted.map((r) => {
                     running += r.moneyIn - r.moneyOut;
                     const bal = running;
@@ -1147,17 +1173,18 @@ function ReconciliationReport({ data, period }: {
                     );
                   })}
                   <TableRow className="border-t-2 font-semibold">
-                    <TableCell colSpan={3}>Totals</TableCell>
+                    <TableCell colSpan={3}>Totals for {period.label}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(data.moneyIn)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(data.moneyOut)}</TableCell>
-                    <TableCell />
-                  </TableRow>
-                  <TableRow className="font-semibold">
-                    <TableCell colSpan={5}>Closing balance for {period.label}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(data.balance)}</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-muted/40 font-semibold">
+                    <TableCell colSpan={5}>Closing balance as at {formatDate(period.to)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(data.closing)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
+
               <TablePagination ctrl={ctrl} label="transactions" />
             </>
           )}
