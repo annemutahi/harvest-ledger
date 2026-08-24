@@ -5,28 +5,45 @@ import { AppShell } from "@/components/app-shell";
 import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { StatusBadge } from "@/components/status-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BanknoteArrowUp, CalendarClock, CreditCard, FileText, TrendingUp, Wallet, PiggyBank } from "lucide-react";
+import { AlertTriangle, BanknoteArrowUp, CalendarClock, CreditCard, PackageCheck, PiggyBank, TrendingUp, Wallet } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Dashboard" }] }),
+  head: () => ({
+    meta: [
+      { title: "Dashboard · Peaceful Acres Farm ERP" },
+      { name: "description", content: "Month-to-date sales, cash collected, expenses and outstanding receivables for Peaceful Acres Farm." },
+      { property: "og:title", content: "Dashboard · Peaceful Acres Farm ERP" },
+      { property: "og:description", content: "Month-to-date sales, cash collected, expenses and outstanding receivables." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: LandingPage,
 });
 
 const today = new Date();
 const dueSoonWindowDays = 7;
 
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 function daysUntil(date: string) {
   const due = new Date(date);
   return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
+
+function pctChange(current: number, previous: number): string {
+  if (!previous) return "No prior-month figure";
+  const change = ((current - previous) / Math.abs(previous)) * 100;
+  const sign = change >= 0 ? "+" : "";
+  return `${sign}${change.toFixed(0)}% vs last month (${formatCurrency(previous)})`;
+}
+
 
 function groupMonthlySales(invoices: Array<{ invoiceDate: string; totalAmount: number; outstandingBalance: number }>) {
   const groups = new Map<string, { key: string; month: string; sales: number; receivables: number }>();
