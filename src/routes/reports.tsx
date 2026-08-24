@@ -199,10 +199,14 @@ function ReportsPage() {
     return { purchases, wages, purchasesTotal, wagesTotal, total, categories, trend };
   }, [purchasesQ.data, wagesQ.data, period, month, year]);
 
-  // ---------- P&L ----------
+  // ---------- P&L (cash basis: money received vs money paid) ----------
   const pnl = useMemo(() => {
-    const revenue = salesData.totalSales;
-    const expenses = expenseData.total;
+    const receipts = (paymentsQ.data ?? []).filter((p) => inRange(p.date, period.from, period.to));
+    const paidPurchases = expenseData.purchases.filter((p: any) => p.paid);
+    const paidWages = expenseData.wages.filter((w: any) => w.paid);
+    const revenue = receipts.reduce((a, p) => a + p.amount, 0);
+    const expenses = paidPurchases.reduce((a: number, p: any) => a + p.total, 0)
+      + paidWages.reduce((a: number, w: any) => a + w.total, 0);
     const net = revenue - expenses;
     const margin = revenue > 0 ? (net / revenue) * 100 : 0;
     const comparison = [
@@ -214,9 +218,9 @@ function ReportsPage() {
     const buckets: { label: string; revenue: number; expenses: number; net: number }[] = [];
     if (month === "all") {
       const r = new Array(12).fill(0), e = new Array(12).fill(0);
-      salesData.sales.forEach((s) => { const d = new Date(s.date); if (d.getFullYear() === year) r[d.getMonth()] += s.amount; });
-      expenseData.purchases.forEach((x) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
-      expenseData.wages.forEach((x) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
+      receipts.forEach((p) => { const d = new Date(p.date); if (d.getFullYear() === year) r[d.getMonth()] += p.amount; });
+      paidPurchases.forEach((x: any) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
+      paidWages.forEach((x: any) => { const d = new Date(x.date); if (d.getFullYear() === year) e[d.getMonth()] += x.total; });
       for (let i = 0; i < 12; i++) buckets.push({ label: MONTHS[i].slice(0, 3), revenue: r[i], expenses: e[i], net: r[i] - e[i] });
     } else {
       buckets.push({ label: "Revenue", revenue, expenses: 0, net: 0 });
@@ -224,7 +228,8 @@ function ReportsPage() {
       buckets.push({ label: "Net", revenue: 0, expenses: 0, net });
     }
     return { revenue, expenses, net, margin, comparison, buckets };
-  }, [salesData, expenseData, month, year]);
+  }, [paymentsQ.data, expenseData, period, month, year]);
+
 
   // ---------- Inventory ----------
   const inventory = useMemo(() => {
