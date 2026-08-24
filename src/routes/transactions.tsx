@@ -106,7 +106,7 @@ function TransactionsPage() {
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link to="/payments/new" search={{}}>
+            <Link to="/payments/new" search={{ customer: undefined, invoice: undefined }}>
               <BanknoteArrowUp className="mr-2 h-4 w-4" />
               Record Payment
             </Link>
