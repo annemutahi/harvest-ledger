@@ -1071,7 +1071,7 @@ function AllCustomersTable({ rows }: { rows: {
 
 /* ---------------- Reconciliation ---------------- */
 function ReconciliationReport({ data, period }: {
-  data: { rows: ReconRow[]; moneyIn: number; moneyOut: number; balance: number };
+  data: { rows: ReconRow[]; moneyIn: number; moneyOut: number; balance: number; opening: number; closing: number };
   period: Period;
 }) {
   const ctrl = useTableView<ReconRow>({
