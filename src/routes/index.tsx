@@ -214,21 +214,39 @@ function LandingPage() {
     label: new Date(2026, i, 1).toLocaleString("default", { month: "long" }),
   }));
 
-  const currentMonth = monthlySales[monthlySales.length - 1] ?? { month: "", sales: 0, receivables: 0 };
-  const previousMonth = monthlySales[monthlySales.length - 2];
-  const totalMonthSales = currentMonth.sales + deliveredOrdersMTD;
-  const monthlyChange = previousMonth
-    ? ((totalMonthSales - previousMonth.sales) / previousMonth.sales) * 100
-    : 0;
-  const monthlyProfit = totalMonthSales - expensesThisMonth.paidTotal;
-  const paymentsReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const monthLabel = today.toLocaleString("default", { month: "long" });
+  const totalMonthSales = summary?.sales.total ?? 0;
+  const prevMonthSales = prevSummary?.sales.total ?? 0;
+
+  const inThisMonth = (d: string) => {
+    const date = new Date(d);
+    return date >= monthStart && date <= today;
+  };
+  const inPrevMonth = (d: string) => {
+    const date = new Date(d);
+    return date >= prevStart && date <= prevEnd;
+  };
+  const collectedMTD = payments.filter((p) => inThisMonth(p.date)).reduce((s, p) => s + p.amount, 0);
+  const collectedPrev = payments.filter((p) => inPrevMonth(p.date)).reduce((s, p) => s + p.amount, 0);
+
+  const paidExpensesMTD = expensesThisMonth.paidTotal;
+  const prevPaidExpenses = prevSummary?.expenses.paidTotal ?? 0;
+  const cashProfit = collectedMTD - paidExpensesMTD;
+  const prevCashProfit = collectedPrev - prevPaidExpenses;
+
+  const openInvoices = invoices.filter((invoice) => invoice.outstandingBalance > 0);
+  const receivables = openInvoices.reduce((s, i) => s + i.outstandingBalance, 0);
+  const overdue = openInvoices
+    .map((invoice) => ({ ...invoice, daysUntilDue: daysUntil(invoice.dueDate) }))
+    .filter((invoice) => invoice.daysUntilDue < 0)
+    .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+  const overdueTotal = overdue.reduce((s, i) => s + i.outstandingBalance, 0);
   const totalCredit = invoices.reduce((sum, invoice) => sum + invoice.availableCredit, 0);
-  const dueSoon = invoices
-    .filter((invoice) => invoice.outstandingBalance > 0)
+  const dueSoon = openInvoices
     .map((invoice) => ({ ...invoice, daysUntilDue: daysUntil(invoice.dueDate) }))
     .filter((invoice) => invoice.daysUntilDue >= 0 && invoice.daysUntilDue <= dueSoonWindowDays)
     .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-  const dueSoonTotal = dueSoon.reduce((sum, invoice) => sum + invoice.outstandingBalance, 0);
+  const pendingStock = stockEntries.filter((s) => s.status === "pending");
 
   return (
     <AppShell
@@ -241,54 +259,77 @@ function LandingPage() {
         </Button>
       }
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          label={`${currentMonth.month || "This Month"} Sales`}
-          value={formatCurrency(totalMonthSales)}
-          icon={TrendingUp}
-          tone="primary"
-          trend={`Invoices ${formatCurrency(currentMonth.sales)} · Delivered orders ${formatCurrency(deliveredOrdersMTD)}`}
-          trendDirection={monthlyChange >= 0 ? "up" : "down"}
-        />
-        <StatCard
-          label="Monthly Profits"
-          value={formatCurrency(monthlyProfit)}
-          icon={PiggyBank}
-          tone={monthlyProfit >= 0 ? "success" : "destructive"}
-          trend={`Sales ${formatCurrency(totalMonthSales)} − Paid expenses ${formatCurrency(expensesThisMonth.paidTotal)}`}
-          trendDirection={monthlyProfit >= 0 ? "up" : "down"}
-        />
-        <StatCard
-          label="Payments"
-          value={formatCurrency(paymentsReceived)}
-          icon={BanknoteArrowUp}
-          tone="success"
-          trend={`${payments.length} payments recorded`}
-          trendDirection="up"
-        />
-        <StatCard
-          label="Total Credit"
-          value={formatCurrency(totalCredit)}
-          icon={CreditCard}
-          tone="earth"
-          trend="Outstanding customer balance"
-        />
-        <StatCard
-          label="Payments Due Soon"
-          value={formatCurrency(dueSoonTotal)}
-          icon={CalendarClock}
-          tone="warning"
-          trend={`${dueSoon.length} invoices due in ${dueSoonWindowDays} days`}
-        />
-        <StatCard
-          label="Expenses This Month"
-          value={formatCurrency(expensesThisMonth.total)}
-          icon={Wallet}
-          tone="destructive"
-          trend={`Purchases ${formatCurrency(expensesThisMonth.purchases)} · Wages ${formatCurrency(expensesThisMonth.wages)}`}
-          trendDirection={expensesThisMonth.total > 0 ? "down" : "neutral"}
-        />
-      </div>
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          {monthLabel} so far · 1–{today.getDate()} {monthLabel}
+        </h2>
+        <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Sales invoiced"
+            value={formatCurrency(totalMonthSales)}
+            icon={TrendingUp}
+            tone="primary"
+            trend={pctChange(totalMonthSales, prevMonthSales)}
+            trendDirection={totalMonthSales >= prevMonthSales ? "up" : "down"}
+          />
+          <StatCard
+            label="Cash collected"
+            value={formatCurrency(collectedMTD)}
+            icon={BanknoteArrowUp}
+            tone="success"
+            trend={pctChange(collectedMTD, collectedPrev)}
+            trendDirection={collectedMTD >= collectedPrev ? "up" : "down"}
+          />
+          <StatCard
+            label="Expenses paid"
+            value={formatCurrency(paidExpensesMTD)}
+            icon={Wallet}
+            tone="destructive"
+            trend={`${formatCurrency(expensesThisMonth.total - paidExpensesMTD)} still unpaid`}
+            trendDirection="neutral"
+          />
+          <StatCard
+            label="Net cash profit"
+            value={formatCurrency(cashProfit)}
+            icon={PiggyBank}
+            tone={cashProfit >= 0 ? "success" : "destructive"}
+            trend={`Collected − expenses paid · ${pctChange(cashProfit, prevCashProfit)}`}
+            trendDirection={cashProfit >= prevCashProfit ? "up" : "down"}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Sales are invoiced value (accrual). Profit is cash basis: money received less expenses actually paid. Delivered orders contribute {formatCurrency(deliveredOrdersMTD)} of sales.
+        </p>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="text-sm font-semibold text-muted-foreground">Balances as at today</h2>
+        <div className="mt-3 grid gap-4 md:grid-cols-3">
+          <StatCard
+            label="Owed to us (receivables)"
+            value={formatCurrency(receivables)}
+            icon={CalendarClock}
+            tone="warning"
+            trend={`${openInvoices.length} open invoices`}
+          />
+          <StatCard
+            label="Overdue"
+            value={formatCurrency(overdueTotal)}
+            icon={AlertTriangle}
+            tone="destructive"
+            trend={`${overdue.length} invoices past due date`}
+            trendDirection={overdueTotal > 0 ? "down" : "neutral"}
+          />
+          <StatCard
+            label="Customer credit held"
+            value={formatCurrency(totalCredit)}
+            icon={CreditCard}
+            tone="earth"
+            trend="Overpayments we owe back to customers"
+          />
+        </div>
+      </section>
+
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card>
