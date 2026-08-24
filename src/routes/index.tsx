@@ -365,28 +365,37 @@ function LandingPage() {
                 </TabsList>
               </Tabs>
             </div>
-            {chartPeriod !== "week" && (
-              <div className="flex flex-wrap gap-2">
-                {chartPeriod === "month" && (
-                  <Select value={String(chartMonth)} onValueChange={(v) => setChartMonth(Number(v))}>
-                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <div className="flex flex-wrap items-center gap-2">
+              <Tabs value={chartMetric} onValueChange={(v) => setChartMetric(v as "sales" | "collected" | "both")}>
+                <TabsList>
+                  <TabsTrigger value="sales">Invoiced</TabsTrigger>
+                  <TabsTrigger value="collected">Cash collected</TabsTrigger>
+                  <TabsTrigger value="both">Both</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {chartPeriod !== "week" && (
+                <>
+                  {chartPeriod === "month" && (
+                    <Select value={String(chartMonth)} onValueChange={(v) => setChartMonth(Number(v))}>
+                      <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {monthOptions.map((m) => (
+                          <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Select value={String(chartYear)} onValueChange={(v) => setChartYear(Number(v))}>
+                    <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {monthOptions.map((m) => (
-                        <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
+                      {yearOptions.map((y) => (
+                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                )}
-                <Select value={String(chartYear)} onValueChange={(v) => setChartYear(Number(v))}>
-                  <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {yearOptions.map((y) => (
-                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -406,18 +415,34 @@ function LandingPage() {
                     borderRadius: 8,
                   }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="sales"
-                  stroke="var(--color-primary)"
-                  strokeWidth={2}
-                  fill="var(--color-primary)"
-                  fillOpacity={0.18}
-                />
+                {chartMetric !== "collected" && (
+                  <Area
+                    type="monotone"
+                    dataKey="sales"
+                    name="Invoiced sales"
+                    stroke="var(--color-primary)"
+                    strokeWidth={2}
+                    fill="var(--color-primary)"
+                    fillOpacity={0.18}
+                  />
+                )}
+                {chartMetric !== "sales" && (
+                  <Area
+                    type="monotone"
+                    dataKey="collected"
+                    name="Cash collected"
+                    stroke="var(--color-success)"
+                    strokeWidth={2}
+                    fill="var(--color-success)"
+                    fillOpacity={0.14}
+                  />
+                )}
+                {chartMetric === "both" && <Legend />}
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
 
 
         <Card>
