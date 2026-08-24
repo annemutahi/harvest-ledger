@@ -108,6 +108,21 @@ function ReportsPage() {
   const stockQ = useQuery({ queryKey: ["stock", range], queryFn: () => api.listStockEntries(range) });
   const ordersQ = useQuery({ queryKey: ["orders", range], queryFn: () => api.listOrders(range) });
 
+  // Everything settled before this period — used to carry the previous
+  // closing balance forward as this period's opening balance.
+  const priorRange = useMemo(() => {
+    const d = new Date(`${period.from}T00:00:00`);
+    d.setDate(d.getDate() - 1);
+    return { from: "2000-01-01", to: d.toISOString().slice(0, 10) };
+  }, [period.from]);
+  const priorPaymentsQ = useQuery({
+    queryKey: ["payments-prior", priorRange],
+    queryFn: async () => (await api.listPayments(priorRange)).filter((p) => !p.isVoided),
+  });
+  const priorPurchasesQ = useQuery({ queryKey: ["purchases-prior", priorRange], queryFn: () => api.listPurchases(priorRange) });
+  const priorWagesQ = useQuery({ queryKey: ["casual-wages-prior", priorRange], queryFn: () => api.listCasualWages(priorRange) });
+
+
   const loading =
     invoicesQ.isLoading || salesQ.isLoading || paymentsQ.isLoading || customersQ.isLoading ||
     productsQ.isLoading || purchasesQ.isLoading || wagesQ.isLoading || workersQ.isLoading ||
