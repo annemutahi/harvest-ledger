@@ -7,9 +7,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  ComposedChart,
   Legend,
-  Line,
   LineChart,
   Pie,
   PieChart,
@@ -734,22 +732,16 @@ function PnlReport({ data, monthMode, period }: { data: {
       <ChartCard title={monthMode ? "Cash In vs Cash Out (Monthly)" : "Cash In vs Cash Out"}>
         {data.buckets.length === 0 ? <EmptyState label="No data" /> : (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data.buckets} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+            <BarChart data={data.buckets} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} unit="%" />
-              <Tooltip
-                formatter={(v: number, name: string) =>
-                  name === "Net Margin (%)" ? `${v.toFixed(1)}%` : formatCurrency(v)
-                }
-              />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(v: number) => formatCurrency(v)} />
               <Legend />
-              <Bar yAxisId="left" dataKey="revenue" fill={CHART_COLORS[0]} name="Money Received" />
-              <Bar yAxisId="left" dataKey="expenses" fill={CHART_COLORS[4]} name="Money Paid Out" />
-              {monthMode && <Bar yAxisId="left" dataKey="net" fill={CHART_COLORS[2]} name="Net" />}
-              <Bar yAxisId="right" dataKey="margin" fill={CHART_COLORS[1]} name="Net Margin (%)" />
-            </ComposedChart>
+              <Bar dataKey="revenue" fill={CHART_COLORS[0]} name="Money Received" />
+              <Bar dataKey="expenses" fill={CHART_COLORS[4]} name="Money Paid Out" />
+              {monthMode && <Bar dataKey="net" fill={CHART_COLORS[2]} name="Net" />}
+            </BarChart>
           </ResponsiveContainer>
         )}
       </ChartCard>
