@@ -257,13 +257,12 @@ def render_invoice_pdf(invoice) -> bytes:
         Spacer(1, 3),
         Paragraph(f"<b>{customer_name}</b>", s["base"]),
     ]
-    if customer.contact_person:
-        bill_lines.append(Paragraph(_esc(customer.contact_person), s["muted"]))
     if customer.phone:
         bill_lines.append(Paragraph(_esc(customer.phone), s["muted"]))
     if customer.email:
         bill_lines.append(Paragraph(_esc(customer.email), s["muted"]))
     bill = _panel(bill_lines, inner + 16)
+
 
     payment_type = (getattr(invoice, "payment_type", "") or "Credit").title()
     method = _panel([
@@ -340,6 +339,29 @@ def render_invoice_pdf(invoice) -> bytes:
     rule.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), FOREST)]))
     story += [rule, Spacer(1, 6 * mm)]
 
+    # ---- Voided banner (mirrors the on-screen notice) --------------------
+    if getattr(invoice, "voided_at", None):
+        void_lines = [
+            Paragraph(
+                "<b><font color='#b91c1c'>VOIDED</font></b>",
+                ParagraphStyle("void", parent=s["base"], fontSize=9),
+            ),
+        ]
+        if getattr(invoice, "void_reason", ""):
+            void_lines += [Spacer(1, 2), Paragraph(_esc(invoice.void_reason), s["muted"])]
+        voided_by = getattr(invoice, "voided_by", None)
+        by = f" by {_esc(getattr(voided_by, 'get_full_name', lambda: '')() or getattr(voided_by, 'username', ''))}" if voided_by else ""
+        void_lines += [
+            Spacer(1, 2),
+            Paragraph(f"Voided {invoice.voided_at:%d %b %Y}{by}", s["small"]),
+        ]
+        story += [
+            _panel(void_lines, W - 16, background=colors.HexColor("#fef2f2")),
+            Spacer(1, 6 * mm),
+        ]
+
+
+
     # ---- Items -----------------------------------------------------------
     sale = getattr(invoice, "sale", None)
     items = list(sale.items.all()) if sale else []
@@ -394,19 +416,26 @@ def render_invoice_pdf(invoice) -> bytes:
     ], inner + 16, background=colors.HexColor("#f6faf6"))
 
     balance = float(invoice.outstanding_balance or 0)
-    totals = Table(
-        [
-            ["Subtotal", _money(invoice.total_amount)],
-            ["Paid", _money(invoice.amount_paid)],
-            ["Overdraft" if balance < 0 else "Balance Due", _money(abs(balance))],
-        ],
-        colWidths=[col * 0.5, col * 0.5],
+    try:
+        credit_applied = float(
+            sum(a.amount for a in invoice.credit_applications.all()) or 0
+        )
+    except Exception:  # noqa: BLE001 — totals must never break the PDF
+        credit_applied = 0.0
+
+    total_rows = [["Subtotal", _money(invoice.total_amount)]]
+    if credit_applied > 0:
+        total_rows.append(["Credit applied", f"\u2212{_money(credit_applied)}"])
+    total_rows.append(["Paid", _money(invoice.amount_paid)])
+    total_rows.append(
+        ["Overdraft" if balance < 0 else "Balance Due", _money(abs(balance))]
     )
+    totals = Table(total_rows, colWidths=[col * 0.5, col * 0.5])
     totals.setStyle(TableStyle([
         ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
         ("FONTSIZE", (0, 0), (-1, -1), 9.5),
         ("TEXTCOLOR", (0, 0), (0, -2), MUTED),
-        ("TEXTCOLOR", (1, 1), (1, 1), FOREST),
+        ("TEXTCOLOR", (1, 1), (1, -2), FOREST),
         ("LINEBELOW", (0, 0), (-1, -2), 0.4, colors.HexColor("#e5e7eb")),
         ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
         ("FONTSIZE", (0, -1), (-1, -1), 11),
@@ -417,6 +446,7 @@ def render_invoice_pdf(invoice) -> bytes:
         ("LEFTPADDING", (0, -1), (-1, -1), 8),
         ("RIGHTPADDING", (0, -1), (-1, -1), 8),
     ]))
+
 
     footer = Table([[pay, totals]], colWidths=[col, col + 6 * mm])
     footer.setStyle(TableStyle([
@@ -440,10 +470,7 @@ def render_invoice_pdf(invoice) -> bytes:
         ("TOPPADDING", (0, 0), (-1, 0), 10),
     ]))
 
-    closing = Paragraph(
-        "From Our Farm to Your Table. Thank you for supporting local farmers.",
-        s["center"],
-    )
+    closing = Paragraph("Thank you for supporting our business.", s["center"])
     bottom_block = [footer, Spacer(1, 9 * mm), signatures, Spacer(1, 6 * mm), closing]
 
     reserved = 0.0
@@ -451,6 +478,37 @@ def render_invoice_pdf(invoice) -> bytes:
         reserved += flowable.wrap(W, A4[1])[1]
     story.append(FlexSpacer(reserved + 4 * mm, minimum=10 * mm))
     story.append(KeepTogether(bottom_block))
+
+    # ---- Invoice changes (debit / credit notes) --------------------------
+    try:
+        adjustments = list(invoice.adjustments.all())
+    except Exception:  # noqa: BLE001
+        adjustments = []
+    if adjustments:
+        story += [Spacer(1, 6 * mm), Paragraph("INVOICE CHANGES", s["small"])]
+        for adj in adjustments:
+            rows = [
+                Table(
+                    [[Paragraph(f"<b>{adj.get_kind_display()} note</b>", s["base"]),
+                      Paragraph(f"<b>{_money(adj.amount)}</b>", s["right"])]],
+                    colWidths=[(W - 32) * 0.6, (W - 32) * 0.4],
+                    style=TableStyle([
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                        ("TOPPADDING", (0, 0), (-1, -1), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ]),
+                ),
+                Paragraph(
+                    f"{_money(adj.previous_total)} -&gt; {_money(adj.new_total)} · "
+                    f"{adj.created_at:%d %b %Y}",
+                    s["small"],
+                ),
+            ]
+            if adj.notes:
+                rows.append(Paragraph(_esc(adj.notes), s["muted"]))
+            story += [Spacer(1, 3 * mm), _panel(rows, W - 16)]
+
 
     doc.build(story, onFirstPage=_decorations, onLaterPages=_decorations)
 
