@@ -257,13 +257,12 @@ def render_invoice_pdf(invoice) -> bytes:
         Spacer(1, 3),
         Paragraph(f"<b>{customer_name}</b>", s["base"]),
     ]
-    if customer.contact_person:
-        bill_lines.append(Paragraph(_esc(customer.contact_person), s["muted"]))
     if customer.phone:
         bill_lines.append(Paragraph(_esc(customer.phone), s["muted"]))
     if customer.email:
         bill_lines.append(Paragraph(_esc(customer.email), s["muted"]))
     bill = _panel(bill_lines, inner + 16)
+
 
     payment_type = (getattr(invoice, "payment_type", "") or "Credit").title()
     method = _panel([
