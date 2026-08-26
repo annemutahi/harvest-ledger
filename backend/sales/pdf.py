@@ -416,19 +416,26 @@ def render_invoice_pdf(invoice) -> bytes:
     ], inner + 16, background=colors.HexColor("#f6faf6"))
 
     balance = float(invoice.outstanding_balance or 0)
-    totals = Table(
-        [
-            ["Subtotal", _money(invoice.total_amount)],
-            ["Paid", _money(invoice.amount_paid)],
-            ["Overdraft" if balance < 0 else "Balance Due", _money(abs(balance))],
-        ],
-        colWidths=[col * 0.5, col * 0.5],
+    try:
+        credit_applied = float(
+            sum(a.amount for a in invoice.credit_applications.all()) or 0
+        )
+    except Exception:  # noqa: BLE001 — totals must never break the PDF
+        credit_applied = 0.0
+
+    total_rows = [["Subtotal", _money(invoice.total_amount)]]
+    if credit_applied > 0:
+        total_rows.append(["Credit applied", f"\u2212{_money(credit_applied)}"])
+    total_rows.append(["Paid", _money(invoice.amount_paid)])
+    total_rows.append(
+        ["Overdraft" if balance < 0 else "Balance Due", _money(abs(balance))]
     )
+    totals = Table(total_rows, colWidths=[col * 0.5, col * 0.5])
     totals.setStyle(TableStyle([
         ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
         ("FONTSIZE", (0, 0), (-1, -1), 9.5),
         ("TEXTCOLOR", (0, 0), (0, -2), MUTED),
-        ("TEXTCOLOR", (1, 1), (1, 1), FOREST),
+        ("TEXTCOLOR", (1, 1), (1, -2), FOREST),
         ("LINEBELOW", (0, 0), (-1, -2), 0.4, colors.HexColor("#e5e7eb")),
         ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
         ("FONTSIZE", (0, -1), (-1, -1), 11),
@@ -439,6 +446,7 @@ def render_invoice_pdf(invoice) -> bytes:
         ("LEFTPADDING", (0, -1), (-1, -1), 8),
         ("RIGHTPADDING", (0, -1), (-1, -1), 8),
     ]))
+
 
     footer = Table([[pay, totals]], colWidths=[col, col + 6 * mm])
     footer.setStyle(TableStyle([
