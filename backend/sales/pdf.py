@@ -339,6 +339,29 @@ def render_invoice_pdf(invoice) -> bytes:
     rule.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), FOREST)]))
     story += [rule, Spacer(1, 6 * mm)]
 
+    # ---- Voided banner (mirrors the on-screen notice) --------------------
+    if getattr(invoice, "voided_at", None):
+        void_lines = [
+            Paragraph(
+                "<b><font color='#b91c1c'>VOIDED</font></b>",
+                ParagraphStyle("void", parent=s["base"], fontSize=9),
+            ),
+        ]
+        if getattr(invoice, "void_reason", ""):
+            void_lines += [Spacer(1, 2), Paragraph(_esc(invoice.void_reason), s["muted"])]
+        voided_by = getattr(invoice, "voided_by", None)
+        by = f" by {_esc(getattr(voided_by, 'get_full_name', lambda: '')() or getattr(voided_by, 'username', ''))}" if voided_by else ""
+        void_lines += [
+            Spacer(1, 2),
+            Paragraph(f"Voided {invoice.voided_at:%d %b %Y}{by}", s["small"]),
+        ]
+        story += [
+            _panel(void_lines, W - 16, background=colors.HexColor("#fef2f2")),
+            Spacer(1, 6 * mm),
+        ]
+
+
+
     # ---- Items -----------------------------------------------------------
     sale = getattr(invoice, "sale", None)
     items = list(sale.items.all()) if sale else []
