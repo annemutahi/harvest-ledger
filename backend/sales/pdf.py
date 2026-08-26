@@ -470,10 +470,7 @@ def render_invoice_pdf(invoice) -> bytes:
         ("TOPPADDING", (0, 0), (-1, 0), 10),
     ]))
 
-    closing = Paragraph(
-        "From Our Farm to Your Table. Thank you for supporting local farmers.",
-        s["center"],
-    )
+    closing = Paragraph("Thank you for supporting our business.", s["center"])
     bottom_block = [footer, Spacer(1, 9 * mm), signatures, Spacer(1, 6 * mm), closing]
 
     reserved = 0.0
@@ -481,6 +478,37 @@ def render_invoice_pdf(invoice) -> bytes:
         reserved += flowable.wrap(W, A4[1])[1]
     story.append(FlexSpacer(reserved + 4 * mm, minimum=10 * mm))
     story.append(KeepTogether(bottom_block))
+
+    # ---- Invoice changes (debit / credit notes) --------------------------
+    try:
+        adjustments = list(invoice.adjustments.all())
+    except Exception:  # noqa: BLE001
+        adjustments = []
+    if adjustments:
+        story += [Spacer(1, 6 * mm), Paragraph("INVOICE CHANGES", s["small"])]
+        for adj in adjustments:
+            rows = [
+                Table(
+                    [[Paragraph(f"<b>{adj.get_kind_display()} note</b>", s["base"]),
+                      Paragraph(f"<b>{_money(adj.amount)}</b>", s["right"])]],
+                    colWidths=[W * 0.6 - 16, W * 0.4],
+                    style=TableStyle([
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                        ("TOPPADDING", (0, 0), (-1, -1), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ]),
+                ),
+                Paragraph(
+                    f"{_money(adj.previous_total)} &#8594; {_money(adj.new_total)} · "
+                    f"{adj.created_at:%d %b %Y}",
+                    s["small"],
+                ),
+            ]
+            if adj.notes:
+                rows.append(Paragraph(_esc(adj.notes), s["muted"]))
+            story += [Spacer(1, 3 * mm), _panel(rows, W - 16)]
+
 
     doc.build(story, onFirstPage=_decorations, onLaterPages=_decorations)
 
