@@ -491,7 +491,7 @@ def render_invoice_pdf(invoice) -> bytes:
                 Table(
                     [[Paragraph(f"<b>{adj.get_kind_display()} note</b>", s["base"]),
                       Paragraph(f"<b>{_money(adj.amount)}</b>", s["right"])]],
-                    colWidths=[W * 0.6 - 16, W * 0.4],
+                    colWidths=[(W - 32) * 0.6, (W - 32) * 0.4],
                     style=TableStyle([
                         ("LEFTPADDING", (0, 0), (-1, -1), 0),
                         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
@@ -500,7 +500,7 @@ def render_invoice_pdf(invoice) -> bytes:
                     ]),
                 ),
                 Paragraph(
-                    f"{_money(adj.previous_total)} &#8594; {_money(adj.new_total)} · "
+                    f"{_money(adj.previous_total)} -&gt; {_money(adj.new_total)} · "
                     f"{adj.created_at:%d %b %Y}",
                     s["small"],
                 ),
