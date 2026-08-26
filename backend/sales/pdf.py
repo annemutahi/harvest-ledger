@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 from django.conf import settings
 from reportlab.lib import colors
@@ -25,6 +26,11 @@ FOREST_SOFT = colors.HexColor("#eaf1ea")
 LIGHT = colors.HexColor("#f1f5f0")
 MUTED = colors.HexColor("#4b5563")
 BORDER = colors.HexColor("#a7bfa9")
+
+
+def _esc(value) -> str:
+    """Escape user-supplied text before it enters ReportLab paragraph markup."""
+    return escape("" if value is None else str(value))
 
 ROOT = Path(getattr(settings, "BASE_DIR", Path(__file__).resolve().parents[2])).parent
 LOGO_PATH = ROOT / "public" / "assets" / "favicon.png"
@@ -204,9 +210,9 @@ def render_invoice_pdf(invoice) -> bytes:
     W = doc.width
 
     customer = invoice.customer
-    customer_name = customer.name
+    customer_name = _esc(customer.name)
     if invoice.store_name:
-        customer_name = f"{customer_name} - {invoice.store_name}"
+        customer_name = f"{customer_name} - {_esc(invoice.store_name)}"
 
     # ---- Header: logo + company, contacts on the right -------------------
     logo = (
@@ -252,11 +258,11 @@ def render_invoice_pdf(invoice) -> bytes:
         Paragraph(f"<b>{customer_name}</b>", s["base"]),
     ]
     if customer.contact_person:
-        bill_lines.append(Paragraph(customer.contact_person, s["muted"]))
+        bill_lines.append(Paragraph(_esc(customer.contact_person), s["muted"]))
     if customer.phone:
-        bill_lines.append(Paragraph(customer.phone, s["muted"]))
+        bill_lines.append(Paragraph(_esc(customer.phone), s["muted"]))
     if customer.email:
-        bill_lines.append(Paragraph(customer.email, s["muted"]))
+        bill_lines.append(Paragraph(_esc(customer.email), s["muted"]))
     bill = _panel(bill_lines, inner + 16)
 
     payment_type = (getattr(invoice, "payment_type", "") or "Credit").title()
@@ -264,8 +270,8 @@ def render_invoice_pdf(invoice) -> bytes:
         _chip("Payment method", s, inner),
         Spacer(1, 3),
         Table(
-            [[Paragraph(payment_type, s["base"]),
-              _status_pill(invoice.get_status_display(), s)]],
+            [[Paragraph(_esc(payment_type), s["base"]),
+              _status_pill(_esc(invoice.get_status_display()), s)]],
             colWidths=[inner * 0.5, inner * 0.5],
             style=TableStyle([
                 ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -285,7 +291,7 @@ def render_invoice_pdf(invoice) -> bytes:
     if invoice.etims_number:
         meta_rows.append([
             Paragraph("KRA ETIMS NO.", key),
-            Paragraph(invoice.etims_number, s["right"]),
+            Paragraph(_esc(invoice.etims_number), s["right"]),
         ])
     right_inner = col + 6 * mm - 32
     meta_table = Table(meta_rows, colWidths=[right_inner * 0.45, right_inner * 0.55])
@@ -300,7 +306,7 @@ def render_invoice_pdf(invoice) -> bytes:
 
     meta_head = Table(
         [[_chip("Invoice no.", s),
-          Paragraph(f"<b>{invoice.invoice_number}</b>",
+          Paragraph(f"<b>{_esc(invoice.invoice_number)}</b>",
                     ParagraphStyle("no", parent=s["base"], alignment=2, fontSize=14,
                                    fontName="Helvetica-Bold", textColor=colors.black))]],
         colWidths=[right_inner * 0.45, right_inner * 0.55],
