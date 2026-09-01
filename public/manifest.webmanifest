@@ -1,0 +1,16 @@
+{
+  "name": "Peaceful Acres Farm — Sales & Receivables",
+  "short_name": "Peaceful Acres",
+  "description": "Manage poultry sales, customer balances, invoices and payments for Peaceful Acres Farm Limited.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0B1F3A",
+  "theme_color": "#14532D",
+  "icons": [
+    { "src": "/assets/pwa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
