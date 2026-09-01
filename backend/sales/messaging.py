@@ -38,7 +38,7 @@ def build_email_body(invoice) -> tuple[str, str]:
         f"KES {invoice.total_amount:,.2f}, due {invoice.due_date:%d %b %Y}.\n\n"
         f"Thank you for supporting our business.\n{company}\n"
     )
-    subject = f"Invoice {invoice.invoice_number} — {company}"
+    subject = f"Invoice {invoice.invoice_number} - {company}"
     return subject, text
 
 
