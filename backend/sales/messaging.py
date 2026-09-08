@@ -65,13 +65,80 @@ def send_email(invoice) -> tuple[str, str, str]:
     return SENT, to, "Email sent with the invoice PDF attached."
 
 
+def normalise_msisdn(raw: str, country_code: str = "254") -> str:
+    """Turn 0722..., 722..., +254722... into +254722... (E.164)."""
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    if not digits:
+        return ""
+    if digits.startswith(country_code):
+        pass
+    elif digits.startswith("0"):
+        digits = country_code + digits[1:]
+    else:
+        digits = country_code + digits
+    return "+" + digits
+
+
+def _africastalking_send(to: str, text: str) -> tuple[str, str, str]:
+    username = getattr(settings, "AT_USERNAME", "")
+    api_key = getattr(settings, "AT_API_KEY", "")
+    base = (
+        "https://api.sandbox.africastalking.com"
+        if username == "sandbox" or getattr(settings, "AT_SANDBOX", False)
+        else "https://api.africastalking.com"
+    )
+    url = f"{base}/version1/messaging"
+    fields = {"username": username, "to": to, "message": text}
+    sender = getattr(settings, "AT_SENDER_ID", "") or getattr(settings, "SMS_SENDER_ID", "")
+    if sender:
+        fields["from"] = sender
+
+    req = urllib.request.Request(
+        url,
+        data=urllib.parse.urlencode(fields).encode(),
+        method="POST",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+            "apiKey": api_key,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310 — fixed host
+            body = json.loads(resp.read().decode() or "{}")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode(errors="replace")[:300]
+        log.warning("africastalking http %s: %s", exc.code, detail)
+        return FAILED, to, f"Africa's Talking responded {exc.code}: {detail}"
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+        log.warning("africastalking sms failed: %s", exc)
+        return FAILED, to, str(exc)[:300]
+
+    recipients = (body.get("SMSMessageData") or {}).get("Recipients") or []
+    if not recipients:
+        message = (body.get("SMSMessageData") or {}).get("Message", "No recipients accepted.")
+        return FAILED, to, str(message)[:300]
+    first = recipients[0]
+    status_code = int(first.get("statusCode") or 0)
+    if status_code in (100, 101, 102):
+        return SENT, to, f"SMS queued by Africa's Talking ({first.get('status', 'Success')})."
+    return FAILED, to, f"Africa's Talking: {first.get('status', 'rejected')} ({status_code})."
+
+
 def send_sms(invoice) -> tuple[str, str, str]:
     """Returns (status, recipient, detail). No gateway configured => skipped."""
-    to = (invoice.customer.phone or "").strip()
-    if not to:
+    raw = (invoice.customer.phone or "").strip()
+    if not raw:
         return SKIPPED, "", "No phone number on file for this customer."
+    to = normalise_msisdn(raw)
+    if not to:
+        return SKIPPED, raw, "Phone number on file is not a valid number."
 
     text = build_sms_text(invoice)
+
+    if getattr(settings, "AT_USERNAME", "") and getattr(settings, "AT_API_KEY", ""):
+        return _africastalking_send(to, text)
+
     url = getattr(settings, "SMS_GATEWAY_URL", "")
     key = getattr(settings, "SMS_GATEWAY_API_KEY", "")
     if not url or not key:
