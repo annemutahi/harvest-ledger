@@ -236,6 +236,12 @@ FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:8080")
 SMS_GATEWAY_URL = env("SMS_GATEWAY_URL", default="")
 SMS_GATEWAY_API_KEY = env("SMS_GATEWAY_API_KEY", default="")
 SMS_SENDER_ID = env("SMS_SENDER_ID", default="PEACEFULACRES")
+
+# --- Africa's Talking SMS (preferred when set) ---
+AT_USERNAME = env("AT_USERNAME", default="")
+AT_API_KEY = env("AT_API_KEY", default="")
+AT_SENDER_ID = env("AT_SENDER_ID", default="")  # approved alphanumeric ID or short code
+AT_SANDBOX = env.bool("AT_SANDBOX", default=False)
 COMPANY_NAME = env("COMPANY_NAME", default="Peaceful Acres Farm")
 
 # --- Store sync (optional) ---
