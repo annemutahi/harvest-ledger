@@ -247,6 +247,8 @@ COMPANY_NAME = env("COMPANY_NAME", default="Peaceful Acres Farm")
 # --- Store sync (optional) ---
 STORE_API_URL = env("STORE_API_URL", default="")
 STORE_API_KEY = env("STORE_API_KEY", default="")
+# Token the online store must present to read the public product feed.
+STORE_FEED_TOKEN = env("STORE_FEED_TOKEN", default="")
 
 # --- Logging ---
 LOGGING = {
