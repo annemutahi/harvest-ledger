@@ -52,6 +52,17 @@ class OrderViewSet(viewsets.ModelViewSet):
                 log.warning("push_status_to_store failed for %s: %s", order.reference, exc)
         return response.Response(OrderSerializer(order).data)
 
+    @decorators.action(detail=False, methods=["post"], url_path="sync-store")
+    def sync_store(self, request):
+        """Pull new orders from the online store on demand."""
+        if not has_perm(request.user, "orders", "change"):
+            return response.Response({"detail": "forbidden"},
+                                     status=status.HTTP_403_FORBIDDEN)
+        from .store_client import pull_orders
+        result = pull_orders()
+        code = status.HTTP_200_OK if result.get("ok") else status.HTTP_502_BAD_GATEWAY
+        return response.Response(result, status=code)
+
 
 @csrf_exempt
 def webhook(request):

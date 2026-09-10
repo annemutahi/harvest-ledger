@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
 import type { OrderStatus } from "@/lib/orders-store";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -30,7 +31,19 @@ const statusVariant: Record<OrderStatus, string> = {
 };
 
 function OrdersPage() {
+  const qc = useQueryClient();
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => api.listOrders() });
+  const sync = useMutation({
+    mutationFn: api.syncStoreOrders,
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      if (!r.ok) return toast.error(r.detail ?? "Could not reach the online store");
+      toast.success(
+        r.imported > 0 ? `${r.imported} new order${r.imported === 1 ? "" : "s"} imported` : "No new orders",
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not reach the online store"),
+  });
   const [q, setQ] = useState("");
   const query = q.toLowerCase();
   const filtered = orders.filter(
@@ -76,16 +89,21 @@ function OrdersPage() {
       }
     >
       <Card className="mt-4 border-dashed">
-        <CardContent className="flex flex-col items-start gap-1 py-6">
-          <Badge variant="outline" className="mb-1">Coming soon</Badge>
-          <p className="text-sm font-medium">Online store orders</p>
-          <p className="text-sm text-muted-foreground">
-            The online shop is still being built. Once it goes live, customer orders will
-            flow into this module automatically as pending, ready for staff to review and
-            update.
-          </p>
+        <CardContent className="flex flex-col items-start gap-2 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Online store orders</p>
+            <p className="text-sm text-muted-foreground">
+              Orders placed on the farm shop arrive here automatically. Use Check for new
+              orders to pull them in right away.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => sync.mutate()} disabled={sync.isPending}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} />
+            {sync.isPending ? "Checking…" : "Check for new orders"}
+          </Button>
         </CardContent>
       </Card>
+
 
       <Card className="mt-4">
 

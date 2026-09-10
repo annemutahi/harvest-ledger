@@ -1,7 +1,4 @@
-"""Optional: push order status changes back to the online store.
-
-Implement this to call your store's REST API. Credentials come from
-`settings.STORE_API_URL` / `settings.STORE_API_KEY`.
+"""Push order status changes back to the online store.
 
 Any exception raised here is caught in `OrderViewSet.status` — a failing
 sync must never break the local status update.
@@ -10,29 +7,20 @@ from __future__ import annotations
 
 import logging
 
-from django.conf import settings
+from .store_client import STATUS_OUT, _call, is_configured
 
 log = logging.getLogger(__name__)
 
 
 def push_status_to_store(order) -> None:
-    if not settings.STORE_API_URL or not settings.STORE_API_KEY:
+    if not is_configured() or not order.external_id:
         return
-    # Example (using stdlib http.client so we don't require `requests`):
-    #
-    #   import http.client, json
-    #   from urllib.parse import urlparse
-    #   u = urlparse(settings.STORE_API_URL)
-    #   conn = http.client.HTTPSConnection(u.netloc, timeout=5)
-    #   body = json.dumps({"reference": order.reference, "status": order.status})
-    #   conn.request("POST", f"{u.path.rstrip('/')}/orders/{order.external_id}/status",
-    #                body=body,
-    #                headers={
-    #                    "Content-Type": "application/json",
-    #                    "Authorization": f"Bearer {settings.STORE_API_KEY}",
-    #                })
-    #   resp = conn.getresponse(); resp.read(); conn.close()
-    #   if resp.status >= 400:
-    #       raise RuntimeError(f"store returned {resp.status}")
-    log.info("would push status %s for %s to %s", order.status, order.reference,
-             settings.STORE_API_URL)
+    store_status = STATUS_OUT.get(order.status)
+    if not store_status:
+        return
+    _call("POST", "orders/", {
+        "order_id": order.external_id,
+        "erp_order_ref": order.reference,
+        "status": store_status,
+    })
+    log.info("pushed status %s for %s to store", store_status, order.reference)

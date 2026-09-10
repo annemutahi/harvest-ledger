@@ -867,6 +867,8 @@ export const api = {
         body: JSON.stringify({ status }),
       }),
     ),
+  syncStoreOrders: async (): Promise<{ ok: boolean; imported: number; failed: number; fetched?: number; detail?: string }> =>
+    await request(`/orders/sync-store/`, { method: "POST" }),
 
   // ---------- Notifications (in-app only) — /api/notifications/ ----------
   getNotificationState: async (): Promise<{ read: string[]; dismissed: string[] }> => {
