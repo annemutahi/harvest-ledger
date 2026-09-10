@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
 import type { OrderStatus } from "@/lib/orders-store";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -30,7 +31,19 @@ const statusVariant: Record<OrderStatus, string> = {
 };
 
 function OrdersPage() {
+  const qc = useQueryClient();
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => api.listOrders() });
+  const sync = useMutation({
+    mutationFn: api.syncStoreOrders,
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      if (!r.ok) return toast.error(r.detail ?? "Could not reach the online store");
+      toast.success(
+        r.imported > 0 ? `${r.imported} new order${r.imported === 1 ? "" : "s"} imported` : "No new orders",
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not reach the online store"),
+  });
   const [q, setQ] = useState("");
   const query = q.toLowerCase();
   const filtered = orders.filter(
