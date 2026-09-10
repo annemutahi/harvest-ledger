@@ -76,16 +76,21 @@ function OrdersPage() {
       }
     >
       <Card className="mt-4 border-dashed">
-        <CardContent className="flex flex-col items-start gap-1 py-6">
-          <Badge variant="outline" className="mb-1">Coming soon</Badge>
-          <p className="text-sm font-medium">Online store orders</p>
-          <p className="text-sm text-muted-foreground">
-            The online shop is still being built. Once it goes live, customer orders will
-            flow into this module automatically as pending, ready for staff to review and
-            update.
-          </p>
+        <CardContent className="flex flex-col items-start gap-2 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Online store orders</p>
+            <p className="text-sm text-muted-foreground">
+              Orders placed on the farm shop arrive here automatically. Use Check for new
+              orders to pull them in right away.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => sync.mutate()} disabled={sync.isPending}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} />
+            {sync.isPending ? "Checking…" : "Check for new orders"}
+          </Button>
         </CardContent>
       </Card>
+
 
       <Card className="mt-4">
 
